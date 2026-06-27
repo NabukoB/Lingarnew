@@ -38,16 +38,15 @@ async function fetchUrlText(url: string): Promise<{ text: string; title?: string
 }
 
 async function parsePdfBuffer(buffer: Buffer): Promise<string> {
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: buffer });
-  const result = await parser.getText();
-  const text = result.text?.trim();
-  if (!text) {
+  const { extractText } = await import("unpdf");
+  const { text, totalPages } = await extractText(new Uint8Array(buffer), { mergePages: true });
+  const trimmed = text?.trim();
+  if (!trimmed) {
     throw new Error(
-      "No selectable text found in this PDF. It may be a scanned or image-only PDF — try copying the text and using the Paste tab instead."
+      `No selectable text found in this PDF (${totalPages} pages). It may be a scanned or image-only PDF — try copying the text and using the Paste tab instead.`
     );
   }
-  return text;
+  return trimmed;
 }
 
 export async function POST(req: NextRequest) {
