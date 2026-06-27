@@ -65,7 +65,8 @@ export default function AddArticlePage() {
     setLoading(false);
 
     if (res.ok && (data.insights ?? 0) > 0) {
-      setTimeout(() => router.push(`/digest/${todaySlug()}`), 1500);
+      const target = `/digest/${(data.date as string | undefined) ?? todaySlug()}`;
+      setTimeout(() => { router.refresh(); router.push(target); }, 1500);
     }
   }
 

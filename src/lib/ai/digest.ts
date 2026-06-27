@@ -39,17 +39,18 @@ export async function assembleDigest(params: {
 
   const selectedInsights = (insightRows ?? []) as Insight[];
 
-  // Fetch Ghost Notes for today's insights above confidence threshold
+  // Fetch Ghost Notes: top by confidence across all user's notes.
+  // We intentionally do NOT filter by today's insight IDs — ghost notes
+  // surface cross-article patterns and may be triggered by any insight,
+  // including ones that didn't make the top-N relevance cut today.
   const selectedGhostNotes: GhostNote[] = [];
   const ghostLimit = GHOST_NOTE_LIMITS[plan];
 
-  if (ghostLimit > 0 && selectedInsights.length > 0) {
-    const insightIds = selectedInsights.map((i) => i.id);
+  if (ghostLimit > 0) {
     const { data: ghostRows } = await supabase
       .from("ghost_notes")
       .select("*")
       .eq("user_id", userId)
-      .in("trigger_insight_id", insightIds)
       .gte("confidence_score", 0.6)
       .order("confidence_score", { ascending: false })
       .limit(ghostLimit);
