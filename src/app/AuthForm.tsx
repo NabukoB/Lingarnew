@@ -36,26 +36,28 @@ export function AuthForm() {
 
   if (sent) {
     return (
-      <p className="text-sm text-gray-600 border border-gray-200 rounded-lg px-4 py-3 bg-white">
-        Check your inbox. Click the link to sign in.
-      </p>
+      <div className="text-sm text-gray-300 border border-white/20 rounded-xl px-4 py-3 bg-lingar-surface">
+        Check your inbox — click the link to sign in.
+      </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 max-w-sm">
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="your@email.com"
-        required
-        className="flex-1 border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lingar-accent"
-      />
-      <Button type="submit" disabled={loading}>
-        {loading ? "..." : "Get started"}
-      </Button>
-      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+    <form onSubmit={handleSubmit} className="space-y-3 max-w-sm">
+      <div className="flex gap-2">
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="your@email.com"
+          required
+          className="flex-1 border border-white/20 rounded-xl px-3 py-2 text-sm bg-lingar-surface2 text-lingar-paper placeholder:text-lingar-ghost focus:outline-none focus:ring-2 focus:ring-lingar-gold"
+        />
+        <Button type="submit" disabled={loading}>
+          {loading ? "..." : "Get started"}
+        </Button>
+      </div>
+      {error && <p className="text-xs text-lingar-red">{error}</p>}
     </form>
   );
 }
