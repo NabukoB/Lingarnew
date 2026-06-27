@@ -14,6 +14,8 @@ html {
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #161618;
+  color: #FAFAF8;
 }
 
 /* Prevent horizontal scroll on mobile */
@@ -23,4 +25,13 @@ body {
 
 input, button, a {
   touch-action: manipulation;
+}
+
+/* Hide scrollbar for carousels */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

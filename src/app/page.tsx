@@ -5,9 +5,7 @@ import { AuthForm } from "./AuthForm";
 
 export default async function LandingPage() {
   const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (user) {
     redirect(`/digest/${todaySlug()}`);
@@ -20,12 +18,12 @@ export default async function LandingPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-lingar-ghost">
           Personal Intelligence OS
         </p>
-        <h1 className="text-4xl font-bold leading-tight tracking-tight">
+        <h1 className="text-4xl font-bold leading-tight tracking-tight text-lingar-paper">
           The digest that
           <br />
           remembers you.
         </h1>
-        <p className="text-lg text-gray-600 leading-relaxed">
+        <p className="text-lg text-gray-300 leading-relaxed">
           Forward your newsletters. Lingar extracts what matters, connects it to
           your history, and surfaces the patterns you&apos;re too busy to see.
         </p>
@@ -60,7 +58,7 @@ export default async function LandingPage() {
             "Lingar extracts insights, builds context, spots patterns",
             "Read your daily brief. Ask the Ghost anything.",
           ].map((step, i) => (
-            <li key={i} className="flex gap-4 items-start text-sm text-gray-700">
+            <li key={i} className="flex gap-4 items-start text-sm text-gray-300">
               <span className="font-mono text-lingar-ghost shrink-0 w-5">{i + 1}.</span>
               {step}
             </li>
@@ -106,17 +104,11 @@ export default async function LandingPage() {
   );
 }
 
-function FeatureCard({
-  label,
-  description,
-}: {
-  label: string;
-  description: string;
-}) {
+function FeatureCard({ label, description }: { label: string; description: string }) {
   return (
-    <div className="border border-gray-100 rounded-lg p-5 bg-white space-y-2">
-      <h3 className="font-semibold text-sm text-lingar-ink">{label}</h3>
-      <p className="text-sm text-gray-600 leading-relaxed">{description}</p>
+    <div className="border border-white/10 rounded-xl p-5 bg-lingar-surface space-y-2">
+      <h3 className="font-semibold text-sm text-lingar-paper">{label}</h3>
+      <p className="text-sm text-gray-300 leading-relaxed">{description}</p>
     </div>
   );
 }
@@ -134,30 +126,21 @@ function PricingCard({
 }) {
   return (
     <div
-      className={`rounded-lg p-5 space-y-4 border ${
+      className={`rounded-xl p-5 space-y-4 border ${
         highlighted
-          ? "border-lingar-ink bg-lingar-ink text-lingar-paper"
-          : "border-gray-100 bg-white"
+          ? "border-lingar-gold/50 bg-lingar-gold/10"
+          : "border-white/10 bg-lingar-surface"
       }`}
     >
       <div>
-        <p
-          className={`text-xs font-semibold uppercase tracking-widest ${
-            highlighted ? "text-gray-400" : "text-lingar-ghost"
-          }`}
-        >
+        <p className={`text-xs font-semibold uppercase tracking-widest ${highlighted ? "text-lingar-gold" : "text-lingar-ghost"}`}>
           {plan}
         </p>
-        <p className="text-2xl font-bold mt-1">{price}</p>
+        <p className="text-2xl font-bold mt-1 text-lingar-paper">{price}</p>
       </div>
       <ul className="space-y-1.5">
         {features.map((f) => (
-          <li
-            key={f}
-            className={`text-sm ${highlighted ? "text-gray-300" : "text-gray-600"}`}
-          >
-            {f}
-          </li>
+          <li key={f} className="text-sm text-gray-300">{f}</li>
         ))}
       </ul>
     </div>

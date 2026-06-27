@@ -2,18 +2,15 @@ import { notFound, redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { InsightItem } from "@/components/digest/InsightItem";
 import { GhostNote } from "@/components/digest/GhostNote";
+import { StatsRow } from "@/components/digest/StatsRow";
+import { DailyBriefCard } from "@/components/digest/DailyBriefCard";
+import { TensionMapping } from "@/components/digest/TensionMapping";
 import { SourceHealth } from "@/components/sources/SourceHealth";
-import { formatDigestDate, todaySlug } from "@/lib/utils/date";
-import type { Digest, Insight, GhostNote as GhostNoteType } from "@/types";
+import { todaySlug } from "@/lib/utils/date";
+import type { Digest, Insight, GhostNote as GhostNoteType, Source } from "@/types";
 
 interface PageProps {
   params: { date: string };
-}
-
-function greeting(name: string | null | undefined) {
-  const hour = new Date().getHours();
-  const time = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
-  return `Good ${time}${name ? `, ${name}` : ""}`;
 }
 
 export default async function DigestPage({ params }: PageProps) {
@@ -37,50 +34,114 @@ export default async function DigestPage({ params }: PageProps) {
         .select("ingest_email, display_name")
         .eq("id", user.id)
         .single();
-      return <EmptyState ingestEmail={profile?.ingest_email ?? null} name={profile?.display_name} />;
+      return <EmptyState ingestEmail={profile?.ingest_email ?? null} />;
     }
     notFound();
   }
 
   const digest = digestRow as Digest;
 
-  const [insightsRes, ghostNotesRes, profileRes] = await Promise.all([
+  const [insightsRes, ghostNotesRes, sourcesRes] = await Promise.all([
     supabase.from("insights").select("*").in("id", digest.insight_ids).order("relevance_score", { ascending: false }),
     supabase.from("ghost_notes").select("*").in("id", digest.ghost_note_ids).order("confidence_score", { ascending: false }),
-    supabase.from("profiles").select("display_name, plan").eq("id", user.id).single(),
+    supabase.from("sources").select("id, from_name, from_email, send_count, useful_count").eq("user_id", user.id),
   ]);
 
   const insights = (insightsRes.data ?? []) as Insight[];
   const ghostNotes = (ghostNotesRes.data ?? []) as GhostNoteType[];
-  const profile = profileRes.data;
+  const sources = (sourcesRes.data ?? []) as Pick<Source, "id" | "from_name" | "from_email" | "send_count" | "useful_count">[];
+
+  // Compute Knowledge Health %
+  const totalSend = sources.reduce((sum, s) => sum + s.send_count, 0);
+  const totalUseful = sources.reduce((sum, s) => sum + s.useful_count, 0);
+  const healthPct = totalSend > 0 ? Math.round((totalUseful / totalSend) * 100) : 100;
+
+  // Top 3 deduplicated tags from insights
+  const tagCounts = new Map<string, number>();
+  for (const insight of insights) {
+    for (const tag of insight.tags ?? []) {
+      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+    }
+  }
+  const topTags = Array.from(tagCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([tag]) => tag);
+
+  // For TensionMapping: build insightId → {summary, sourceName} map for contradiction notes
+  const contradictionNotes = ghostNotes.filter((n) => n.note_type === "contradiction");
+  const tensionInsightIds = new Set<string>();
+  for (const note of contradictionNotes) {
+    tensionInsightIds.add(note.trigger_insight_id);
+    if (note.related_insight_ids[0]) tensionInsightIds.add(note.related_insight_ids[0]);
+  }
+
+  const sourceById = new Map(sources.map((s) => [s.id, s]));
+
+  let insightMap = new Map<string, { summary: string; sourceName: string }>();
+  if (tensionInsightIds.size > 0) {
+    const { data: tensionInsights } = await supabase
+      .from("insights")
+      .select("id, summary, source_id")
+      .in("id", Array.from(tensionInsightIds));
+
+    for (const ins of tensionInsights ?? []) {
+      const src = ins.source_id ? sourceById.get(ins.source_id) : undefined;
+      insightMap.set(ins.id, {
+        summary: ins.summary,
+        sourceName: src?.from_name ?? src?.from_email ?? "Unknown source",
+      });
+    }
+  }
+
+  const opportunityCount = ghostNotes.filter((n) => n.note_type === "opportunity").length;
 
   return (
-    <div className="space-y-6">
-      {/* Greeting */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{greeting(profile?.display_name)} 👋</h1>
-          <p className="text-[13px] text-lingar-ghost mt-1">
-            {formatDigestDate(date)} · {insights.length} insight{insights.length !== 1 ? "s" : ""} waiting
-          </p>
-        </div>
-        <div className="w-10 h-10 rounded-full bg-lingar-accent flex items-center justify-center text-white font-bold text-sm shrink-0">
-          {(profile?.display_name?.[0] ?? user.email?.[0] ?? "L").toUpperCase()}
-        </div>
-      </div>
+    <div className="space-y-4">
+      <StatsRow
+        healthPct={healthPct}
+        insightCount={insights.length}
+        opportunityCount={opportunityCount}
+      />
 
-      {/* Headline */}
       {digest.headline && (
-        <div className="bg-lingar-accent/5 border border-lingar-accent/20 rounded-2xl px-4 py-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-lingar-accent mb-1">Today&apos;s theme</p>
-          <p className="text-[14px] font-semibold text-lingar-ink leading-snug">{digest.headline}</p>
+        <DailyBriefCard digest={digest} topTags={topTags} />
+      )}
+
+      {/* Ghost Notes */}
+      {ghostNotes.length > 0 && (
+        <div className="space-y-3">
+          {ghostNotes.map((note) => {
+            if (note.note_type === "contradiction") {
+              const triggerData = insightMap.get(note.trigger_insight_id);
+              const relatedData = note.related_insight_ids[0]
+                ? insightMap.get(note.related_insight_ids[0])
+                : undefined;
+
+              return (
+                <TensionMapping
+                  key={note.id}
+                  note={note}
+                  sourceA={{
+                    name: triggerData?.sourceName ?? "Source A",
+                    quote: triggerData?.summary ?? note.title,
+                  }}
+                  sourceB={{
+                    name: relatedData?.sourceName ?? "Source B",
+                    quote: relatedData?.summary ?? note.body.slice(0, 120),
+                  }}
+                />
+              );
+            }
+            return <GhostNote key={note.id} note={note} />;
+          })}
         </div>
       )}
 
       {/* Insights */}
       {insights.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
+        <section className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-lingar-ghost">
               Today&apos;s Brief
             </h2>
@@ -94,52 +155,22 @@ export default async function DigestPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Ghost Notes / Opportunity Feed */}
-      {ghostNotes.length > 0 ? (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-lingar-ghost">
-              Opportunity Feed
-            </h2>
-            <span className="text-[11px] text-lingar-accent font-medium">From the Ghost</span>
-          </div>
-          <div className="space-y-3">
-            {ghostNotes.map((note) => (
-              <GhostNote key={note.id} note={note} />
-            ))}
-          </div>
-        </section>
-      ) : profile?.plan === "free" ? (
-        <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-5 text-center space-y-2">
-          <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center mx-auto text-lg">◈</div>
-          <p className="text-[13px] font-semibold text-lingar-ink">Ghost Notes are a Pro feature</p>
-          <p className="text-[12px] text-lingar-ghost leading-snug">
-            Upgrade to see patterns, contradictions, and opportunities the Ghost spots in your reading history.
-          </p>
-        </div>
-      ) : null}
-
-      {/* Source Health */}
       <SourceHealth userId={user.id} />
     </div>
   );
 }
 
-function EmptyState({ ingestEmail, name }: { ingestEmail: string | null; name?: string | null }) {
+function EmptyState({ ingestEmail }: { ingestEmail: string | null }) {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{greeting(name)} 👋</h1>
-        <p className="text-[13px] text-lingar-ghost mt-1">Nothing yet today.</p>
-      </div>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
-        <div className="w-10 h-10 rounded-xl bg-lingar-accent/10 flex items-center justify-center text-xl">📬</div>
-        <h2 className="font-semibold text-[15px]">Forward a newsletter</h2>
-        <p className="text-[13px] text-gray-600 leading-relaxed">
+    <div className="space-y-4">
+      <div className="bg-lingar-surface rounded-2xl p-5 space-y-3">
+        <div className="w-10 h-10 rounded-xl bg-lingar-gold/10 flex items-center justify-center text-xl">📬</div>
+        <h2 className="font-semibold text-[15px] text-lingar-paper">Forward a newsletter</h2>
+        <p className="text-[13px] text-gray-300 leading-relaxed">
           The Ghost will extract insights, connect them to your history, and build your brief automatically.
         </p>
         {ingestEmail && (
-          <div className="bg-lingar-ink rounded-xl px-4 py-3 font-mono text-[12px] text-lingar-paper break-all">
+          <div className="bg-lingar-dark rounded-xl px-4 py-3 font-mono text-[12px] text-lingar-paper break-all border border-white/10">
             {ingestEmail}
           </div>
         )}

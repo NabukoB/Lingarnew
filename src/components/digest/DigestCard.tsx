@@ -13,12 +13,12 @@ export function DigestCard({ digest }: DigestCardProps) {
   return (
     <Link
       href={`/digest/${digest.slug}`}
-      className="block border border-gray-100 rounded-lg p-5 bg-white hover:border-gray-200 hover:shadow-sm transition-all"
+      className="block border border-white/10 rounded-xl p-4 bg-lingar-surface hover:border-lingar-gold/30 transition-colors"
     >
       <p className="text-xs text-lingar-ghost uppercase tracking-widest mb-1">
         {formatDigestDate(digest.slug)}
       </p>
-      <h3 className="font-semibold text-lingar-ink leading-snug mb-3">
+      <h3 className="font-semibold text-lingar-paper leading-snug mb-3">
         {digest.headline ?? "Daily brief"}
       </h3>
       <div className="flex gap-4 text-xs text-lingar-ghost">
