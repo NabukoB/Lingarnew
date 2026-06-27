@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { SynthesisQueryBox } from "@/components/synthesis/SynthesisQueryBox";
 
@@ -45,7 +46,9 @@ export default async function SynthesisPage() {
         </p>
       </div>
 
-      <SynthesisQueryBox />
+      <Suspense fallback={null}>
+        <SynthesisQueryBox />
+      </Suspense>
     </div>
   );
 }

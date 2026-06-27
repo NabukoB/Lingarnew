@@ -16,29 +16,32 @@ const NAV = [
     ),
   },
   {
-    href: "/synthesis",
-    label: "Search",
+    href: "/graph",
+    label: "Graph",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#5B5BD6" : "#9CA3AF"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="11" cy="11" r="7" />
-        <path d="M21 21l-4.35-4.35" />
+        <circle cx="5" cy="12" r="2.5" />
+        <circle cx="19" cy="5" r="2.5" />
+        <circle cx="19" cy="19" r="2.5" />
+        <line x1="7.4" y1="11.1" x2="16.7" y2="6.4" />
+        <line x1="7.4" y1="12.9" x2="16.7" y2="17.6" />
       </svg>
     ),
   },
   {
-    href: "/archive",
-    label: "Archive",
+    href: "/synthesis",
+    label: "Query",
     icon: (_active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
+        <circle cx="11" cy="11" r="7" />
+        <path d="M21 21l-4.35-4.35" />
       </svg>
     ),
     isCenter: true,
   },
   {
     href: "/archive",
-    label: "Sources",
+    label: "Archive",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#5B5BD6" : "#9CA3AF"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="3" width="20" height="14" rx="2" />
