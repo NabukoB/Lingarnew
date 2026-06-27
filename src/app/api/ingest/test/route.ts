@@ -1,23 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
-// One-tap test trigger — fires a sample newsletter through the full AI pipeline.
-// Protected by CRON_SECRET so only you can use it.
 export async function GET(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get("secret");
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const recipient = req.nextUrl.searchParams.get("recipient");
-  if (!recipient) {
-    return NextResponse.json({ error: "Missing ?recipient= param" }, { status: 400 });
+  // Look up the first profile and use whatever ingest_email is stored.
+  // Also fixes the domain if it was saved with the wrong one.
+  const service = createSupabaseServiceClient();
+  const { data: profiles } = await service
+    .from("profiles")
+    .select("id, ingest_email")
+    .limit(1);
+
+  const profile = profiles?.[0];
+  if (!profile) {
+    return NextResponse.json({ error: "No profiles found" }, { status: 404 });
+  }
+
+  // Fix wrong domain in-place if needed.
+  if (profile.ingest_email.includes("lingarnew.vercel.app")) {
+    const fixed = profile.ingest_email.replace("lingarnew.vercel.app", "lingar.app");
+    await service.from("profiles").update({ ingest_email: fixed }).eq("id", profile.id);
+    profile.ingest_email = fixed;
   }
 
   const body = new FormData();
   body.set("test_mode", process.env.CRON_SECRET!);
-  body.set("recipient", recipient);
+  body.set("recipient", profile.ingest_email);
   body.set("from", "The Batch <editor@deeplearning.ai>");
   body.set("subject", "AI Weekly: The models that matter this week");
   body.set(
@@ -37,5 +51,5 @@ Key trend: frontier labs are converging on inference-time compute scaling as the
   const res = await fetch(ingestUrl.toString(), { method: "POST", body });
   const result = await res.json();
 
-  return NextResponse.json({ status: res.status, result });
+  return NextResponse.json({ status: res.status, recipient: profile.ingest_email, result });
 }
