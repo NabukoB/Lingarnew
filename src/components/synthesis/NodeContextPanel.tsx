@@ -85,8 +85,8 @@ export function NodeContextPanel({ node, onClose }: Props) {
             <p className="text-[10px] font-bold uppercase tracking-widest text-lingar-ghost mb-1">
               Topic Node
             </p>
-            <h2 className="text-xl font-bold text-lingar-paper capitalize truncate">
-              {node?.tag}
+            <h2 className="text-xl font-bold text-lingar-paper truncate">
+              {node?.tag.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
             </h2>
             <p className="text-[12px] text-lingar-ghost mt-0.5">
               {node?.insightCount ?? 0} insight{(node?.insightCount ?? 0) !== 1 ? "s" : ""} in your history
@@ -163,7 +163,7 @@ export function NodeContextPanel({ node, onClose }: Props) {
               <circle cx="11" cy="11" r="7" />
               <path d="M21 21l-4.35-4.35" />
             </svg>
-            Ask the Ghost about &ldquo;{node?.tag}&rdquo;
+            Ask the Ghost about &ldquo;{node?.tag.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}&rdquo;
           </Link>
         </div>
       </div>

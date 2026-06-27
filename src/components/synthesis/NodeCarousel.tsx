@@ -35,9 +35,15 @@ const NEUTRAL_STYLE = {
   border: "border-white/10",
   badge: "bg-lingar-surface2 text-lingar-ghost",
   badgeText: "Topic",
-  icon: "○",
-  iconColor: "text-lingar-ghost",
+  icon: "◉",
+  iconColor: "text-lingar-ghost/50",
 };
+
+function formatTag(tag: string): string {
+  return tag
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 function NodeCard({
   node,
@@ -51,14 +57,14 @@ function NodeCard({
   return (
     <button
       onClick={() => onSelect(node)}
-      className={`shrink-0 w-36 h-44 rounded-2xl bg-lingar-surface border ${style.border} p-4 flex flex-col justify-between text-left active:scale-95 transition-transform`}
+      className={`shrink-0 w-40 h-44 rounded-2xl bg-lingar-surface border ${style.border} p-4 flex flex-col justify-between text-left active:scale-95 transition-transform`}
     >
       <div>
         <div className="w-9 h-9 rounded-xl bg-lingar-surface2 flex items-center justify-center text-base mb-3">
           <span className={style.iconColor}>{style.icon}</span>
         </div>
-        <p className="text-[13px] font-semibold text-lingar-paper leading-snug capitalize line-clamp-3">
-          {node.tag}
+        <p className="text-[13px] font-semibold text-lingar-paper leading-snug line-clamp-3">
+          {formatTag(node.tag)}
         </p>
       </div>
       <div className="space-y-1.5">
