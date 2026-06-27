@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { generateIngestEmail } from "@/lib/utils/ingest-email";
 import { todaySlug } from "@/lib/utils/date";
 import { Button } from "@/components/ui/Button";
 
@@ -64,34 +63,22 @@ export default function OnboardingPage() {
     setSaving(true);
     setSaveError(null);
 
-    const supabase = createSupabaseBrowserClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setSaveError("Session expired. Please sign in again.");
-      setSaving(false);
-      return;
-    }
-
     const allGoals = customGoal.trim()
       ? [...goals, customGoal.trim()]
       : goals;
 
-    const ingestAddr = generateIngestEmail(user.id);
-
-    const { error } = await supabase.from("profiles").upsert({
-      id: user.id,
-      email: user.email ?? "",
-      ingest_email: ingestAddr,
-      display_name: displayName.trim() || null,
-      goals: allGoals,
-      interests,
-      plan: "free",
+    const res = await fetch("/api/profile/setup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ displayName, goals: allGoals, interests }),
     });
 
-    if (error) {
-      setSaveError(error.message);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setSaveError(data.error ?? "Something went wrong. Please try again.");
     } else {
-      setIngestEmail(ingestAddr);
+      setIngestEmail(data.ingestEmail);
       setStep("done");
     }
 
