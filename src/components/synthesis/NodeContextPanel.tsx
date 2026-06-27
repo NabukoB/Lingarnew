@@ -70,7 +70,7 @@ export function NodeContextPanel({ node, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={node?.tag ?? "Node context"}
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-lingar-surface rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out max-h-[85vh] overflow-hidden flex flex-col ${
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-lingar-surface rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out max-h-[90vh] overflow-hidden flex flex-col ${
           node ? "translate-y-0" : "translate-y-full"
         }`}
       >
@@ -104,7 +104,7 @@ export function NodeContextPanel({ node, onClose }: Props) {
         </div>
 
         {/* Ghost Notes */}
-        <div className="overflow-y-auto flex-1 px-5 pb-4 space-y-3">
+        <div className="overflow-y-auto flex-1 px-5 pb-6 space-y-3" style={{ WebkitOverflowScrolling: "touch" }}>
           {node?.topGhostNotes.length === 0 && (
             <p className="text-sm text-lingar-ghost py-4 text-center">
               No Ghost Notes for this topic yet.
@@ -134,7 +134,7 @@ export function NodeContextPanel({ node, onClose }: Props) {
                     <h4 className="font-semibold text-[13px] text-lingar-paper leading-snug mb-1">
                       {note.title}
                     </h4>
-                    <div className="text-[11px] text-gray-300 leading-relaxed prose prose-sm max-w-none prose-invert line-clamp-3">
+                    <div className="text-[11px] text-gray-300 leading-relaxed prose prose-sm max-w-none prose-invert">
                       <ReactMarkdown>{note.body}</ReactMarkdown>
                     </div>
                   </div>
