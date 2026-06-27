@@ -38,10 +38,16 @@ async function fetchUrlText(url: string): Promise<{ text: string; title?: string
 }
 
 async function parsePdfBuffer(buffer: Buffer): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string }>;
-  const data = await pdfParse(buffer);
-  return data.text;
+  const { PDFParse } = await import("pdf-parse");
+  const parser = new PDFParse({ data: buffer });
+  const result = await parser.getText();
+  const text = result.text?.trim();
+  if (!text) {
+    throw new Error(
+      "No selectable text found in this PDF. It may be a scanned or image-only PDF — try copying the text and using the Paste tab instead."
+    );
+  }
+  return text;
 }
 
 export async function POST(req: NextRequest) {
@@ -70,8 +76,9 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     try {
       bodyText = await parsePdfBuffer(buffer);
-    } catch {
-      return NextResponse.json({ error: "Could not parse PDF" }, { status: 422 });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not parse PDF";
+      return NextResponse.json({ error: msg }, { status: 422 });
     }
 
     subject = (fd.get("title") as string | null) ?? file.name ?? "PDF upload";
