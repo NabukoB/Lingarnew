@@ -11,8 +11,8 @@ const INSIGHT_LIMITS: Record<Plan, number> = {
 };
 
 const GHOST_NOTE_LIMITS: Record<Plan, number> = {
-  free: 0, // Ghost Notes are a paid feature
-  pro: 5,
+  free: 5,
+  pro: 10,
   executive: 15,
 };
 

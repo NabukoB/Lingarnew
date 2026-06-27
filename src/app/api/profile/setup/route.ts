@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     display_name: displayName?.trim() || null,
     goals: goals ?? [],
     interests: interests ?? [],
-    plan: "free",
+    plan: "pro",
   });
 
   if (error) {

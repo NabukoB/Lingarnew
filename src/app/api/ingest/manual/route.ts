@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
 
       if (!stored) continue;
 
-      if (profile.plan !== "free") {
+      if (true) { // Ghost Notes enabled for all plans
         const similar = await findSimilarInsights({ queryEmbedding: embedding, userId: user.id, matchThreshold: 0.5, matchCount: 5 });
         if (similar.length > 0) {
           const ghosts = await generateGhostNotes({ newInsight: insight, similarInsights: similar, userGoals: profile.goals });

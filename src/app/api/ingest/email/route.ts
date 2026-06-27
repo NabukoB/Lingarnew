@@ -175,8 +175,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         matchCount: 5,
       });
 
-      // 9. Generate Ghost Notes (Pro/Executive plans only)
-      if (similarInsights.length > 0 && typedProfile.plan !== "free") {
+      // 9. Generate Ghost Notes
+      if (similarInsights.length > 0) {
         const ghostCandidates = await generateGhostNotes({
           newInsight: {
             title: insight.title,

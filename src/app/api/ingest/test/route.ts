@@ -26,7 +26,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No profiles found", debug }, { status: 404 });
   }
 
-  // Step 2: Fix wrong domain if needed
+  // Step 2: Upgrade plan to pro if still on free
+  if (profile.plan === "free") {
+    const { error: planErr } = await service
+      .from("profiles")
+      .update({ plan: "pro" })
+      .eq("id", profile.id);
+    debug.plan_upgrade = planErr ? `FAILED: ${planErr.message}` : "free → pro";
+    profile.plan = "pro";
+  } else {
+    debug.plan_upgrade = `already ${profile.plan}`;
+  }
+
+  // Step 3: Fix wrong domain if needed
   if (profile.ingest_email.includes("lingarnew.vercel.app")) {
     const fixed = profile.ingest_email.replace("lingarnew.vercel.app", "lingar.app");
     const { error: fixErr } = await service
