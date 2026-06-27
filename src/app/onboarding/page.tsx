@@ -34,6 +34,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(true);
 
   // Setup form state
+  const [showSetupForm, setShowSetupForm] = useState(false);
   const [step, setStep] = useState<"setup" | "done">("setup");
   const [displayName, setDisplayName] = useState("");
   const [goals, setGoals] = useState<string[]>([]);
@@ -161,9 +162,17 @@ export default function OnboardingPage() {
               </p>
             </>
           ) : (
-            <p className="text-[12px] text-gray-300 leading-snug">
-              Complete the setup form below to get your personal ingest address.
-            </p>
+            <>
+              <p className="text-[12px] text-gray-300 leading-snug">
+                Get a personal email address to forward newsletters to. The Ghost will process them automatically.
+              </p>
+              <button
+                onClick={() => setShowSetupForm(true)}
+                className="w-full h-10 rounded-xl bg-lingar-gold text-lingar-ink text-sm font-semibold hover:bg-lingar-gold/90 transition-colors"
+              >
+                Set up ingest address
+              </button>
+            </>
           )}
         </div>
 
@@ -228,6 +237,32 @@ export default function OnboardingPage() {
     );
   }
 
+  // Setup complete (from profile page flow) — show the new ingest email then go back to profile
+  if (step === "done" && !showSetupForm && newIngestEmail && authEmail) {
+    return (
+      <div className="space-y-6 pt-2">
+        <div>
+          <p className="text-xs text-lingar-ghost uppercase tracking-widest mb-1">Profile</p>
+          <h1 className="text-2xl font-bold text-lingar-paper">
+            {profile?.display_name ?? authEmail.split("@")[0]}
+          </h1>
+          <p className="text-sm text-lingar-ghost mt-1">{profile?.email ?? authEmail}</p>
+        </div>
+        <div className="bg-lingar-surface border border-lingar-gold/30 rounded-2xl p-4 space-y-3">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-lingar-gold">Ingest address created</p>
+          <button onClick={() => copyEmail(newIngestEmail)}
+            className="w-full bg-lingar-dark border border-white/10 rounded-xl px-4 py-3 font-mono text-[12px] text-lingar-paper text-left break-all hover:border-lingar-gold/40 transition-colors">
+            {newIngestEmail}
+          </button>
+          <p className="text-[11px] text-lingar-ghost">{copied ? "✓ Copied to clipboard" : "Tap to copy"}</p>
+          <p className="text-[12px] text-gray-300">Forward newsletters to this address. The Ghost will process them automatically.</p>
+        </div>
+        <Button onClick={() => router.push(`/digest/${todaySlug()}`)}>Go to today&apos;s digest</Button>
+        <button onClick={handleLogout} className="w-full h-10 rounded-xl border border-white/10 text-sm text-lingar-ghost hover:text-lingar-red hover:border-lingar-red/40 transition-colors">Sign out</button>
+      </div>
+    );
+  }
+
   // New user — setup complete
   if (step === "done") {
     return (
@@ -258,6 +293,51 @@ export default function OnboardingPage() {
           Go to today&apos;s digest
         </Button>
       </div>
+    );
+  }
+
+  // Returning user who clicked "Set up ingest address" — show setup form
+  if (showSetupForm && step === "setup") {
+    return (
+      <form onSubmit={async (e) => { await handleSave(e); setShowSetupForm(false); }} className="max-w-md space-y-10 pt-8">
+        <div className="flex items-center gap-3 mb-2">
+          <button type="button" onClick={() => setShowSetupForm(false)} className="text-lingar-ghost text-sm">← Back</button>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-lingar-ghost mb-2">Set up ingest</p>
+          <h1 className="text-2xl font-bold text-lingar-paper">Tell the Ghost what you&apos;re building</h1>
+          <p className="text-sm text-gray-300 mt-2">This is how Lingar filters signal from noise.</p>
+        </div>
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-lingar-paper">What are you trying to do?</label>
+          <div className="flex flex-wrap gap-2">
+            {SUGGESTED_GOALS.map((goal) => (
+              <button key={goal} type="button" onClick={() => toggleGoal(goal)}
+                className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${goals.includes(goal) ? "bg-lingar-gold text-lingar-ink border-lingar-gold" : "border-white/20 text-gray-300 hover:border-white/40"}`}>
+                {goal}
+              </button>
+            ))}
+          </div>
+          <input type="text" value={customGoal} onChange={(e) => setCustomGoal(e.target.value)}
+            placeholder="Or describe your goal..."
+            className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm bg-lingar-surface2 text-lingar-paper placeholder:text-lingar-ghost focus:outline-none focus:ring-2 focus:ring-lingar-gold" />
+        </div>
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-lingar-paper">What topics are you tracking?</label>
+          <div className="flex flex-wrap gap-2">
+            {SUGGESTED_INTERESTS.map((interest) => (
+              <button key={interest} type="button" onClick={() => toggleInterest(interest)}
+                className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${interests.includes(interest) ? "bg-lingar-gold text-lingar-ink border-lingar-gold" : "border-white/20 text-gray-300 hover:border-white/40"}`}>
+                {interest}
+              </button>
+            ))}
+          </div>
+        </div>
+        <Button type="submit" disabled={saving || (goals.length === 0 && !customGoal.trim())}>
+          {saving ? "Saving..." : "Create my ingest address"}
+        </Button>
+        {saveError && <p className="text-sm text-lingar-red">{saveError}</p>}
+      </form>
     );
   }
 
