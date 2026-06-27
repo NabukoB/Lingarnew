@@ -22,10 +22,8 @@ const NAV = [
     label: "Memory",
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? "#C9A050" : "#9CA3AF"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2a5 5 0 0 1 5 5c0 1.5-.5 2.8-1.4 3.8A4 4 0 0 1 16 14c0 2.2-1.8 4-4 4s-4-1.8-4-4a4 4 0 0 1 .4-3.2A5 5 0 0 1 7 7a5 5 0 0 1 5-5z" />
-        <path d="M8 14c-1.5.5-2.5 1.5-3 3" />
-        <path d="M16 14c1.5.5 2.5 1.5 3 3" />
-        <circle cx="12" cy="19" r="1" fill={active ? "#C9A050" : "#9CA3AF"} stroke="none" />
+        <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-1.16z" />
+        <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-1.16z" />
       </svg>
     ),
   },

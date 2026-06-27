@@ -8,8 +8,8 @@ export function AppHeader() {
     <header className="bg-lingar-dark px-4 py-3 flex items-center justify-between sticky top-0 z-10 border-b border-white/5">
       <div className="flex items-center gap-3">
         <span
-          className="text-lingar-gold text-[30px] leading-none select-none"
-          style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontWeight: 400 }}
+          className="text-lingar-gold leading-none select-none"
+          style={{ fontFamily: "Georgia, serif", fontStyle: "italic", fontWeight: 300, fontSize: "52px", lineHeight: 1, letterSpacing: "-0.02em" }}
         >
           L
         </span>
