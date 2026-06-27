@@ -6,6 +6,7 @@ import { StatsRow } from "@/components/digest/StatsRow";
 import { DailyBriefCard } from "@/components/digest/DailyBriefCard";
 import { TensionMapping } from "@/components/digest/TensionMapping";
 import { SourceHealth } from "@/components/sources/SourceHealth";
+import { RefreshBriefButton } from "@/components/digest/RefreshBriefButton";
 import { todaySlug } from "@/lib/utils/date";
 import type { Digest, Insight, GhostNote as GhostNoteType, Source } from "@/types";
 
@@ -41,15 +42,21 @@ export default async function DigestPage({ params }: PageProps) {
 
   const digest = digestRow as Digest;
 
-  const [insightsRes, ghostNotesRes, sourcesRes] = await Promise.all([
+  const [insightsRes, ghostNotesRes, sourcesRes, ghostNoteCountRes] = await Promise.all([
     supabase.from("insights").select("*").in("id", digest.insight_ids).order("relevance_score", { ascending: false }),
-    supabase.from("ghost_notes").select("*").in("id", digest.ghost_note_ids).order("confidence_score", { ascending: false }),
+    digest.ghost_note_ids.length > 0
+      ? supabase.from("ghost_notes").select("*").in("id", digest.ghost_note_ids).order("confidence_score", { ascending: false })
+      : Promise.resolve({ data: [] }),
     supabase.from("sources").select("id, from_name, from_email, send_count, useful_count").eq("user_id", user.id),
+    digest.ghost_note_ids.length === 0
+      ? supabase.from("ghost_notes").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("confidence_score", 0.6)
+      : Promise.resolve({ count: 0 }),
   ]);
 
   const insights = (insightsRes.data ?? []) as Insight[];
   const ghostNotes = (ghostNotesRes.data ?? []) as GhostNoteType[];
   const sources = (sourcesRes.data ?? []) as Pick<Source, "id" | "from_name" | "from_email" | "send_count" | "useful_count">[];
+  const hasUnsyncedGhostNotes = ghostNotes.length === 0 && (ghostNoteCountRes.count ?? 0) > 0;
 
   // Compute Knowledge Health %
   const totalSend = sources.reduce((sum, s) => sum + s.send_count, 0);
@@ -111,6 +118,9 @@ export default async function DigestPage({ params }: PageProps) {
       {digest.headline && (
         <DailyBriefCard digest={digest} topTags={topTags} />
       )}
+
+      {/* Sync prompt when digest was built before ghost notes were generated */}
+      {hasUnsyncedGhostNotes && <RefreshBriefButton date={date} />}
 
       {/* Featured Ghost Note — the Ghost's top insight for today */}
       {featuredNote && <GhostNote note={featuredNote} />}
