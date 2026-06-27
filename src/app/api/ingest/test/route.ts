@@ -9,29 +9,43 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Look up the first profile and use whatever ingest_email is stored.
-  // Also fixes the domain if it was saved with the wrong one.
+  const debug: Record<string, unknown> = {};
+
+  // Step 1: Look up profile
   const service = createSupabaseServiceClient();
-  const { data: profiles } = await service
+  const { data: profiles, error: profileErr } = await service
     .from("profiles")
-    .select("id, ingest_email")
+    .select("id, ingest_email, plan, goals")
     .limit(1);
+
+  debug.profile_query_error = profileErr?.message ?? null;
+  debug.profiles_found = profiles?.length ?? 0;
 
   const profile = profiles?.[0];
   if (!profile) {
-    return NextResponse.json({ error: "No profiles found" }, { status: 404 });
+    return NextResponse.json({ error: "No profiles found", debug }, { status: 404 });
   }
 
-  // Fix wrong domain in-place if needed.
+  // Step 2: Fix wrong domain if needed
   if (profile.ingest_email.includes("lingarnew.vercel.app")) {
     const fixed = profile.ingest_email.replace("lingarnew.vercel.app", "lingar.app");
-    await service.from("profiles").update({ ingest_email: fixed }).eq("id", profile.id);
+    const { error: fixErr } = await service
+      .from("profiles")
+      .update({ ingest_email: fixed })
+      .eq("id", profile.id);
+    debug.domain_fix = fixErr ? `FAILED: ${fixErr.message}` : `fixed to ${fixed}`;
     profile.ingest_email = fixed;
   }
 
+  debug.recipient = profile.ingest_email;
+  debug.plan = profile.plan;
+  debug.goals = profile.goals;
+
+  // Step 3: Fire the ingest pipeline
   const body = new FormData();
   body.set("test_mode", process.env.CRON_SECRET!);
   body.set("recipient", profile.ingest_email);
+  body.set("sender", "editor@deeplearning.ai");
   body.set("from", "The Batch <editor@deeplearning.ai>");
   body.set("subject", "AI Weekly: The models that matter this week");
   body.set(
@@ -48,8 +62,28 @@ Key trend: frontier labs are converging on inference-time compute scaling as the
   );
 
   const ingestUrl = new URL("/api/ingest/email", req.url);
-  const res = await fetch(ingestUrl.toString(), { method: "POST", body });
-  const result = await res.json();
+  let pipelineResult: unknown = null;
+  let pipelineStatus = 0;
 
-  return NextResponse.json({ status: res.status, recipient: profile.ingest_email, result });
+  try {
+    const res = await fetch(ingestUrl.toString(), { method: "POST", body });
+    pipelineStatus = res.status;
+    pipelineResult = await res.json();
+  } catch (err) {
+    pipelineResult = { fetch_error: err instanceof Error ? err.message : String(err) };
+  }
+
+  debug.pipeline_status = pipelineStatus;
+  debug.pipeline_result = pipelineResult;
+
+  // Step 4: Count what was created
+  const [{ count: insightCount }, { count: ghostCount }] = await Promise.all([
+    service.from("insights").select("*", { count: "exact", head: true }).eq("user_id", profile.id),
+    service.from("ghost_notes").select("*", { count: "exact", head: true }).eq("user_id", profile.id),
+  ]);
+
+  debug.total_insights_in_db = insightCount;
+  debug.total_ghost_notes_in_db = ghostCount;
+
+  return NextResponse.json(debug);
 }
