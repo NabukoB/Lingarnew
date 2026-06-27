@@ -28,9 +28,13 @@ export default async function DigestPage({ params }: PageProps) {
     .single();
 
   if (!digestRow) {
-    // If today, show empty state. Otherwise 404.
     if (date === todaySlug()) {
-      return <EmptyState />;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("ingest_email")
+        .eq("id", user.id)
+        .single();
+      return <EmptyState ingestEmail={profile?.ingest_email ?? null} />;
     }
     notFound();
   }
@@ -113,7 +117,7 @@ export default async function DigestPage({ params }: PageProps) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ ingestEmail }: { ingestEmail: string | null }) {
   return (
     <div className="pt-16 space-y-4 max-w-sm">
       <p className="text-xs text-lingar-ghost uppercase tracking-widest">Today</p>
@@ -121,8 +125,13 @@ function EmptyState() {
       <p className="text-gray-600 text-sm leading-relaxed">
         Forward a newsletter to your ingest address. The Ghost will get to work.
       </p>
+      {ingestEmail && (
+        <div className="border border-lingar-ink rounded-lg px-4 py-3 bg-lingar-ink text-lingar-paper font-mono text-sm break-all">
+          {ingestEmail}
+        </div>
+      )}
       <p className="text-xs text-lingar-ghost">
-        Check your Settings for your ingest email address.
+        Copy the address above and forward any newsletter to it.
       </p>
     </div>
   );
