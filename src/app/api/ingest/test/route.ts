@@ -85,5 +85,25 @@ Key trend: frontier labs are converging on inference-time compute scaling as the
   debug.total_insights_in_db = insightCount;
   debug.total_ghost_notes_in_db = ghostCount;
 
+  // Step 5: Generate today's digest
+  const today = new Date().toISOString().slice(0, 10);
+  const digestUrl = new URL("/api/digest/generate", req.url);
+  let digestResult: unknown = null;
+  try {
+    const digestRes = await fetch(digestUrl.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.CRON_SECRET}`,
+      },
+      body: JSON.stringify({ user_id: profile.id, date: today }),
+    });
+    digestResult = await digestRes.json();
+  } catch (err) {
+    digestResult = { error: err instanceof Error ? err.message : String(err) };
+  }
+  debug.digest_result = digestResult;
+  debug.view_digest_at = `/digest/${today}`;
+
   return NextResponse.json(debug);
 }
