@@ -35,6 +35,7 @@ export default function OnboardingPage() {
   const [customGoal, setCustomGoal] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [ingestEmail, setIngestEmail] = useState("");
 
   useEffect(() => {
@@ -61,10 +62,15 @@ export default function OnboardingPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setSaveError(null);
 
     const supabase = createSupabaseBrowserClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setSaveError("Session expired. Please sign in again.");
+      setSaving(false);
+      return;
+    }
 
     const allGoals = customGoal.trim()
       ? [...goals, customGoal.trim()]
@@ -82,7 +88,9 @@ export default function OnboardingPage() {
       plan: "free",
     });
 
-    if (!error) {
+    if (error) {
+      setSaveError(error.message);
+    } else {
       setIngestEmail(ingestAddr);
       setStep("done");
     }
@@ -206,6 +214,9 @@ export default function OnboardingPage() {
       >
         {saving ? "Saving..." : "Set up my ingest address"}
       </Button>
+      {saveError && (
+        <p className="text-sm text-red-600">{saveError}</p>
+      )}
     </form>
   );
 }
