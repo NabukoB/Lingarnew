@@ -27,7 +27,7 @@ export function TensionMapping({ note, sourceA, sourceB }: Props) {
             </svg>
           </div>
           <div>
-            <p className="text-[15px] font-bold text-lingar-paper leading-snug">Tension Mapping</p>
+            <p className="text-[18px] font-bold text-lingar-paper leading-snug">Tension Mapping</p>
             <p className="text-[11px] text-gray-400">Different perspectives detected across sources.</p>
           </div>
         </div>

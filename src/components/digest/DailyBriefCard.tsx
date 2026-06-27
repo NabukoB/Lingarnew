@@ -1,20 +1,69 @@
 import Link from "next/link";
 import type { Digest } from "@/types";
 
-type PillDef = { icon: string; label: string };
+const svgBase = {
+  width: "11",
+  height: "11",
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: "2",
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+};
+
+type PillDef = { icon: React.ReactNode; label: string };
 
 function pillFor(tag: string): PillDef {
   const t = tag.toLowerCase();
   if (t.includes("world") || t.includes("global") || t.includes("geo"))
-    return { icon: "⊕", label: "World" };
+    return {
+      label: "World",
+      icon: (
+        <svg {...svgBase}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+      ),
+    };
   if (t.includes("market") || t.includes("finance") || t.includes("invest"))
-    return { icon: "↗", label: "Markets" };
+    return {
+      label: "Markets",
+      icon: (
+        <svg {...svgBase}>
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+          <polyline points="16 7 22 7 22 13" />
+        </svg>
+      ),
+    };
   if (t.includes("ai") || t.includes("tech") || t.includes("ml") || t.includes("machine"))
-    return { icon: "⚙", label: "Technology" };
+    return {
+      label: "Technology",
+      icon: (
+        <svg {...svgBase}>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+        </svg>
+      ),
+    };
   if (t.includes("startup") || t.includes("business"))
-    return { icon: "◈", label: "Business" };
-  // truncate long tags to 12 chars
-  return { icon: "●", label: tag.length > 12 ? tag.slice(0, 11) + "…" : tag };
+    return {
+      label: "Business",
+      icon: (
+        <svg {...svgBase}>
+          <rect x="2" y="7" width="20" height="14" rx="2" />
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+        </svg>
+      ),
+    };
+  return {
+    label: tag.length > 12 ? tag.slice(0, 11) + "…" : tag,
+    icon: (
+      <svg {...svgBase}>
+        <circle cx="12" cy="12" r="4" fill="currentColor" />
+      </svg>
+    ),
+  };
 }
 
 interface Props {
@@ -23,7 +72,6 @@ interface Props {
 }
 
 export function DailyBriefCard({ digest, topTags }: Props) {
-  // Deduplicate pills by label (multiple tags can map to same category)
   const pills = [...new Map(
     topTags.slice(0, 6).map(pillFor).map((p) => [p.label, p])
   ).values()].slice(0, 3);
@@ -50,7 +98,7 @@ export function DailyBriefCard({ digest, topTags }: Props) {
         </div>
 
         {/* Headline */}
-        <p className="text-[13px] text-gray-300 leading-snug line-clamp-2">
+        <p className="text-[16px] text-lingar-paper leading-snug line-clamp-3">
           {digest.headline ?? "Your intelligence brief is ready."}
         </p>
 
@@ -60,9 +108,9 @@ export function DailyBriefCard({ digest, topTags }: Props) {
             {pills.map((p, i) => (
               <span
                 key={i}
-                className="flex items-center gap-1 text-[11px] text-lingar-ghost bg-lingar-surface2 border border-white/10 px-2.5 py-1 rounded-full whitespace-nowrap"
+                className="flex items-center gap-1.5 text-[11px] text-lingar-ghost bg-lingar-surface2 border border-white/10 px-2.5 py-1 rounded-full whitespace-nowrap"
               >
-                <span className="text-[10px]">{p.icon}</span>
+                {p.icon}
                 {p.label}
               </span>
             ))}
