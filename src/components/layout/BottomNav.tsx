@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils/cn";
 
 const NAV = [
@@ -62,6 +63,17 @@ const NAV = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const [hasUnread, setHasUnread] = useState(false);
+
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (pathname.startsWith("/digest")) {
+      localStorage.setItem("last_digest_seen", today);
+      setHasUnread(false);
+    } else {
+      setHasUnread(localStorage.getItem("last_digest_seen") !== today);
+    }
+  }, [pathname]);
 
   if (pathname === "/" || pathname.startsWith("/auth")) return null;
 
@@ -85,6 +97,7 @@ export function BottomNav() {
             </Link>
           );
         }
+        const showBadge = hasUnread && item.href === "/digest";
         return (
           <Link
             key={item.label}
@@ -94,7 +107,12 @@ export function BottomNav() {
             {active && (
               <span className="absolute top-0 left-4 right-4 h-[2px] rounded-full bg-lingar-gold" />
             )}
-            {item.icon(active)}
+            <span className="relative">
+              {item.icon(active)}
+              {showBadge && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-lingar-gold border border-lingar-surface" />
+              )}
+            </span>
             <span
               className={cn(
                 "text-[10px] font-medium",

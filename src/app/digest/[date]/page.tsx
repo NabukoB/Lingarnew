@@ -96,6 +96,10 @@ export default async function DigestPage({ params }: PageProps) {
 
   const opportunityCount = ghostNotes.filter((n) => n.note_type === "opportunity").length;
 
+  // Featured note: top non-contradiction ghost note (highest confidence)
+  const featuredNote = ghostNotes.find((n) => n.note_type !== "contradiction") ?? null;
+  const remainingNotes = ghostNotes.filter((n) => n !== featuredNote);
+
   return (
     <div className="space-y-4">
       <StatsRow
@@ -108,10 +112,13 @@ export default async function DigestPage({ params }: PageProps) {
         <DailyBriefCard digest={digest} topTags={topTags} />
       )}
 
-      {/* Ghost Notes */}
-      {ghostNotes.length > 0 && (
+      {/* Featured Ghost Note — the Ghost's top insight for today */}
+      {featuredNote && <GhostNote note={featuredNote} />}
+
+      {/* Remaining Ghost Notes */}
+      {remainingNotes.length > 0 && (
         <div className="space-y-3">
-          {ghostNotes.map((note) => {
+          {remainingNotes.map((note) => {
             if (note.note_type === "contradiction") {
               const triggerData = insightMap.get(note.trigger_insight_id);
               const relatedData = note.related_insight_ids[0]

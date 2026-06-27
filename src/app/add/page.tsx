@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { todaySlug } from "@/lib/utils/date";
 
 type Tab = "paste" | "url" | "pdf";
+
+const LOADING_STEPS = [
+  "Ghost is reading…",
+  "Extracting insights…",
+  "Connecting to your history…",
+  "Building your brief…",
+];
 
 export default function AddArticlePage() {
   const router = useRouter();
@@ -15,8 +22,17 @@ export default function AddArticlePage() {
   const [url, setUrl] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [result, setResult] = useState<{ insights?: number; message?: string; error?: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!loading) { setLoadingStep(0); return; }
+    const t1 = setTimeout(() => setLoadingStep(1), 1800);
+    const t2 = setTimeout(() => setLoadingStep(2), 3600);
+    const t3 = setTimeout(() => setLoadingStep(3), 5500);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [loading]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -190,7 +206,26 @@ export default function AddArticlePage() {
           )}
         </div>
 
-        {result && (
+        {loading && (
+          <div className="flex flex-col items-center gap-3 py-2">
+            <div className="w-14 h-14 rounded-full bg-lingar-gold/10 border border-lingar-gold/20 flex items-center justify-center animate-pulse">
+              <span className="text-2xl">👻</span>
+            </div>
+            <p className="text-[14px] font-medium text-lingar-paper">{LOADING_STEPS[loadingStep]}</p>
+            <div className="flex gap-1.5">
+              {LOADING_STEPS.map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
+                    i === loadingStep ? "bg-lingar-gold" : "bg-white/20"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {result && !loading && (
           <div className={`rounded-2xl px-4 py-3 text-[13px] ${
             result.error
               ? "bg-red-500/10 text-red-400 border border-red-500/20"
@@ -211,7 +246,7 @@ export default function AddArticlePage() {
           disabled={!canSubmit}
           className="w-full bg-lingar-gold text-lingar-dark rounded-2xl py-3.5 text-[15px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {loading ? "Extracting insights…" : "Extract insights"}
+          {loading ? LOADING_STEPS[loadingStep] : "Extract insights"}
         </button>
       </form>
     </div>
