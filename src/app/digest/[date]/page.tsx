@@ -105,16 +105,10 @@ export default async function DigestPage({ params }: PageProps) {
 
   // Featured note: prefer non-contradiction; fall back to first note of any type
   const featuredNote = (ghostNotes.find((n) => n.note_type !== "contradiction") ?? ghostNotes[0]) ?? null;
-  // Cap contradictions at 3 to avoid a wall of tension cards
-  let contradictionCount = 0;
-  const remainingNotes = ghostNotes.filter((n) => {
-    if (n === featuredNote) return false;
-    if (n.note_type === "contradiction") {
-      if (contradictionCount >= 3) return false;
-      contradictionCount++;
-    }
-    return true;
-  });
+  // Show at most 2 remaining notes (3 total incl. featured) to avoid a wall before Today's Brief
+  const remainingNotes = ghostNotes
+    .filter((n) => n !== featuredNote)
+    .slice(0, 2);
 
   return (
     <div className="space-y-4">
