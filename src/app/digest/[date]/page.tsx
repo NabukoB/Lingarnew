@@ -103,8 +103,8 @@ export default async function DigestPage({ params }: PageProps) {
 
   const opportunityCount = ghostNotes.filter((n) => n.note_type === "opportunity").length;
 
-  // Featured note: top non-contradiction ghost note (highest confidence)
-  const featuredNote = ghostNotes.find((n) => n.note_type !== "contradiction") ?? null;
+  // Featured note: prefer non-contradiction; fall back to first note of any type
+  const featuredNote = (ghostNotes.find((n) => n.note_type !== "contradiction") ?? ghostNotes[0]) ?? null;
   const remainingNotes = ghostNotes.filter((n) => n !== featuredNote);
 
   return (

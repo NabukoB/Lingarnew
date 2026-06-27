@@ -35,6 +35,7 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(true);
   const [isRebuilding, startRebuild] = useTransition();
   const [rebuildStatus, setRebuildStatus] = useState<"idle" | "done" | "error">("idle");
+  const [rebuildDate, setRebuildDate] = useState<string | null>(null);
 
   // Setup form state
   const [showSetupForm, setShowSetupForm] = useState(false);
@@ -285,7 +286,12 @@ export default function OnboardingPage() {
               onClick={() =>
                 startRebuild(async () => {
                   const result = await rebuildTodaysDigest();
-                  setRebuildStatus(result?.ok ? "done" : "error");
+                  if (result?.ok) {
+                    setRebuildStatus("done");
+                    setRebuildDate(result.date ?? null);
+                  } else {
+                    setRebuildStatus("error");
+                  }
                 })
               }
               disabled={isRebuilding || rebuildStatus === "done"}
@@ -308,7 +314,7 @@ export default function OnboardingPage() {
           </div>
           {rebuildStatus === "done" && (
             <button
-              onClick={() => router.push(`/digest/${todaySlug()}`)}
+              onClick={() => router.push(`/digest/${rebuildDate ?? todaySlug()}`)}
               className="mt-3 w-full h-9 rounded-xl bg-lingar-gold text-lingar-dark text-[13px] font-semibold"
             >
               View today's brief →

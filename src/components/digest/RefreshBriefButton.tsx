@@ -1,9 +1,11 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { syncDigestGhostNotes } from "@/app/digest/[date]/actions";
 
 export function RefreshBriefButton({ date }: { date: string }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -22,7 +24,12 @@ export function RefreshBriefButton({ date }: { date: string }) {
         </div>
       </div>
       <button
-        onClick={() => startTransition(() => syncDigestGhostNotes(date))}
+        onClick={() =>
+          startTransition(async () => {
+            await syncDigestGhostNotes(date);
+            router.refresh();
+          })
+        }
         disabled={isPending}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-lingar-gold/10 border border-lingar-gold/30 text-lingar-gold text-[12px] font-semibold disabled:opacity-50 transition-opacity"
       >
