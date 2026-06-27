@@ -23,7 +23,10 @@ interface Props {
 }
 
 export function DailyBriefCard({ digest, topTags }: Props) {
-  const pills = topTags.slice(0, 3).map(pillFor);
+  // Deduplicate pills by label (multiple tags can map to same category)
+  const pills = [...new Map(
+    topTags.slice(0, 6).map(pillFor).map((p) => [p.label, p])
+  ).values()].slice(0, 3);
 
   return (
     <Link href={`/digest/${digest.slug}`} className="block">
