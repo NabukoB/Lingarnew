@@ -150,7 +150,7 @@ export default async function DigestPage({ params }: PageProps) {
                   note={note}
                   sourceA={{
                     name: triggerData?.sourceName ?? "Source A",
-                    quote: triggerData?.summary ?? note.title,
+                    quote: triggerData?.summary ?? note.body.slice(0, 120),
                   }}
                   sourceB={{
                     name: relatedData?.sourceName ?? "Source B",
