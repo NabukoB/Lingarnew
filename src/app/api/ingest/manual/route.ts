@@ -8,35 +8,112 @@ import type { Profile } from "@/types";
 
 export const runtime = "nodejs";
 
+async function fetchUrlText(url: string): Promise<{ text: string; title?: string }> {
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; Lingar/1.0)" },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) throw new Error(`Failed to fetch URL: ${res.status}`);
+  const html = await res.text();
+
+  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  const title = titleMatch?.[1]?.trim();
+
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return { text, title };
+}
+
+async function parsePdfBuffer(buffer: Buffer): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const pdfParse = require("pdf-parse") as (buf: Buffer) => Promise<{ text: string }>;
+  const data = await pdfParse(buffer);
+  return data.text;
+}
+
 export async function POST(req: NextRequest) {
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { title, text, source } = await req.json();
-  if (!text?.trim()) return NextResponse.json({ error: "No text provided" }, { status: 400 });
-
   const service = createSupabaseServiceClient();
-
   const { data: profileRow } = await service.from("profiles").select("*").eq("id", user.id).single();
   if (!profileRow) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   const profile = profileRow as Profile;
 
-  // Upsert source
-  const fromEmail = `manual@${source?.toLowerCase().replace(/\s+/g, "-") ?? "paste"}`;
+  let bodyText = "";
+  let subject = "Manual article";
+  let fromName = "Manual entry";
+  let fromEmailSlug = "paste";
+
+  const contentType = req.headers.get("content-type") ?? "";
+
+  if (contentType.includes("multipart/form-data")) {
+    const fd = await req.formData();
+    const file = fd.get("file") as File | null;
+    if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    if (file.size > 10 * 1024 * 1024) return NextResponse.json({ error: "PDF too large (max 10 MB)" }, { status: 400 });
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    try {
+      bodyText = await parsePdfBuffer(buffer);
+    } catch {
+      return NextResponse.json({ error: "Could not parse PDF" }, { status: 422 });
+    }
+
+    subject = (fd.get("title") as string | null) ?? file.name ?? "PDF upload";
+    fromName = (fd.get("source") as string | null) ?? "PDF upload";
+    fromEmailSlug = "pdf";
+  } else {
+    const body = await req.json() as { title?: string; text?: string; source?: string; url?: string };
+
+    if (body.url) {
+      try {
+        const fetched = await fetchUrlText(body.url);
+        bodyText = fetched.text;
+        subject = body.title ?? fetched.title ?? "Article";
+        fromName = body.source ?? new URL(body.url).hostname;
+        fromEmailSlug = "url";
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to fetch URL";
+        return NextResponse.json({ error: msg }, { status: 422 });
+      }
+    } else {
+      if (!body.text?.trim()) return NextResponse.json({ error: "No text provided" }, { status: 400 });
+      bodyText = body.text;
+      subject = body.title ?? "Manual article";
+      fromName = body.source ?? "Manual entry";
+      fromEmailSlug = "paste";
+    }
+  }
+
+  if (!bodyText.trim()) return NextResponse.json({ error: "No text could be extracted" }, { status: 400 });
+
+  const fromEmail = `manual-${fromEmailSlug}@lingar.internal`;
+
   const { data: sourceRow } = await service.from("sources").upsert(
-    { user_id: user.id, from_email: fromEmail, from_name: source ?? "Manual entry", last_seen_at: new Date().toISOString() },
+    { user_id: user.id, from_email: fromEmail, from_name: fromName, last_seen_at: new Date().toISOString() },
     { onConflict: "user_id,from_email" }
   ).select("id").single();
 
-  // Store raw email
   const { data: rawEmail } = await service.from("raw_emails").insert({
     user_id: user.id,
     source_id: sourceRow?.id ?? null,
     from_email: fromEmail,
-    from_name: source ?? "Manual entry",
-    subject: title ?? "Manual article",
-    body_text: text,
+    from_name: fromName,
+    subject,
+    body_text: bodyText,
     received_at: new Date().toISOString(),
   }).select("id").single();
 
@@ -44,9 +121,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const extracted = await extractInsights({
-      subject: title ?? "Manual article",
-      bodyText: text,
-      fromName: source ?? "Manual entry",
+      subject,
+      bodyText,
+      fromName,
       userGoals: profile.goals,
       userInterests: profile.interests,
     });
