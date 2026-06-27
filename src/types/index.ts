@@ -113,6 +113,26 @@ export interface SynthesisResult {
   similarity: number;
 }
 
+export interface SynthesisNodeNote {
+  id: string;
+  note_type: GhostNoteType;
+  title: string;
+  body: string;
+  confidence_score: number;
+  created_at: string;
+}
+
+export interface SynthesisNode {
+  tag: string;
+  insightCount: number;
+  dominantType: GhostNoteType | null;
+  topGhostNotes: SynthesisNodeNote[];
+}
+
+export interface SynthesisNodesResponse {
+  nodes: SynthesisNode[];
+}
+
 export interface SynthesisQueryResponse {
   notes: SynthesisResult[];
   query_id: string;

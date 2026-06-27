@@ -1,22 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { GhostNote } from "@/components/digest/GhostNote";
 import type { SynthesisQueryResponse, GhostNote as GhostNoteType } from "@/types";
 
 export function SynthesisQueryBox() {
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q") ?? "";
+
+  const [query, setQuery] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<GhostNoteType[]>([]);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const didAutoSubmit = useRef(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!query.trim()) return;
+  // Auto-submit when arriving from a node CTA link
+  useEffect(() => {
+    if (initialQuery && !didAutoSubmit.current) {
+      didAutoSubmit.current = true;
+      void runQuery(initialQuery);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  async function runQuery(q: string) {
+    if (!q.trim()) return;
     setLoading(true);
     setError(null);
     setResults([]);
@@ -25,7 +37,7 @@ export function SynthesisQueryBox() {
       const res = await fetch("/api/synthesis/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query: q }),
       });
 
       if (!res.ok) throw new Error("Query failed");
@@ -46,6 +58,11 @@ export function SynthesisQueryBox() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await runQuery(query);
   }
 
   return (
