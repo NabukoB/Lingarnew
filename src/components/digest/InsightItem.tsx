@@ -45,16 +45,6 @@ export function InsightItem({ insight }: { insight: Insight }) {
         </div>
       )}
 
-      {insight.why_it_matters && (
-        <div className="pt-1 border-t border-white/10">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-lingar-gold mb-1">
-            Why it matters
-          </p>
-          <p className="text-[12px] text-gray-300 leading-snug line-clamp-3">
-            {insight.why_it_matters}
-          </p>
-        </div>
-      )}
     </article>
   );
 }

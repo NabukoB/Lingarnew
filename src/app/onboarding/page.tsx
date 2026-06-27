@@ -118,7 +118,7 @@ export default function OnboardingPage() {
   }
 
   // Returning user — show profile summary with ingest email + logout
-  if (profile?.ingest_email) {
+  if (profile) {
     const ingestEmail = newIngestEmail || profile.ingest_email;
     return (
       <div className="space-y-6 pt-2">
@@ -142,18 +142,26 @@ export default function OnboardingPage() {
             </div>
             <p className="text-[13px] font-semibold text-lingar-paper">Ingest Address</p>
           </div>
-          <p className="text-[12px] text-gray-300 leading-snug">
-            Forward newsletters to this address. The Ghost will process them automatically.
-          </p>
-          <button
-            onClick={() => copyEmail(ingestEmail)}
-            className="w-full bg-lingar-dark border border-white/10 rounded-xl px-4 py-3 font-mono text-[12px] text-lingar-paper text-left break-all hover:border-lingar-gold/40 transition-colors"
-          >
-            {ingestEmail}
-          </button>
-          <p className="text-[11px] text-lingar-ghost">
-            {copied ? "✓ Copied to clipboard" : "Tap to copy"}
-          </p>
+          {ingestEmail ? (
+            <>
+              <p className="text-[12px] text-gray-300 leading-snug">
+                Forward newsletters to this address. The Ghost will process them automatically.
+              </p>
+              <button
+                onClick={() => copyEmail(ingestEmail)}
+                className="w-full bg-lingar-dark border border-white/10 rounded-xl px-4 py-3 font-mono text-[12px] text-lingar-paper text-left break-all hover:border-lingar-gold/40 transition-colors"
+              >
+                {ingestEmail}
+              </button>
+              <p className="text-[11px] text-lingar-ghost">
+                {copied ? "✓ Copied to clipboard" : "Tap to copy"}
+              </p>
+            </>
+          ) : (
+            <p className="text-[12px] text-gray-300 leading-snug">
+              Complete the setup form below to get your personal ingest address.
+            </p>
+          )}
         </div>
 
         {/* Goals */}
