@@ -25,17 +25,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const token = formData.get("token") as string | null;
   const signature = formData.get("signature") as string | null;
 
-  if (!timestamp || !token || !signature) {
-    return NextResponse.json({ error: "Missing signature fields" }, { status: 400 });
-  }
-
-  // 2. Verify Mailgun HMAC signature
-  try {
-    if (!verifyMailgunWebhook({ timestamp, token, signature })) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  // 2. Verify Mailgun HMAC signature (skip in test mode)
+  const testMode = formData.get("test_mode") === process.env.CRON_SECRET;
+  if (!testMode) {
+    if (!timestamp || !token || !signature) {
+      return NextResponse.json({ error: "Missing signature fields" }, { status: 400 });
     }
-  } catch {
-    return NextResponse.json({ error: "Signature check failed" }, { status: 401 });
+    try {
+      if (!verifyMailgunWebhook({ timestamp, token, signature })) {
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    } catch {
+      return NextResponse.json({ error: "Signature check failed" }, { status: 401 });
+    }
   }
 
   const supabase = createSupabaseServiceClient();
