@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { todaySlug } from "@/lib/utils/date";
 import { Button } from "@/components/ui/Button";
+import { rebuildTodaysDigest } from "@/app/digest/[date]/actions";
 import type { Profile } from "@/types";
 
 const SUGGESTED_GOALS = [
@@ -32,6 +33,8 @@ export default function OnboardingPage() {
   const [authEmail, setAuthEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRebuilding, startRebuild] = useTransition();
+  const [rebuildStatus, setRebuildStatus] = useState<"idle" | "done" | "error">("idle");
 
   // Setup form state
   const [showSetupForm, setShowSetupForm] = useState(false);
@@ -261,6 +264,57 @@ export default function OnboardingPage() {
             )}
           </div>
         )}
+
+        {/* Rebuild brief */}
+        <div className="bg-lingar-surface rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-lingar-gold/10 flex items-center justify-center text-lg shrink-0">
+                👻
+              </div>
+              <div>
+                <p className="text-[13px] font-semibold text-lingar-paper">
+                  {isRebuilding ? "Building brief…" : rebuildStatus === "done" ? "Brief rebuilt ✓" : "Rebuild today's brief"}
+                </p>
+                <p className="text-[11px] text-lingar-ghost mt-0.5">
+                  {rebuildStatus === "done" ? "Ghost Notes synced — check your brief" : "Syncs all Ghost Notes into today's digest"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() =>
+                startRebuild(async () => {
+                  const result = await rebuildTodaysDigest();
+                  setRebuildStatus(result?.ok ? "done" : "error");
+                })
+              }
+              disabled={isRebuilding || rebuildStatus === "done"}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-lingar-gold/10 border border-lingar-gold/30 text-lingar-gold text-[12px] font-semibold shrink-0 disabled:opacity-40 transition-opacity"
+            >
+              {isRebuilding ? (
+                <span className="w-3 h-3 rounded-full border border-lingar-gold border-t-transparent animate-spin" />
+              ) : rebuildStatus === "done" ? (
+                "✓"
+              ) : (
+                <>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                    <path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                  </svg>
+                  Rebuild
+                </>
+              )}
+            </button>
+          </div>
+          {rebuildStatus === "done" && (
+            <button
+              onClick={() => router.push(`/digest/${todaySlug()}`)}
+              className="mt-3 w-full h-9 rounded-xl bg-lingar-gold text-lingar-dark text-[13px] font-semibold"
+            >
+              View today's brief →
+            </button>
+          )}
+        </div>
 
         {/* Actions */}
         <div className="pt-2 space-y-3">
