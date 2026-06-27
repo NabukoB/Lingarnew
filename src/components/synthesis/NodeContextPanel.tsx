@@ -7,27 +7,24 @@ import type { SynthesisNode, GhostNoteType } from "@/types";
 
 const TYPE_CONFIG: Record<
   GhostNoteType,
-  { label: string; bg: string; text: string; iconBg: string; icon: string }
+  { label: string; iconBg: string; iconColor: string; icon: string }
 > = {
   connection: {
     label: "Trend",
-    bg: "bg-blue-50",
-    text: "text-blue-600",
-    iconBg: "bg-blue-100",
+    iconBg: "bg-blue-900/50",
+    iconColor: "text-blue-400",
     icon: "↗",
   },
   contradiction: {
     label: "Warning",
-    bg: "bg-amber-50",
-    text: "text-amber-600",
-    iconBg: "bg-amber-100",
+    iconBg: "bg-amber-900/50",
+    iconColor: "text-amber-400",
     icon: "⚠",
   },
   opportunity: {
     label: "Opportunity",
-    bg: "bg-emerald-50",
-    text: "text-emerald-600",
-    iconBg: "bg-emerald-100",
+    iconBg: "bg-emerald-900/50",
+    iconColor: "text-emerald-400",
     icon: "◈",
   },
 };
@@ -38,7 +35,6 @@ interface Props {
 }
 
 export function NodeContextPanel({ node, onClose }: Props) {
-  // Lock body scroll while open
   useEffect(() => {
     if (node) {
       document.body.style.overflow = "hidden";
@@ -50,7 +46,6 @@ export function NodeContextPanel({ node, onClose }: Props) {
     };
   }, [node]);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -63,7 +58,7 @@ export function NodeContextPanel({ node, onClose }: Props) {
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
+        className={`fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity duration-300 ${
           node ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
@@ -75,13 +70,13 @@ export function NodeContextPanel({ node, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-label={node?.tag ?? "Node context"}
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out max-h-[85vh] overflow-hidden flex flex-col ${
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-lingar-surface rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out max-h-[85vh] overflow-hidden flex flex-col ${
           node ? "translate-y-0" : "translate-y-full"
         }`}
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-gray-200" />
+          <div className="w-10 h-1 rounded-full bg-white/20" />
         </div>
 
         {/* Header */}
@@ -90,7 +85,7 @@ export function NodeContextPanel({ node, onClose }: Props) {
             <p className="text-[10px] font-bold uppercase tracking-widest text-lingar-ghost mb-1">
               Topic Node
             </p>
-            <h2 className="text-xl font-bold text-lingar-ink capitalize truncate">
+            <h2 className="text-xl font-bold text-lingar-paper capitalize truncate">
               {node?.tag}
             </h2>
             <p className="text-[12px] text-lingar-ghost mt-0.5">
@@ -99,7 +94,7 @@ export function NodeContextPanel({ node, onClose }: Props) {
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors shrink-0 mt-1"
+            className="w-8 h-8 rounded-full bg-lingar-surface2 flex items-center justify-center text-lingar-ghost hover:text-lingar-paper transition-colors shrink-0 mt-1"
             aria-label="Close"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -121,36 +116,30 @@ export function NodeContextPanel({ node, onClose }: Props) {
             return (
               <div
                 key={note.id}
-                className="bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden"
+                className="bg-lingar-surface2 rounded-2xl border border-white/10 overflow-hidden"
               >
                 <div className="flex items-start gap-3 p-4">
-                  <div
-                    className={`w-9 h-9 rounded-xl ${cfg.iconBg} flex items-center justify-center shrink-0 text-base`}
-                  >
+                  <div className={`w-9 h-9 rounded-xl ${cfg.iconBg} flex items-center justify-center shrink-0 text-base ${cfg.iconColor}`}>
                     {cfg.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span
-                        className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}
-                      >
+                      <span className={`text-[10px] font-bold uppercase tracking-widest ${cfg.iconColor}`}>
                         {cfg.label}
                       </span>
                       {isSpeculative && (
-                        <span className="text-[10px] text-lingar-ghost italic">
-                          speculative
-                        </span>
+                        <span className="text-[10px] text-lingar-ghost italic">speculative</span>
                       )}
                     </div>
-                    <h4 className="font-semibold text-[13px] text-lingar-ink leading-snug mb-1">
+                    <h4 className="font-semibold text-[13px] text-lingar-paper leading-snug mb-1">
                       {note.title}
                     </h4>
-                    <div className="text-[11px] text-gray-600 leading-relaxed prose prose-sm max-w-none line-clamp-3">
+                    <div className="text-[11px] text-gray-300 leading-relaxed prose prose-sm max-w-none prose-invert line-clamp-3">
                       <ReactMarkdown>{note.body}</ReactMarkdown>
                     </div>
                   </div>
                 </div>
-                <div className="px-4 py-2 border-t border-gray-100">
+                <div className="px-4 py-2 border-t border-white/10">
                   <span className="text-[10px] text-lingar-ghost">
                     {Math.round(note.confidence_score * 100)}% confidence
                   </span>
@@ -162,13 +151,13 @@ export function NodeContextPanel({ node, onClose }: Props) {
 
         {/* CTA */}
         <div
-          className="px-5 pb-safe shrink-0 border-t border-gray-100 pt-3"
+          className="px-5 shrink-0 border-t border-white/10 pt-3"
           style={{ paddingBottom: "max(20px, env(safe-area-inset-bottom))" }}
         >
           <Link
             href={`/synthesis?q=${encodeURIComponent(node?.tag ?? "")}`}
             onClick={onClose}
-            className="flex items-center justify-center gap-2 w-full h-12 rounded-2xl bg-lingar-ink text-lingar-paper text-sm font-semibold"
+            className="flex items-center justify-center gap-2 w-full h-12 rounded-2xl bg-lingar-gold text-lingar-ink text-sm font-semibold"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="7" />

@@ -18,7 +18,6 @@ export function SynthesisQueryBox() {
   const [error, setError] = useState<string | null>(null);
   const didAutoSubmit = useRef(false);
 
-  // Auto-submit when arriving from a node CTA link
   useEffect(() => {
     if (initialQuery && !didAutoSubmit.current) {
       didAutoSubmit.current = true;
@@ -73,7 +72,7 @@ export function SynthesisQueryBox() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="What has the Ghost noticed about AI agents? Or venture capital sentiment? Or anything you've been reading about..."
           rows={3}
-          className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm text-lingar-ink placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-lingar-accent resize-none"
+          className="w-full border border-white/20 rounded-xl px-4 py-3 text-sm text-lingar-paper bg-lingar-surface2 placeholder:text-lingar-ghost focus:outline-none focus:ring-2 focus:ring-lingar-gold resize-none"
         />
         <Button type="submit" disabled={loading || !query.trim()}>
           {loading ? (
@@ -87,7 +86,7 @@ export function SynthesisQueryBox() {
         </Button>
       </form>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-lingar-red">{error}</p>}
 
       {searched && results.length === 0 && !loading && (
         <p className="text-sm text-lingar-ghost">

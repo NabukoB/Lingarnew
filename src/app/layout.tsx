@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { BottomNav } from "@/components/layout/BottomNav";
 
 export const metadata: Metadata = {
@@ -18,8 +19,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
-      <body className="bg-lingar-muted text-lingar-ink font-sans antialiased min-h-screen">
-        <main className="mx-auto max-w-lg px-4 pt-6 pb-28">{children}</main>
+      <body className="bg-lingar-dark text-lingar-paper font-sans antialiased min-h-screen">
+        <AppHeader />
+        <main className="mx-auto max-w-lg px-4 pt-6 pb-24">{children}</main>
         <BottomNav />
       </body>
     </html>

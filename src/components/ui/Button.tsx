@@ -16,12 +16,11 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lingar-accent disabled:opacity-50 disabled:pointer-events-none",
-        variant === "primary" && "bg-lingar-ink text-lingar-paper hover:bg-gray-800",
-        variant === "ghost" && "text-lingar-ghost hover:text-lingar-ink hover:bg-gray-100",
-        variant === "outline" &&
-          "border border-gray-200 text-lingar-ink hover:bg-gray-50",
-        size === "md" && "h-10 px-4 text-sm",
+        "inline-flex items-center justify-center rounded-xl font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lingar-gold disabled:opacity-50 disabled:pointer-events-none",
+        variant === "primary" && "bg-lingar-gold text-lingar-ink hover:bg-lingar-gold/90",
+        variant === "ghost" && "text-lingar-ghost hover:text-lingar-paper hover:bg-lingar-surface2",
+        variant === "outline" && "border border-white/20 text-lingar-paper hover:bg-lingar-surface2",
+        size === "md" && "h-10 px-5 text-sm",
         size === "sm" && "h-8 px-3 text-xs",
         className
       )}

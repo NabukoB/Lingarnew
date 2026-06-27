@@ -6,37 +6,37 @@ import type { SynthesisNode, GhostNoteType } from "@/types";
 
 const DOMINANT_STYLES: Record<
   GhostNoteType,
-  { border: string; badge: string; badgeText: string; icon: string; iconBg: string }
+  { border: string; badge: string; badgeText: string; icon: string; iconColor: string }
 > = {
   connection: {
-    border: "border-blue-200",
-    badge: "bg-blue-100 text-blue-600",
+    border: "border-blue-500/40",
+    badge: "bg-blue-900/50 text-blue-300",
     badgeText: "Trend",
     icon: "↗",
-    iconBg: "bg-blue-100",
+    iconColor: "text-blue-400",
   },
   contradiction: {
-    border: "border-amber-200",
-    badge: "bg-amber-100 text-amber-600",
+    border: "border-amber-500/40",
+    badge: "bg-amber-900/50 text-amber-300",
     badgeText: "Tension",
     icon: "⚠",
-    iconBg: "bg-amber-100",
+    iconColor: "text-amber-400",
   },
   opportunity: {
-    border: "border-emerald-200",
-    badge: "bg-emerald-100 text-emerald-600",
+    border: "border-emerald-500/40",
+    badge: "bg-emerald-900/50 text-emerald-300",
     badgeText: "Opportunity",
     icon: "◈",
-    iconBg: "bg-emerald-100",
+    iconColor: "text-emerald-400",
   },
 };
 
 const NEUTRAL_STYLE = {
-  border: "border-gray-200",
-  badge: "bg-gray-100 text-lingar-ghost",
+  border: "border-white/10",
+  badge: "bg-lingar-surface2 text-lingar-ghost",
   badgeText: "Topic",
   icon: "○",
-  iconBg: "bg-gray-100",
+  iconColor: "text-lingar-ghost",
 };
 
 function NodeCard({
@@ -46,22 +46,18 @@ function NodeCard({
   node: SynthesisNode;
   onSelect: (node: SynthesisNode) => void;
 }) {
-  const style = node.dominantType
-    ? DOMINANT_STYLES[node.dominantType]
-    : NEUTRAL_STYLE;
+  const style = node.dominantType ? DOMINANT_STYLES[node.dominantType] : NEUTRAL_STYLE;
 
   return (
     <button
       onClick={() => onSelect(node)}
-      className={`shrink-0 w-36 h-44 rounded-2xl bg-white border ${style.border} p-4 flex flex-col justify-between text-left shadow-sm active:scale-95 transition-transform`}
+      className={`shrink-0 w-36 h-44 rounded-2xl bg-lingar-surface border ${style.border} p-4 flex flex-col justify-between text-left active:scale-95 transition-transform`}
     >
       <div>
-        <div
-          className={`w-9 h-9 rounded-xl ${style.iconBg} flex items-center justify-center text-base mb-3`}
-        >
-          {style.icon}
+        <div className="w-9 h-9 rounded-xl bg-lingar-surface2 flex items-center justify-center text-base mb-3">
+          <span className={style.iconColor}>{style.icon}</span>
         </div>
-        <p className="text-[13px] font-semibold text-lingar-ink leading-snug capitalize line-clamp-3">
+        <p className="text-[13px] font-semibold text-lingar-paper leading-snug capitalize line-clamp-3">
           {node.tag}
         </p>
       </div>
@@ -70,9 +66,7 @@ function NodeCard({
           {node.insightCount} insight{node.insightCount !== 1 ? "s" : ""}
         </p>
         {node.dominantType && (
-          <span
-            className={`inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${style.badge}`}
-          >
+          <span className={`inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full ${style.badge}`}>
             {style.badgeText}
           </span>
         )}
@@ -91,10 +85,10 @@ export function NodeCarousel({ nodes }: Props) {
   if (nodes.length === 0) {
     return (
       <div className="py-10 text-center space-y-2">
-        <div className="w-12 h-12 rounded-2xl bg-lingar-accent/10 flex items-center justify-center mx-auto text-xl">
+        <div className="w-12 h-12 rounded-2xl bg-lingar-gold/10 flex items-center justify-center mx-auto text-xl text-lingar-gold">
           ◈
         </div>
-        <p className="text-sm font-semibold text-lingar-ink">No topic nodes yet</p>
+        <p className="text-sm font-semibold text-lingar-paper">No topic nodes yet</p>
         <p className="text-[12px] text-lingar-ghost leading-snug max-w-[220px] mx-auto">
           Forward newsletters to build your knowledge graph. Topics emerge as the Ghost finds patterns.
         </p>
@@ -102,20 +96,17 @@ export function NodeCarousel({ nodes }: Props) {
     );
   }
 
-  // Split into two rows for a staggered grid feel
   const row1 = nodes.filter((_, i) => i % 2 === 0);
   const row2 = nodes.filter((_, i) => i % 2 === 1);
 
   return (
     <>
       <div className="space-y-3 -mx-4 px-4 overflow-x-auto scrollbar-hide">
-        {/* Row 1 */}
         <div className="flex gap-3 pb-1">
           {row1.map((node) => (
             <NodeCard key={node.tag} node={node} onSelect={setSelected} />
           ))}
         </div>
-        {/* Row 2 — offset to create stagger */}
         {row2.length > 0 && (
           <div className="flex gap-3 pl-[72px]">
             {row2.map((node) => (

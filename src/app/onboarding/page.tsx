@@ -52,9 +52,7 @@ export default function OnboardingPage() {
 
   function toggleInterest(interest: string) {
     setInterests((prev) =>
-      prev.includes(interest)
-        ? prev.filter((i) => i !== interest)
-        : [...prev, interest]
+      prev.includes(interest) ? prev.filter((i) => i !== interest) : [...prev, interest]
     );
   }
 
@@ -63,9 +61,7 @@ export default function OnboardingPage() {
     setSaving(true);
     setSaveError(null);
 
-    const allGoals = customGoal.trim()
-      ? [...goals, customGoal.trim()]
-      : goals;
+    const allGoals = customGoal.trim() ? [...goals, customGoal.trim()] : goals;
 
     const res = await fetch("/api/profile/setup", {
       method: "POST",
@@ -92,14 +88,14 @@ export default function OnboardingPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-lingar-ghost mb-2">
             You&apos;re set up
           </p>
-          <h1 className="text-2xl font-bold">Your ingest address</h1>
+          <h1 className="text-2xl font-bold text-lingar-paper">Your ingest address</h1>
         </div>
 
-        <div className="border border-lingar-ink rounded-lg px-5 py-4 bg-lingar-ink text-lingar-paper font-mono text-sm">
+        <div className="border border-lingar-gold/30 rounded-xl px-5 py-4 bg-lingar-surface font-mono text-sm text-lingar-paper">
           {ingestEmail}
         </div>
 
-        <div className="space-y-2 text-sm text-gray-700">
+        <div className="space-y-2 text-sm text-gray-300">
           <p>Forward newsletters and articles to this address.</p>
           <p>
             Lingar will extract insights, build context, and generate your daily
@@ -123,16 +119,16 @@ export default function OnboardingPage() {
         <p className="text-xs font-semibold uppercase tracking-widest text-lingar-ghost mb-2">
           Set up your profile
         </p>
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-2xl font-bold text-lingar-paper">
           Tell the Ghost what you&apos;re building
         </h1>
-        <p className="text-sm text-gray-600 mt-2">
+        <p className="text-sm text-gray-300 mt-2">
           This is how Lingar filters signal from noise. Be specific.
         </p>
       </div>
 
       <div className="space-y-2">
-        <label className="text-sm font-medium text-lingar-ink">
+        <label className="text-sm font-medium text-lingar-paper">
           Your name (optional)
         </label>
         <input
@@ -140,12 +136,12 @@ export default function OnboardingPage() {
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
           placeholder="First name"
-          className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lingar-accent"
+          className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm bg-lingar-surface2 text-lingar-paper placeholder:text-lingar-ghost focus:outline-none focus:ring-2 focus:ring-lingar-gold"
         />
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium text-lingar-ink">
+        <label className="text-sm font-medium text-lingar-paper">
           What are you trying to do? (pick all that apply)
         </label>
         <div className="flex flex-wrap gap-2">
@@ -156,8 +152,8 @@ export default function OnboardingPage() {
               onClick={() => toggleGoal(goal)}
               className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${
                 goals.includes(goal)
-                  ? "bg-lingar-ink text-lingar-paper border-lingar-ink"
-                  : "border-gray-200 text-gray-700 hover:border-gray-400"
+                  ? "bg-lingar-gold text-lingar-ink border-lingar-gold"
+                  : "border-white/20 text-gray-300 hover:border-white/40"
               }`}
             >
               {goal}
@@ -169,12 +165,12 @@ export default function OnboardingPage() {
           value={customGoal}
           onChange={(e) => setCustomGoal(e.target.value)}
           placeholder="Or describe your goal..."
-          className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-lingar-accent"
+          className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm bg-lingar-surface2 text-lingar-paper placeholder:text-lingar-ghost focus:outline-none focus:ring-2 focus:ring-lingar-gold"
         />
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium text-lingar-ink">
+        <label className="text-sm font-medium text-lingar-paper">
           What topics are you tracking?
         </label>
         <div className="flex flex-wrap gap-2">
@@ -185,8 +181,8 @@ export default function OnboardingPage() {
               onClick={() => toggleInterest(interest)}
               className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${
                 interests.includes(interest)
-                  ? "bg-lingar-ink text-lingar-paper border-lingar-ink"
-                  : "border-gray-200 text-gray-700 hover:border-gray-400"
+                  ? "bg-lingar-gold text-lingar-ink border-lingar-gold"
+                  : "border-white/20 text-gray-300 hover:border-white/40"
               }`}
             >
               {interest}
@@ -201,9 +197,7 @@ export default function OnboardingPage() {
       >
         {saving ? "Saving..." : "Set up my ingest address"}
       </Button>
-      {saveError && (
-        <p className="text-sm text-red-600">{saveError}</p>
-      )}
+      {saveError && <p className="text-sm text-lingar-red">{saveError}</p>}
     </form>
   );
 }

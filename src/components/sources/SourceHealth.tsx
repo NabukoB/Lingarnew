@@ -32,7 +32,7 @@ export function SourceHealth({ userId }: SourceHealthProps) {
   );
 
   return (
-    <section className="mt-10 pt-8 border-t border-gray-100">
+    <section className="mt-8 pt-6 border-t border-white/10">
       <h2 className="text-xs font-semibold uppercase tracking-widest text-lingar-ghost mb-4">
         Source Health
       </h2>
@@ -42,19 +42,16 @@ export function SourceHealth({ userId }: SourceHealthProps) {
           const ratio = signalRatio(source);
           const shouldFlag = source.unsubscribe_suggested || (source.send_count >= 5 && ratio < 0.2);
           return (
-            <div
-              key={source.id}
-              className="flex items-center gap-4 text-sm"
-            >
+            <div key={source.id} className="flex items-center gap-4 text-sm">
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-lingar-ink truncate">
+                <p className="font-medium text-lingar-paper truncate">
                   {source.from_name ?? source.from_email}
                 </p>
                 <p className="text-xs text-lingar-ghost truncate">{source.from_email}</p>
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="w-20 h-1.5 bg-lingar-surface2 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
@@ -69,8 +66,8 @@ export function SourceHealth({ userId }: SourceHealthProps) {
               </div>
 
               {shouldFlag && (
-                <span className="text-xs text-amber-600 font-medium shrink-0">
-                  Low signal — consider unsubscribing
+                <span className="text-xs text-lingar-amber font-medium shrink-0">
+                  Low signal
                 </span>
               )}
             </div>

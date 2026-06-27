@@ -16,10 +16,7 @@ interface RawGhostNote {
 
 export default async function GraphPage() {
   const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
   const { data: profile } = await supabase
@@ -32,19 +29,18 @@ export default async function GraphPage() {
     return (
       <div className="pt-8 space-y-4 max-w-md">
         <p className="text-xs text-lingar-ghost uppercase tracking-widest">Knowledge Graph</p>
-        <h1 className="text-2xl font-bold">Synthesis Layer</h1>
-        <p className="text-sm text-gray-600 leading-relaxed">
+        <h1 className="text-2xl font-bold text-lingar-paper">Memory</h1>
+        <p className="text-sm text-gray-300 leading-relaxed">
           Explore the topics and patterns the Ghost has discovered across your entire reading history.
           Tap any node to see the Ghost&apos;s sharpest observations about that topic.
         </p>
-        <p className="text-sm font-medium text-lingar-ink">
+        <p className="text-sm font-medium text-lingar-gold">
           Available on Pro and Executive plans.
         </p>
       </div>
     );
   }
 
-  // Build nodes server-side
   const [insightsRes, ghostNotesRes] = await Promise.all([
     supabase.from("insights").select("id, tags").eq("user_id", user.id),
     supabase
@@ -113,7 +109,7 @@ export default async function GraphPage() {
         <p className="text-[11px] font-bold uppercase tracking-widest text-lingar-ghost mb-1">
           Knowledge Graph
         </p>
-        <h1 className="text-2xl font-bold tracking-tight">Topic Nodes</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-lingar-paper">Memory</h1>
         <p className="text-[13px] text-lingar-ghost mt-1.5 leading-snug">
           {topNodes.length > 0
             ? `${topNodes.length} topics the Ghost has been tracking. Tap to explore.`
@@ -124,11 +120,11 @@ export default async function GraphPage() {
       <NodeCarousel nodes={topNodes} />
 
       {topNodes.length > 0 && (
-        <div className="bg-lingar-accent/5 border border-lingar-accent/20 rounded-2xl px-4 py-3">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-lingar-accent mb-1">
+        <div className="bg-lingar-surface rounded-2xl px-4 py-3">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-lingar-gold mb-1">
             How it works
           </p>
-          <p className="text-[12px] text-gray-600 leading-relaxed">
+          <p className="text-[12px] text-gray-300 leading-relaxed">
             Each node is a topic the Ghost identified across your reading history. Color indicates
             the dominant pattern: blue for emerging trends, amber for tensions, green for opportunities.
           </p>
