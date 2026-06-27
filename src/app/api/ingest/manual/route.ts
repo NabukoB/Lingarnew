@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     const fd = await req.formData();
     const file = fd.get("file") as File | null;
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    if (file.size > 10 * 1024 * 1024) return NextResponse.json({ error: "PDF too large (max 10 MB)" }, { status: 400 });
+    if (file.size > 20 * 1024 * 1024) return NextResponse.json({ error: "PDF too large (max 20 MB)" }, { status: 400 });
 
     const buffer = Buffer.from(await file.arrayBuffer());
     try {

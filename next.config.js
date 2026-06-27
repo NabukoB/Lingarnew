@@ -5,6 +5,11 @@ const nextConfig = {
       { protocol: "https", hostname: "**.lingar.app" },
     ],
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "21mb",
+    },
+  },
 };
 
 module.exports = nextConfig;

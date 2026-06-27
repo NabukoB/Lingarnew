@@ -175,7 +175,7 @@ export default function AddArticlePage() {
                   <div className="space-y-2">
                     <div className="text-2xl">📄</div>
                     <p className="text-[14px]">Tap to select a PDF</p>
-                    <p className="text-[12px]">Up to 10 MB</p>
+                    <p className="text-[12px]">Up to 20 MB</p>
                   </div>
                 )}
               </button>
