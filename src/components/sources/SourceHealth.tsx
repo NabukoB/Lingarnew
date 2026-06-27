@@ -87,5 +87,5 @@ export function SourceHealth({ userId }: SourceHealthProps) {
 
 function signalRatio(source: Source): number {
   if (source.send_count === 0) return 1;
-  return source.useful_count / source.send_count;
+  return Math.min(source.useful_count / source.send_count, 1);
 }

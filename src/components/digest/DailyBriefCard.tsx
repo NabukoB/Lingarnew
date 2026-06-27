@@ -1,84 +1,20 @@
 import Link from "next/link";
 import type { Digest } from "@/types";
 
-const TAG_ICONS: Record<string, { svg: React.ReactNode; label: string }> = {
-  ai: {
-    label: "Technology",
-    svg: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
-      </svg>
-    ),
-  },
-  technology: {
-    label: "Technology",
-    svg: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
-      </svg>
-    ),
-  },
-  world: {
-    label: "World",
-    svg: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-      </svg>
-    ),
-  },
-  global: {
-    label: "World",
-    svg: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-      </svg>
-    ),
-  },
-  markets: {
-    label: "Markets",
-    svg: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-        <polyline points="17 6 23 6 23 12" />
-      </svg>
-    ),
-  },
-  finance: {
-    label: "Markets",
-    svg: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-        <polyline points="17 6 23 6 23 12" />
-      </svg>
-    ),
-  },
-  investing: {
-    label: "Markets",
-    svg: (
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-        <polyline points="17 6 23 6 23 12" />
-      </svg>
-    ),
-  },
-};
+type PillDef = { icon: string; label: string };
 
-const DEFAULT_ICON = (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="8" x2="12" y2="16" />
-    <line x1="8" y1="12" x2="16" y2="12" />
-  </svg>
-);
-
-function pillConfig(tag: string): { svg: React.ReactNode; label: string } {
-  const lower = tag.toLowerCase();
-  const key = Object.keys(TAG_ICONS).find((k) => lower.includes(k));
-  return key ? TAG_ICONS[key]! : { svg: DEFAULT_ICON, label: tag };
+function pillFor(tag: string): PillDef {
+  const t = tag.toLowerCase();
+  if (t.includes("world") || t.includes("global") || t.includes("geo"))
+    return { icon: "⊕", label: "World" };
+  if (t.includes("market") || t.includes("finance") || t.includes("invest"))
+    return { icon: "↗", label: "Markets" };
+  if (t.includes("ai") || t.includes("tech") || t.includes("ml") || t.includes("machine"))
+    return { icon: "⚙", label: "Technology" };
+  if (t.includes("startup") || t.includes("business"))
+    return { icon: "◈", label: "Business" };
+  // truncate long tags to 12 chars
+  return { icon: "●", label: tag.length > 12 ? tag.slice(0, 11) + "…" : tag };
 }
 
 interface Props {
@@ -87,9 +23,12 @@ interface Props {
 }
 
 export function DailyBriefCard({ digest, topTags }: Props) {
+  const pills = topTags.slice(0, 3).map(pillFor);
+
   return (
     <Link href={`/digest/${digest.slug}`} className="block">
       <div className="bg-lingar-surface rounded-2xl p-4 flex flex-col gap-3">
+        {/* Header row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-lingar-surface2 border border-lingar-gold/30 flex items-center justify-center shrink-0">
@@ -107,24 +46,23 @@ export function DailyBriefCard({ digest, topTags }: Props) {
           </svg>
         </div>
 
+        {/* Headline */}
         <p className="text-[13px] text-gray-300 leading-snug line-clamp-2">
           {digest.headline ?? "Your intelligence brief is ready."}
         </p>
 
-        {topTags.length > 0 && (
-          <div className="flex gap-2 flex-wrap">
-            {topTags.slice(0, 3).map((tag) => {
-              const cfg = pillConfig(tag);
-              return (
-                <span
-                  key={tag}
-                  className="flex items-center gap-1.5 text-[11px] text-lingar-ghost bg-lingar-surface2 border border-white/10 px-2.5 py-1 rounded-full"
-                >
-                  <span className="text-lingar-ghost">{cfg.svg}</span>
-                  <span className="capitalize">{cfg.label !== tag ? cfg.label : tag}</span>
-                </span>
-              );
-            })}
+        {/* Pills — single row */}
+        {pills.length > 0 && (
+          <div className="flex gap-2">
+            {pills.map((p, i) => (
+              <span
+                key={i}
+                className="flex items-center gap-1 text-[11px] text-lingar-ghost bg-lingar-surface2 border border-white/10 px-2.5 py-1 rounded-full whitespace-nowrap"
+              >
+                <span className="text-[10px]">{p.icon}</span>
+                {p.label}
+              </span>
+            ))}
           </div>
         )}
       </div>
