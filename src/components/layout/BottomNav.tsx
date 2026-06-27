@@ -28,6 +28,17 @@ const NAV = [
     ),
   },
   {
+    href: "/add",
+    label: "Add",
+    icon: (_active: boolean) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    ),
+    isCenter: true,
+  },
+  {
     href: "/synthesis",
     label: "Notes",
     icon: (active: boolean) => (
@@ -61,6 +72,19 @@ export function BottomNav() {
     >
       {NAV.map((item) => {
         const active = pathname.startsWith(item.href);
+        if (item.isCenter) {
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="flex flex-col items-center justify-center gap-1 pt-3 pb-2 px-3 min-w-[56px] relative"
+            >
+              <span className="w-10 h-10 rounded-full bg-lingar-gold flex items-center justify-center shadow-lg">
+                {item.icon(active)}
+              </span>
+            </Link>
+          );
+        }
         return (
           <Link
             key={item.label}
