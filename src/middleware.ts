@@ -46,6 +46,6 @@ export const config = {
   // Exclude static assets and the Mailgun inbound webhook from middleware.
   // The webhook authenticates via HMAC signature, not session cookies.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/ingest).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/ingest|auth/callback).*)",
   ],
 };
