@@ -1,64 +1,65 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
-import { cn } from "@/lib/utils/cn";
 import type { GhostNote as GhostNoteType, GhostNoteType as NoteType } from "@/types";
 
-const NOTE_CONFIG: Record<
-  NoteType,
-  { label: string; borderColor: string; labelColor: string; icon: string }
-> = {
+const NOTE_CONFIG: Record<NoteType, { label: string; bg: string; text: string; iconBg: string; icon: string }> = {
   connection: {
-    label: "Pattern Detected",
-    borderColor: "border-blue-400",
-    labelColor: "text-blue-600",
-    icon: "⟳",
+    label: "Trend",
+    bg: "bg-blue-50",
+    text: "text-blue-600",
+    iconBg: "bg-blue-100",
+    icon: "↗",
   },
   contradiction: {
-    label: "Contradiction Spotted",
-    borderColor: "border-amber-400",
-    labelColor: "text-amber-600",
-    icon: "⚡",
+    label: "Warning",
+    bg: "bg-amber-50",
+    text: "text-amber-600",
+    iconBg: "bg-amber-100",
+    icon: "⚠",
   },
   opportunity: {
-    label: "Opportunity Identified",
-    borderColor: "border-emerald-400",
-    labelColor: "text-emerald-600",
+    label: "Opportunity",
+    bg: "bg-emerald-50",
+    text: "text-emerald-600",
+    iconBg: "bg-emerald-100",
     icon: "◈",
   },
 };
 
-interface GhostNoteProps {
-  note: GhostNoteType;
-}
-
-export function GhostNote({ note }: GhostNoteProps) {
+export function GhostNote({ note }: { note: GhostNoteType }) {
   const config = NOTE_CONFIG[note.note_type];
+  const isSpeculative = note.confidence_score < 0.7;
 
   return (
-    <article
-      className={cn(
-        "border-l-4 pl-5 py-1 space-y-2",
-        config.borderColor
-      )}
-    >
-      <div className="flex items-center gap-2">
-        <span className={cn("text-xs font-semibold uppercase tracking-widest", config.labelColor)}>
-          {config.icon} {config.label}
-        </span>
-        <span className="text-xs text-lingar-ghost ml-auto">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="flex items-start gap-3 p-4">
+        <div className={`w-10 h-10 rounded-xl ${config.iconBg} flex items-center justify-center shrink-0 text-lg`}>
+          {config.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${config.bg} ${config.text}`}>
+              {config.label}
+            </span>
+            {isSpeculative && (
+              <span className="text-[10px] text-lingar-ghost italic">speculative</span>
+            )}
+          </div>
+          <h4 className="font-semibold text-[14px] text-lingar-ink leading-snug mb-1">
+            {note.title}
+          </h4>
+          <div className="text-[12px] text-gray-600 leading-relaxed prose prose-sm max-w-none">
+            <ReactMarkdown>{note.body}</ReactMarkdown>
+          </div>
+        </div>
+      </div>
+      <div className="px-4 py-2 border-t border-gray-50 flex items-center justify-between">
+        <span className="text-[10px] text-lingar-ghost">
           {Math.round(note.confidence_score * 100)}% confidence
-          {note.confidence_score < 0.7 && (
-            <span className="ml-1 italic">(speculative)</span>
-          )}
         </span>
+        <span className="text-[11px] text-lingar-accent font-medium">View →</span>
       </div>
-
-      <h4 className="font-semibold text-lingar-ink leading-snug">{note.title}</h4>
-
-      <div className="prose prose-sm prose-gray max-w-none text-gray-700">
-        <ReactMarkdown>{note.body}</ReactMarkdown>
-      </div>
-    </article>
+    </div>
   );
 }

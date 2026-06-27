@@ -10,12 +10,15 @@ interface PageProps {
   params: { date: string };
 }
 
+function greeting(name: string | null | undefined) {
+  const hour = new Date().getHours();
+  const time = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";
+  return `Good ${time}${name ? `, ${name}` : ""}`;
+}
+
 export default async function DigestPage({ params }: PageProps) {
   const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/");
 
   const { date } = params;
@@ -31,10 +34,10 @@ export default async function DigestPage({ params }: PageProps) {
     if (date === todaySlug()) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("ingest_email")
+        .select("ingest_email, display_name")
         .eq("id", user.id)
         .single();
-      return <EmptyState ingestEmail={profile?.ingest_email ?? null} />;
+      return <EmptyState ingestEmail={profile?.ingest_email ?? null} name={profile?.display_name} />;
     }
     notFound();
   }
@@ -42,21 +45,9 @@ export default async function DigestPage({ params }: PageProps) {
   const digest = digestRow as Digest;
 
   const [insightsRes, ghostNotesRes, profileRes] = await Promise.all([
-    supabase
-      .from("insights")
-      .select("*")
-      .in("id", digest.insight_ids)
-      .order("relevance_score", { ascending: false }),
-    supabase
-      .from("ghost_notes")
-      .select("*")
-      .in("id", digest.ghost_note_ids)
-      .order("confidence_score", { ascending: false }),
-    supabase
-      .from("profiles")
-      .select("display_name, plan")
-      .eq("id", user.id)
-      .single(),
+    supabase.from("insights").select("*").in("id", digest.insight_ids).order("relevance_score", { ascending: false }),
+    supabase.from("ghost_notes").select("*").in("id", digest.ghost_note_ids).order("confidence_score", { ascending: false }),
+    supabase.from("profiles").select("display_name, plan").eq("id", user.id).single(),
   ]);
 
   const insights = (insightsRes.data ?? []) as Insight[];
@@ -64,25 +55,38 @@ export default async function DigestPage({ params }: PageProps) {
   const profile = profileRes.data;
 
   return (
-    <div className="space-y-12">
-      {/* Header */}
-      <div>
-        <p className="text-xs text-lingar-ghost uppercase tracking-widest mb-1">
-          {formatDigestDate(date)}
-          {profile?.display_name ? ` · ${profile.display_name}` : ""}
-        </p>
-        <h1 className="text-2xl font-bold leading-snug tracking-tight">
-          {digest.headline ?? "Your daily brief"}
-        </h1>
+    <div className="space-y-6">
+      {/* Greeting */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{greeting(profile?.display_name)} 👋</h1>
+          <p className="text-[13px] text-lingar-ghost mt-1">
+            {formatDigestDate(date)} · {insights.length} insight{insights.length !== 1 ? "s" : ""} waiting
+          </p>
+        </div>
+        <div className="w-10 h-10 rounded-full bg-lingar-accent flex items-center justify-center text-white font-bold text-sm shrink-0">
+          {(profile?.display_name?.[0] ?? user.email?.[0] ?? "L").toUpperCase()}
+        </div>
       </div>
+
+      {/* Headline */}
+      {digest.headline && (
+        <div className="bg-lingar-accent/5 border border-lingar-accent/20 rounded-2xl px-4 py-3">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-lingar-accent mb-1">Today&apos;s theme</p>
+          <p className="text-[14px] font-semibold text-lingar-ink leading-snug">{digest.headline}</p>
+        </div>
+      )}
 
       {/* Insights */}
       {insights.length > 0 && (
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-lingar-ghost mb-4">
-            Intelligence ({insights.length})
-          </h2>
-          <div className="space-y-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-lingar-ghost">
+              Today&apos;s Brief
+            </h2>
+            <span className="text-[11px] text-lingar-ghost">{insights.length} items</span>
+          </div>
+          <div className="space-y-3">
             {insights.map((insight) => (
               <InsightItem key={insight.id} insight={insight} />
             ))}
@@ -90,25 +94,29 @@ export default async function DigestPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Ghost Notes */}
+      {/* Ghost Notes / Opportunity Feed */}
       {ghostNotes.length > 0 ? (
         <section>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-lingar-ghost mb-4">
-            From the Ghost ({ghostNotes.length})
-          </h2>
-          <div className="space-y-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-lingar-ghost">
+              Opportunity Feed
+            </h2>
+            <span className="text-[11px] text-lingar-accent font-medium">From the Ghost</span>
+          </div>
+          <div className="space-y-3">
             {ghostNotes.map((note) => (
               <GhostNote key={note.id} note={note} />
             ))}
           </div>
         </section>
       ) : profile?.plan === "free" ? (
-        <section className="border border-dashed border-gray-200 rounded-lg p-6 text-center space-y-2">
-          <p className="text-sm font-medium text-lingar-ink">Ghost Notes are a Pro feature</p>
-          <p className="text-sm text-lingar-ghost">
-            Upgrade to see the patterns, contradictions, and opportunities the Ghost has spotted in your reading history.
+        <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-5 text-center space-y-2">
+          <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center mx-auto text-lg">◈</div>
+          <p className="text-[13px] font-semibold text-lingar-ink">Ghost Notes are a Pro feature</p>
+          <p className="text-[12px] text-lingar-ghost leading-snug">
+            Upgrade to see patterns, contradictions, and opportunities the Ghost spots in your reading history.
           </p>
-        </section>
+        </div>
       ) : null}
 
       {/* Source Health */}
@@ -117,22 +125,26 @@ export default async function DigestPage({ params }: PageProps) {
   );
 }
 
-function EmptyState({ ingestEmail }: { ingestEmail: string | null }) {
+function EmptyState({ ingestEmail, name }: { ingestEmail: string | null; name?: string | null }) {
   return (
-    <div className="pt-16 space-y-4 max-w-sm">
-      <p className="text-xs text-lingar-ghost uppercase tracking-widest">Today</p>
-      <h1 className="text-2xl font-bold">Nothing yet.</h1>
-      <p className="text-gray-600 text-sm leading-relaxed">
-        Forward a newsletter to your ingest address. The Ghost will get to work.
-      </p>
-      {ingestEmail && (
-        <div className="border border-lingar-ink rounded-lg px-4 py-3 bg-lingar-ink text-lingar-paper font-mono text-sm break-all">
-          {ingestEmail}
-        </div>
-      )}
-      <p className="text-xs text-lingar-ghost">
-        Copy the address above and forward any newsletter to it.
-      </p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">{greeting(name)} 👋</h1>
+        <p className="text-[13px] text-lingar-ghost mt-1">Nothing yet today.</p>
+      </div>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
+        <div className="w-10 h-10 rounded-xl bg-lingar-accent/10 flex items-center justify-center text-xl">📬</div>
+        <h2 className="font-semibold text-[15px]">Forward a newsletter</h2>
+        <p className="text-[13px] text-gray-600 leading-relaxed">
+          The Ghost will extract insights, connect them to your history, and build your brief automatically.
+        </p>
+        {ingestEmail && (
+          <div className="bg-lingar-ink rounded-xl px-4 py-3 font-mono text-[12px] text-lingar-paper break-all">
+            {ingestEmail}
+          </div>
+        )}
+        <p className="text-[11px] text-lingar-ghost">Tap and hold the address above to copy it.</p>
+      </div>
     </div>
   );
 }
