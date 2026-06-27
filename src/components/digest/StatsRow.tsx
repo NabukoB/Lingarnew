@@ -71,7 +71,7 @@ export function StatsRow({ healthPct, insightCount, opportunityCount }: Props) {
             <circle cx="12" cy="12" r="2" />
           </svg>
         </IconCircle>
-        <p className="text-[10px] text-lingar-ghost leading-snug">Active Opps</p>
+        <p className="text-[10px] text-lingar-ghost leading-snug">Active Opportunities</p>
         <p className="text-[28px] font-bold text-lingar-paper leading-none">{opportunityCount}</p>
         <Squiggle />
       </div>

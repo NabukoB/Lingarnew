@@ -19,8 +19,11 @@ export function TensionMapping({ note, sourceA, sourceB }: Props) {
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-lingar-surface2 border border-lingar-gold/30 flex items-center justify-center shrink-0">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9A050" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 3L5 8v2c0 5.25 3.5 10.17 7 11.5C16.5 20.17 20 15.25 20 10V8L12 3z" />
-              <path d="M8 12l3 3 5-5" />
+              <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+              <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+              <path d="M7 21h10" />
+              <path d="M12 3v18" />
+              <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" />
             </svg>
           </div>
           <div>

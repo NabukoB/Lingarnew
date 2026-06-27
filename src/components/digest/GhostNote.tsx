@@ -22,7 +22,7 @@ export function GhostNote({ note }: { note: GhostNoteType }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-0.5">
-            <p className="text-[15px] font-bold text-lingar-paper leading-snug">Ghost Note</p>
+            <p className="text-[22px] font-bold text-lingar-paper leading-snug">Ghost Note</p>
             <span className="text-lingar-gold text-[14px] shrink-0 mt-0.5">✦</span>
           </div>
           <p className="text-[11px] text-lingar-gold font-medium mb-2">Why this matters to you</p>

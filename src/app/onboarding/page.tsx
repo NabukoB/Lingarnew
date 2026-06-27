@@ -29,6 +29,7 @@ const SUGGESTED_INTERESTS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const [authEmail, setAuthEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,6 +51,8 @@ export default function OnboardingPage() {
         router.replace("/");
         return;
       }
+      // Gate profile view on auth, not on profile row existing
+      setAuthEmail(data.user.email ?? "");
       const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
@@ -117,18 +120,18 @@ export default function OnboardingPage() {
     );
   }
 
-  // Returning user — show profile summary with ingest email + logout
-  if (profile) {
-    const ingestEmail = newIngestEmail || profile.ingest_email;
+  // Any authenticated user → show profile view (profile row may be null for users who skipped setup)
+  if (authEmail) {
+    const ingestEmail = newIngestEmail || profile?.ingest_email;
     return (
       <div className="space-y-6 pt-2">
         {/* Header */}
         <div>
           <p className="text-xs text-lingar-ghost uppercase tracking-widest mb-1">Profile</p>
           <h1 className="text-2xl font-bold text-lingar-paper">
-            {profile.display_name ?? "Your account"}
+            {profile?.display_name ?? authEmail?.split("@")[0] ?? "Your account"}
           </h1>
-          <p className="text-sm text-lingar-ghost mt-1">{profile.email}</p>
+          <p className="text-sm text-lingar-ghost mt-1">{profile?.email ?? authEmail}</p>
         </div>
 
         {/* Ingest email */}
@@ -165,11 +168,11 @@ export default function OnboardingPage() {
         </div>
 
         {/* Goals */}
-        {profile.goals?.length > 0 && (
+        {(profile?.goals?.length ?? 0) > 0 && (
           <div className="bg-lingar-surface rounded-2xl p-4 space-y-3">
             <p className="text-[11px] font-bold uppercase tracking-widest text-lingar-ghost">Your goals</p>
             <div className="flex flex-wrap gap-2">
-              {profile.goals.map((g) => (
+              {profile!.goals.map((g) => (
                 <span key={g} className="text-[12px] px-3 py-1 rounded-full bg-lingar-surface2 text-gray-300">
                   {g}
                 </span>
@@ -179,11 +182,11 @@ export default function OnboardingPage() {
         )}
 
         {/* Interests */}
-        {profile.interests?.length > 0 && (
+        {(profile?.interests?.length ?? 0) > 0 && (
           <div className="bg-lingar-surface rounded-2xl p-4 space-y-3">
             <p className="text-[11px] font-bold uppercase tracking-widest text-lingar-ghost">Tracking</p>
             <div className="flex flex-wrap gap-2">
-              {profile.interests.map((i) => (
+              {profile!.interests.map((i) => (
                 <span key={i} className="text-[12px] px-3 py-1 rounded-full bg-lingar-surface2 text-gray-300">
                   {i}
                 </span>
@@ -193,15 +196,17 @@ export default function OnboardingPage() {
         )}
 
         {/* Plan */}
-        <div className="bg-lingar-surface rounded-2xl p-4 flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-lingar-ghost mb-1">Plan</p>
-            <p className="text-[13px] font-semibold text-lingar-paper capitalize">{profile.plan}</p>
+        {profile?.plan && (
+          <div className="bg-lingar-surface rounded-2xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-lingar-ghost mb-1">Plan</p>
+              <p className="text-[13px] font-semibold text-lingar-paper capitalize">{profile.plan}</p>
+            </div>
+            {profile.plan === "free" && (
+              <span className="text-[11px] text-lingar-gold font-medium">Upgrade →</span>
+            )}
           </div>
-          {profile.plan === "free" && (
-            <span className="text-[11px] text-lingar-gold font-medium">Upgrade →</span>
-          )}
-        </div>
+        )}
 
         {/* Actions */}
         <div className="pt-2 space-y-3">
