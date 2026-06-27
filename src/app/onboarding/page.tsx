@@ -121,6 +121,51 @@ export default function OnboardingPage() {
     );
   }
 
+  // Returning user who clicked "Set up ingest address" — show setup form before profile view
+  if (showSetupForm && step === "setup") {
+    return (
+      <form onSubmit={async (e) => { await handleSave(e); setShowSetupForm(false); }} className="max-w-md space-y-10 pt-8">
+        <div className="flex items-center gap-3 mb-2">
+          <button type="button" onClick={() => setShowSetupForm(false)} className="text-lingar-ghost text-sm">← Back</button>
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-lingar-ghost mb-2">Set up ingest</p>
+          <h1 className="text-2xl font-bold text-lingar-paper">Tell the Ghost what you&apos;re building</h1>
+          <p className="text-sm text-gray-300 mt-2">This is how Lingar filters signal from noise.</p>
+        </div>
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-lingar-paper">What are you trying to do?</label>
+          <div className="flex flex-wrap gap-2">
+            {SUGGESTED_GOALS.map((goal) => (
+              <button key={goal} type="button" onClick={() => toggleGoal(goal)}
+                className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${goals.includes(goal) ? "bg-lingar-gold text-lingar-ink border-lingar-gold" : "border-white/20 text-gray-300 hover:border-white/40"}`}>
+                {goal}
+              </button>
+            ))}
+          </div>
+          <input type="text" value={customGoal} onChange={(e) => setCustomGoal(e.target.value)}
+            placeholder="Or describe your goal..."
+            className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm bg-lingar-surface2 text-lingar-paper placeholder:text-lingar-ghost focus:outline-none focus:ring-2 focus:ring-lingar-gold" />
+        </div>
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-lingar-paper">What topics are you tracking?</label>
+          <div className="flex flex-wrap gap-2">
+            {SUGGESTED_INTERESTS.map((interest) => (
+              <button key={interest} type="button" onClick={() => toggleInterest(interest)}
+                className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${interests.includes(interest) ? "bg-lingar-gold text-lingar-ink border-lingar-gold" : "border-white/20 text-gray-300 hover:border-white/40"}`}>
+                {interest}
+              </button>
+            ))}
+          </div>
+        </div>
+        <Button type="submit" disabled={saving || (goals.length === 0 && !customGoal.trim())}>
+          {saving ? "Saving..." : "Create my ingest address"}
+        </Button>
+        {saveError && <p className="text-sm text-lingar-red">{saveError}</p>}
+      </form>
+    );
+  }
+
   // Any authenticated user → show profile view (profile row may be null for users who skipped setup)
   if (authEmail) {
     const ingestEmail = newIngestEmail || profile?.ingest_email;
@@ -293,51 +338,6 @@ export default function OnboardingPage() {
           Go to today&apos;s digest
         </Button>
       </div>
-    );
-  }
-
-  // Returning user who clicked "Set up ingest address" — show setup form
-  if (showSetupForm && step === "setup") {
-    return (
-      <form onSubmit={async (e) => { await handleSave(e); setShowSetupForm(false); }} className="max-w-md space-y-10 pt-8">
-        <div className="flex items-center gap-3 mb-2">
-          <button type="button" onClick={() => setShowSetupForm(false)} className="text-lingar-ghost text-sm">← Back</button>
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-lingar-ghost mb-2">Set up ingest</p>
-          <h1 className="text-2xl font-bold text-lingar-paper">Tell the Ghost what you&apos;re building</h1>
-          <p className="text-sm text-gray-300 mt-2">This is how Lingar filters signal from noise.</p>
-        </div>
-        <div className="space-y-3">
-          <label className="text-sm font-medium text-lingar-paper">What are you trying to do?</label>
-          <div className="flex flex-wrap gap-2">
-            {SUGGESTED_GOALS.map((goal) => (
-              <button key={goal} type="button" onClick={() => toggleGoal(goal)}
-                className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${goals.includes(goal) ? "bg-lingar-gold text-lingar-ink border-lingar-gold" : "border-white/20 text-gray-300 hover:border-white/40"}`}>
-                {goal}
-              </button>
-            ))}
-          </div>
-          <input type="text" value={customGoal} onChange={(e) => setCustomGoal(e.target.value)}
-            placeholder="Or describe your goal..."
-            className="w-full border border-white/20 rounded-xl px-3 py-2 text-sm bg-lingar-surface2 text-lingar-paper placeholder:text-lingar-ghost focus:outline-none focus:ring-2 focus:ring-lingar-gold" />
-        </div>
-        <div className="space-y-3">
-          <label className="text-sm font-medium text-lingar-paper">What topics are you tracking?</label>
-          <div className="flex flex-wrap gap-2">
-            {SUGGESTED_INTERESTS.map((interest) => (
-              <button key={interest} type="button" onClick={() => toggleInterest(interest)}
-                className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${interests.includes(interest) ? "bg-lingar-gold text-lingar-ink border-lingar-gold" : "border-white/20 text-gray-300 hover:border-white/40"}`}>
-                {interest}
-              </button>
-            ))}
-          </div>
-        </div>
-        <Button type="submit" disabled={saving || (goals.length === 0 && !customGoal.trim())}>
-          {saving ? "Saving..." : "Create my ingest address"}
-        </Button>
-        {saveError && <p className="text-sm text-lingar-red">{saveError}</p>}
-      </form>
     );
   }
 
