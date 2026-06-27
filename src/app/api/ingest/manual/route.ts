@@ -4,7 +4,9 @@ import { extractInsights } from "@/lib/ai/extract";
 import { generateEmbedding, insightToEmbedText, ghostNoteToEmbedText } from "@/lib/ai/embed";
 import { findSimilarInsights } from "@/lib/ai/search";
 import { generateGhostNotes } from "@/lib/ai/ghostnotes";
-import type { Profile } from "@/types";
+import { assembleDigest } from "@/lib/ai/digest";
+import { todaySlug } from "@/lib/utils/date";
+import type { Profile, Plan } from "@/types";
 
 export const runtime = "nodejs";
 
@@ -162,6 +164,14 @@ export async function POST(req: NextRequest) {
     }
 
     await service.from("raw_emails").update({ processed: true }).eq("id", rawEmail.id);
+
+    // Rebuild today's digest so the redirect shows the new insights immediately
+    try {
+      await assembleDigest({ userId: user.id, date: todaySlug(), plan: profile.plan as Plan });
+    } catch {
+      // Non-fatal: insights are saved even if digest rebuild fails
+    }
+
     return NextResponse.json({ insights: extracted.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
