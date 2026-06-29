@@ -1,8 +1,6 @@
 import OpenAI from "openai";
 import type { CrmAnalysis, WaMessage } from "@/types/crm";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export interface CrmAgentParams {
   messages: Array<Pick<WaMessage, "direction" | "body" | "received_at">>;
   existingContact?: {
@@ -83,6 +81,7 @@ function validateAnalysis(raw: Record<string, unknown>): CrmAnalysis {
 }
 
 export async function runCrmAgent(params: CrmAgentParams): Promise<CrmAnalysis> {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const { messages, existingContact } = params;
 
   const transcript = messages
