@@ -7,9 +7,39 @@ import type { WhatsAppWebhookPayload } from "@/lib/whatsapp/types";
 
 export const runtime = "nodejs";
 
-// GET — Meta webhook verification handshake
+// GET — Meta webhook verification handshake + ?diag=1 self-diagnostic
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
+
+  // Diagnostic mode: visit /api/whatsapp/webhook?diag=1 to check config
+  if (searchParams.get("diag") === "1") {
+    const supabase = createSupabaseServiceClient();
+    const urlSet = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const keySet = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const ownerEnv = process.env.WHATSAPP_OWNER_USER_ID ?? null;
+
+    const { data: profiles, error: profileErr } = await supabase
+      .from("profiles")
+      .select("id, email");
+
+    const { data: usersData, error: usersErr } = await supabase.auth.admin
+      .listUsers({ perPage: 5 });
+
+    return NextResponse.json({
+      config: {
+        SUPABASE_URL_set: urlSet,
+        SERVICE_ROLE_KEY_set: keySet,
+        WHATSAPP_OWNER_USER_ID: ownerEnv,
+        WHATSAPP_APP_SECRET_set: !!process.env.WHATSAPP_APP_SECRET,
+        OPENAI_KEY_set: !!process.env.OPENAI_API_KEY,
+      },
+      profiles: profileErr ? { error: profileErr.message } : profiles,
+      authUsers: usersErr
+        ? { error: usersErr.message }
+        : usersData?.users?.map((u) => ({ id: u.id, email: u.email })),
+    });
+  }
+
   const mode = searchParams.get("hub.mode");
   const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
@@ -53,34 +83,39 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Resolve owner: env var → first profile → first auth user (auto-creates profile)
   let ownerId = process.env.WHATSAPP_OWNER_USER_ID ?? null;
+  console.log("[webhook] WHATSAPP_OWNER_USER_ID env:", ownerId ?? "not set");
+  console.log("[webhook] SUPABASE_URL set:", !!process.env.NEXT_PUBLIC_SUPABASE_URL);
+  console.log("[webhook] SERVICE_ROLE_KEY set:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   if (!ownerId) {
-    const { data: firstProfile } = await supabase
+    const { data: firstProfile, error: profileErr } = await supabase
       .from("profiles")
       .select("id")
       .limit(1)
       .single();
+    console.log("[webhook] profile lookup:", firstProfile?.id ?? null, profileErr?.message ?? "ok");
     ownerId = firstProfile?.id ?? null;
   }
 
   if (!ownerId) {
-    // No profile row yet — find the first auth user and create one
-    const { data: usersData } = await supabase.auth.admin.listUsers({ perPage: 1 });
+    const { data: usersData, error: usersErr } = await supabase.auth.admin.listUsers({ perPage: 1 });
+    console.log("[webhook] auth.admin.listUsers error:", usersErr?.message ?? "ok");
     const firstUser = usersData?.users?.[0];
+    console.log("[webhook] first auth user:", firstUser?.id ?? "none");
     if (firstUser) {
-      await supabase
+      const { error: insertErr } = await supabase
         .from("profiles")
-        .insert({ id: firstUser.id, email: firstUser.email ?? null })
-        .select();
+        .insert({ id: firstUser.id, email: firstUser.email ?? null });
+      console.log("[webhook] profile insert error:", insertErr?.message ?? "ok");
       ownerId = firstUser.id;
-      console.log("Auto-created profile for owner:", firstUser.id);
     }
   }
 
   if (!ownerId) {
-    console.error("No auth users found in Supabase — log in at /login first");
+    console.error("[webhook] No auth users found — log in at /login first");
     return NextResponse.json({ status: "misconfigured" });
   }
+  console.log("[webhook] resolved ownerId:", ownerId);
 
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
@@ -128,9 +163,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           .single();
 
         if (contactError || !contact) {
-          console.error("Contact upsert error:", contactError);
+          console.error("[webhook] Contact upsert error:", JSON.stringify(contactError));
           continue;
         }
+        console.log("[webhook] contact upserted:", contact.id);
 
         // Store raw inbound message
         const { data: storedMsg, error: msgError } = await supabase
