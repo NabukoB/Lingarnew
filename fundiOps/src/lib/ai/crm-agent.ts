@@ -46,6 +46,42 @@ Rules:
 - auto_reply_message: suggest ONLY for the very first inbound from a genuinely new lead; null for all other cases; max 100 words
 - spam: marketing bots, irrelevant solicitations — set follow_up_hours to 0, auto_reply_message to null`;
 
+const VALID_CONV_TYPES = new Set(["new_lead", "existing_customer", "support", "spam", "unknown"]);
+const VALID_STAGES = new Set(["new", "contacted", "warm", "hot", "closed_won", "closed_lost"]);
+const VALID_URGENCY = new Set(["low", "medium", "high"]);
+
+function validateAnalysis(raw: Record<string, unknown>): CrmAnalysis {
+  return {
+    conv_type: VALID_CONV_TYPES.has(String(raw.conv_type))
+      ? (raw.conv_type as CrmAnalysis["conv_type"])
+      : "unknown",
+    contact_name: typeof raw.contact_name === "string" ? raw.contact_name : null,
+    business_name: typeof raw.business_name === "string" ? raw.business_name : null,
+    email: typeof raw.email === "string" ? raw.email : null,
+    interest_summary: typeof raw.interest_summary === "string" ? raw.interest_summary : "",
+    urgency: VALID_URGENCY.has(String(raw.urgency))
+      ? (raw.urgency as CrmAnalysis["urgency"])
+      : "low",
+    tags: Array.isArray(raw.tags)
+      ? raw.tags.filter((t): t is string => typeof t === "string")
+      : [],
+    lead_stage: VALID_STAGES.has(String(raw.lead_stage))
+      ? (raw.lead_stage as CrmAnalysis["lead_stage"])
+      : "new",
+    ai_summary: typeof raw.ai_summary === "string" ? raw.ai_summary : "",
+    ai_next_action: typeof raw.ai_next_action === "string" ? raw.ai_next_action : "",
+    follow_up_hours:
+      typeof raw.follow_up_hours === "number" && isFinite(raw.follow_up_hours)
+        ? raw.follow_up_hours
+        : 0,
+    follow_up_note: typeof raw.follow_up_note === "string" ? raw.follow_up_note : null,
+    auto_reply_message:
+      typeof raw.auto_reply_message === "string"
+        ? raw.auto_reply_message.slice(0, 500)
+        : null,
+  };
+}
+
 export async function runCrmAgent(params: CrmAgentParams): Promise<CrmAnalysis> {
   const { messages, existingContact } = params;
 
@@ -73,5 +109,6 @@ export async function runCrmAgent(params: CrmAgentParams): Promise<CrmAnalysis> 
   });
 
   const raw = response.choices[0]?.message?.content ?? "{}";
-  return JSON.parse(raw) as CrmAnalysis;
+  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  return validateAnalysis(parsed);
 }

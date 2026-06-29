@@ -29,16 +29,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const rawBody = Buffer.from(await req.arrayBuffer());
   const signature = req.headers.get("x-hub-signature-256");
 
-  try {
+  if (process.env.WHATSAPP_APP_SECRET) {
     if (!verifyWhatsAppSignature(rawBody, signature)) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
-  } catch (err) {
-    // WHATSAPP_APP_SECRET not configured — log and continue in dev
-    console.warn("Signature verification skipped:", err);
+  } else {
+    console.warn("WHATSAPP_APP_SECRET not set — signature verification skipped");
   }
 
-  const payload = JSON.parse(rawBody.toString()) as WhatsAppWebhookPayload;
+  let payload: WhatsAppWebhookPayload;
+  try {
+    payload = JSON.parse(rawBody.toString()) as WhatsAppWebhookPayload;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  }
 
   // Only handle whatsapp_business_account events
   if (payload.object !== "whatsapp_business_account") {
@@ -47,12 +51,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const supabase = createSupabaseServiceClient();
   const ownerId = process.env.WHATSAPP_OWNER_USER_ID ?? "1e9b0511-6ceb-436c-8b4f-9f11a01776dc";
-  const myPhoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-
-  if (!ownerId) {
-    console.error("WHATSAPP_OWNER_USER_ID not set");
-    return NextResponse.json({ status: "misconfigured" }, { status: 200 });
-  }
 
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
@@ -170,7 +168,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             .single();
 
           // Update contact with AI-extracted fields
-          await supabase
+          const { error: contactUpdateError } = await supabase
             .from("wa_contacts")
             .update({
               display_name: analysis.contact_name ?? contact.display_name,
@@ -182,6 +180,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
               updated_at: new Date().toISOString(),
             })
             .eq("id", contact.id);
+          if (contactUpdateError) {
+            console.error("Contact update error:", contactUpdateError);
+          }
 
           // Schedule follow-up if AI recommends one
           if (analysis.follow_up_hours > 0 && analysis.follow_up_note) {

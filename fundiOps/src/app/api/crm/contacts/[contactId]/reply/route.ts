@@ -30,10 +30,19 @@ export async function POST(
     return NextResponse.json({ error: "Contact not found" }, { status: 404 });
   }
 
-  const waMessageId = await sendWhatsAppMessage({
-    to: contact.wa_id,
-    body: messageBody.trim(),
-  });
+  let waMessageId: string;
+  try {
+    waMessageId = await sendWhatsAppMessage({
+      to: contact.wa_id,
+      body: messageBody.trim(),
+    });
+  } catch (err) {
+    console.error("WhatsApp send error:", err);
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to send WhatsApp message" },
+      { status: 502 }
+    );
+  }
 
   const { data: msg, error: msgError } = await supabase
     .from("wa_messages")

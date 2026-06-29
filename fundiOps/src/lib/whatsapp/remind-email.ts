@@ -36,7 +36,7 @@ export async function sendFollowUpReminderEmail({
     text: `Follow-up for ${contactName}\n\n${note}\n\nDue: ${dueLabel}\n\n${contactUrl}`,
   });
 
-  await fetch(`https://api.mailgun.net/v3/${domain}/messages`, {
+  const res = await fetch(`https://api.mailgun.net/v3/${domain}/messages`, {
     method: "POST",
     headers: {
       Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString("base64")}`,
@@ -44,4 +44,9 @@ export async function sendFollowUpReminderEmail({
     },
     body: body.toString(),
   });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Mailgun error ${res.status}: ${text}`);
+  }
 }
