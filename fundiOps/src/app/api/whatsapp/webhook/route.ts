@@ -41,7 +41,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const supabase = createSupabaseServiceClient();
-  const ownerId = process.env.WHATSAPP_OWNER_USER_ID;
+  const ownerId = process.env.WHATSAPP_OWNER_USER_ID ?? "1e9b0511-6ceb-436c-8b4f-9f11a01776dc";
   const myPhoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
   if (!ownerId) {
