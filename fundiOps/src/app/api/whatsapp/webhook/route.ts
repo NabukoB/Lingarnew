@@ -88,6 +88,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   console.log("[webhook] resolved ownerId:", ownerId);
 
+  // Fetch CRM settings once per webhook call — result is identical for every message
+  const { data: settings } = await supabase
+    .from("crm_settings")
+    .select("auto_reply_global")
+    .eq("user_id", ownerId)
+    .maybeSingle();
+
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
       const value = change.value;
@@ -186,14 +193,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             },
           });
 
-          // Upsert CRM lead
+          // Upsert CRM lead — preserve existing stage if AI parse failed (null)
           const { data: lead } = await supabase
             .from("crm_leads")
             .upsert(
               {
                 user_id: ownerId,
                 contact_id: contact.id,
-                stage: analysis.lead_stage,
+                stage: analysis.lead_stage ?? existingLead?.stage ?? "new",
                 conv_type: analysis.conv_type,
                 ai_summary: analysis.ai_summary,
                 ai_next_action: analysis.ai_next_action,
@@ -204,7 +211,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             .select("id")
             .single();
 
-          // Update contact with AI-extracted fields
+          // Update contact with AI-extracted fields; skip urgency if AI parse failed
           const { error: contactUpdateError } = await supabase
             .from("wa_contacts")
             .update({
@@ -212,7 +219,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
               business_name: analysis.business_name,
               email: analysis.email,
               interest_summary: analysis.interest_summary,
-              urgency: analysis.urgency,
+              ...(analysis.urgency !== null && { urgency: analysis.urgency }),
               tags: analysis.tags,
               updated_at: new Date().toISOString(),
             })
@@ -236,13 +243,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
               status: "pending",
             });
           }
-
-          // Fetch CRM settings for auto-reply check
-          const { data: settings } = await supabase
-            .from("crm_settings")
-            .select("auto_reply_global")
-            .eq("user_id", ownerId)
-            .maybeSingle();
 
           const shouldAutoReply =
             (settings?.auto_reply_global || contact.auto_reply) &&

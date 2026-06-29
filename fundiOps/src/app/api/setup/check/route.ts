@@ -37,8 +37,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     if (!profileIds.has(user.id)) {
       const { error } = await supabase
         .from("profiles")
-        .insert({ id: user.id, email: user.email })
-        .select();
+        .insert({ id: user.id, email: user.email });
       if (!error) created.push(user.id);
       else console.error("Profile create error for", user.id, error);
     }

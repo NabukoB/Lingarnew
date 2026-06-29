@@ -4,7 +4,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/crm";
+  // Only allow relative paths to prevent open redirect
+  const rawNext = searchParams.get("next") ?? "/crm";
+  const next = rawNext.startsWith("/") ? rawNext : "/crm";
 
   if (code) {
     const supabase = createSupabaseServerClient();
@@ -12,7 +14,7 @@ export async function GET(req: NextRequest) {
     if (error) {
       console.error("Auth exchange error:", error.message);
       return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent(error.message)}`, req.url)
+        new URL("/login?error=Authentication+failed", req.url)
       );
     }
   }

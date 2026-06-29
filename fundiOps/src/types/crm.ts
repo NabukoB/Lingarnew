@@ -91,9 +91,9 @@ export interface CrmAnalysis {
   business_name: string | null;
   email: string | null;
   interest_summary: string | null;
-  urgency: UrgencyLevel;
+  urgency: UrgencyLevel | null;
   tags: string[];
-  lead_stage: LeadStage;
+  lead_stage: LeadStage | null;
   ai_summary: string;
   ai_next_action: string;
   follow_up_hours: number;

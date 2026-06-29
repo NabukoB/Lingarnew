@@ -52,22 +52,22 @@ const VALID_URGENCY = new Set(["low", "medium", "high"]);
 
 function validateAnalysis(raw: Record<string, unknown>): CrmAnalysis {
   return {
-    conv_type: VALID_CONV_TYPES.has(String(raw.conv_type))
+    conv_type: typeof raw.conv_type === "string" && VALID_CONV_TYPES.has(raw.conv_type)
       ? (raw.conv_type as CrmAnalysis["conv_type"])
       : "unknown",
     contact_name: typeof raw.contact_name === "string" ? raw.contact_name : null,
     business_name: typeof raw.business_name === "string" ? raw.business_name : null,
     email: typeof raw.email === "string" ? raw.email : null,
     interest_summary: typeof raw.interest_summary === "string" ? raw.interest_summary : "",
-    urgency: VALID_URGENCY.has(String(raw.urgency))
+    urgency: typeof raw.urgency === "string" && VALID_URGENCY.has(raw.urgency)
       ? (raw.urgency as CrmAnalysis["urgency"])
-      : "low",
+      : null,
     tags: Array.isArray(raw.tags)
       ? raw.tags.filter((t): t is string => typeof t === "string")
       : [],
-    lead_stage: VALID_STAGES.has(String(raw.lead_stage))
+    lead_stage: typeof raw.lead_stage === "string" && VALID_STAGES.has(raw.lead_stage)
       ? (raw.lead_stage as CrmAnalysis["lead_stage"])
-      : "new",
+      : null,
     ai_summary: typeof raw.ai_summary === "string" ? raw.ai_summary : "",
     ai_next_action: typeof raw.ai_next_action === "string" ? raw.ai_next_action : "",
     follow_up_hours:

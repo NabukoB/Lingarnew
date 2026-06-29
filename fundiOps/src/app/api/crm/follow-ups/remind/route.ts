@@ -29,13 +29,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Resolve user emails once for all unique user_ids — avoids N+1 admin API calls
+  const uniqueUserIds: string[] = Array.from(
+    new Set<string>((dueFollowUps ?? []).map((f: { user_id: string }) => f.user_id))
+  );
+  const userEmailMap = new Map<string, string>();
+  for (const userId of uniqueUserIds) {
+    const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+    if (authUser.user?.email) userEmailMap.set(userId, authUser.user.email);
+  }
+
   let processed = 0;
 
   for (const followUp of dueFollowUps ?? []) {
     try {
-      const { data: authUser } =
-        await supabase.auth.admin.getUserById(followUp.user_id);
-      const email = authUser.user?.email;
+      const email = userEmailMap.get(followUp.user_id);
 
       if (!email) {
         console.warn(`No email for user ${followUp.user_id} — follow-up ${followUp.id} skipped`);
@@ -64,6 +72,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       processed++;
     } catch (err) {
       console.error("Follow-up remind error for", followUp.id, err);
+      // Mark reminder_sent to prevent infinite retries on persistent Mailgun failures
+      await supabase
+        .from("crm_follow_ups")
+        .update({ reminder_sent: true, updated_at: now })
+        .eq("id", followUp.id);
     }
   }
 
