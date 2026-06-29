@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/crm/follow-ups/remind",
-      "schedule": "0 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
