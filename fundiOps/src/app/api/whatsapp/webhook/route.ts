@@ -50,7 +50,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const supabase = createSupabaseServiceClient();
-  const ownerId = process.env.WHATSAPP_OWNER_USER_ID ?? "1e9b0511-6ceb-436c-8b4f-9f11a01776dc";
+
+  // Resolve owner: prefer env var, fall back to first profile in DB
+  let ownerId = process.env.WHATSAPP_OWNER_USER_ID;
+  if (!ownerId) {
+    const { data: firstProfile } = await supabase
+      .from("profiles")
+      .select("id")
+      .limit(1)
+      .single();
+    ownerId = firstProfile?.id ?? null;
+  }
+  if (!ownerId) {
+    console.error("No owner profile found — run the setup check at /api/setup/check");
+    return NextResponse.json({ status: "misconfigured" });
+  }
 
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
