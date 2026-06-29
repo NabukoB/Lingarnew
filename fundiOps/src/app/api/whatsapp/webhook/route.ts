@@ -53,8 +53,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     for (const change of entry.changes ?? []) {
       const value = change.value;
 
-      // Confirm this event is for our phone number
-      if (value.metadata.phone_number_id !== myPhoneNumberId) continue;
+      // Confirm this event is for our phone number (skip check if env var not set)
+      if (myPhoneNumberId && value.metadata.phone_number_id !== myPhoneNumberId) continue;
 
       // Only process message events (not status updates)
       if (!value.messages?.length) continue;
