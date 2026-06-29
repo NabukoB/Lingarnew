@@ -51,8 +51,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const supabase = createSupabaseServiceClient();
 
-  // Resolve owner: prefer env var, fall back to first profile in DB
-  let ownerId = process.env.WHATSAPP_OWNER_USER_ID;
+  // Resolve owner: env var → first profile → first auth user (auto-creates profile)
+  let ownerId = process.env.WHATSAPP_OWNER_USER_ID ?? null;
+
   if (!ownerId) {
     const { data: firstProfile } = await supabase
       .from("profiles")
@@ -61,8 +62,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       .single();
     ownerId = firstProfile?.id ?? null;
   }
+
   if (!ownerId) {
-    console.error("No owner profile found — run the setup check at /api/setup/check");
+    // No profile row yet — find the first auth user and create one
+    const { data: usersData } = await supabase.auth.admin.listUsers({ perPage: 1 });
+    const firstUser = usersData?.users?.[0];
+    if (firstUser) {
+      await supabase
+        .from("profiles")
+        .insert({ id: firstUser.id, email: firstUser.email ?? null })
+        .select();
+      ownerId = firstUser.id;
+      console.log("Auto-created profile for owner:", firstUser.id);
+    }
+  }
+
+  if (!ownerId) {
+    console.error("No auth users found in Supabase — log in at /login first");
     return NextResponse.json({ status: "misconfigured" });
   }
 
