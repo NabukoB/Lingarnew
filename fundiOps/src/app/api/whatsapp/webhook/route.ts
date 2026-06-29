@@ -7,42 +7,9 @@ import type { WhatsAppWebhookPayload } from "@/lib/whatsapp/types";
 
 export const runtime = "nodejs";
 
-// GET — Meta webhook verification handshake + ?diag=1 self-diagnostic
+// GET — Meta webhook verification handshake
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
-
-  // Diagnostic mode: visit /api/whatsapp/webhook?diag=1 to check config
-  if (searchParams.get("diag") === "1") {
-    const supabase = createSupabaseServiceClient();
-    const urlSet = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const keySet = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const ownerEnv = process.env.WHATSAPP_OWNER_USER_ID ?? null;
-
-    const { data: profiles, error: profileErr } = await supabase
-      .from("profiles")
-      .select("id, email");
-
-    const { data: usersData, error: usersErr } = await supabase.auth.admin
-      .listUsers({ perPage: 5 });
-
-    // Show partial values so mismatches are visible without exposing full secrets
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-    return NextResponse.json({
-      config: {
-        SUPABASE_URL: url || "(not set)",
-        SERVICE_ROLE_KEY_prefix: key ? key.slice(0, 40) + "..." : "(not set)",
-        SERVICE_ROLE_KEY_role: key ? (() => { try { return JSON.parse(Buffer.from(key.split(".")[1], "base64").toString()).role; } catch { return "decode error"; } })() : "(not set)",
-        WHATSAPP_OWNER_USER_ID: ownerEnv ?? "(not set)",
-        WHATSAPP_APP_SECRET_set: !!process.env.WHATSAPP_APP_SECRET,
-        OPENAI_KEY_set: !!process.env.OPENAI_API_KEY,
-      },
-      profiles: profileErr ? { error: profileErr.message } : profiles,
-      authUsers: usersErr
-        ? { error: usersErr.message }
-        : usersData?.users?.map((u) => ({ id: u.id, email: u.email })),
-    });
-  }
 
   const mode = searchParams.get("hub.mode");
   const token = searchParams.get("hub.verify_token");
