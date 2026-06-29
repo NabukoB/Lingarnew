@@ -43,7 +43,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           contactName: contact?.display_name ?? contact?.phone ?? "Unknown",
           note: followUp.note,
           dueAt: followUp.due_at,
-          contactUrl: `${process.env.NEXT_PUBLIC_APP_URL}/crm/${followUp.contact_id}`,
+          contactUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://fundiops.vercel.app"}/crm/${followUp.contact_id}`,
         });
       }
 
