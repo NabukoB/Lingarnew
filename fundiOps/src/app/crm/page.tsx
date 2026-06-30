@@ -36,6 +36,14 @@ export default async function CrmPipelinePage() {
     console.error("[crm/page] wa_contacts query error:", contactsError);
   }
 
+  const debugInfo = {
+    userId: user.id,
+    rawLeadsCount: rawLeads?.length ?? 0,
+    leadsError: leadsError ? JSON.stringify(leadsError) : null,
+    contactsCount: contacts?.length ?? 0,
+    contactsError: contactsError ? JSON.stringify(contactsError) : null,
+  };
+
   const contactsById = new Map((contacts ?? []).map((c) => [c.id, c]));
 
   // Enrich with message counts
@@ -76,6 +84,9 @@ export default async function CrmPipelinePage() {
 
   return (
     <div>
+      <pre className="mb-4 p-3 text-[10px] bg-fundiops-card border border-fundiops-border rounded-lg text-fundiops-muted overflow-x-auto">
+        {JSON.stringify(debugInfo, null, 2)}
+      </pre>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-fundiops-text">Pipeline</h1>
         <p className="text-sm text-fundiops-muted">
