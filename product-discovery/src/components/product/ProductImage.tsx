@@ -1,0 +1,41 @@
+import type { CleanedItem } from "@/types/item";
+
+function ImagePlaceholderIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      className="h-8 w-8"
+      aria-hidden="true"
+    >
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path d="M21 15l-5-5L5 21" />
+    </svg>
+  );
+}
+
+export function ProductImage({ item }: { item: CleanedItem }) {
+  return (
+    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-ink-100">
+      {item.image ? (
+        <img
+          src={item.image}
+          alt={item.title}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-ink-400">
+          <ImagePlaceholderIcon />
+          <span className="text-xs font-medium">
+            {item.brand} · {item.category}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
