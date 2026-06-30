@@ -1,6 +1,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { KanbanBoard } from "@/components/crm/KanbanBoard";
+import { StatsBar } from "@/components/crm/StatsBar";
 import { redirect } from "next/navigation";
+import { endOfToday } from "date-fns";
 import type { CrmLeadWithContact } from "@/types/crm";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +44,15 @@ export default async function CrmPipelinePage() {
     })
   );
 
+  const { count: dueFollowUps } = await supabase
+    .from("crm_follow_ups")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("status", "pending")
+    .lte("due_at", endOfToday().toISOString());
+
+  const hotCount = leads.filter((l) => l.stage === "hot").length;
+
   return (
     <div>
       <div className="mb-6">
@@ -50,6 +61,7 @@ export default async function CrmPipelinePage() {
           {leads.length} lead{leads.length !== 1 ? "s" : ""} tracked
         </p>
       </div>
+      <StatsBar total={leads.length} hot={hotCount} dueFollowUps={dueFollowUps ?? 0} />
       <KanbanBoard leads={leads} />
     </div>
   );

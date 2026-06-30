@@ -29,13 +29,13 @@ export function KanbanBoard({ leads }: { leads: CrmLeadWithContact[] }) {
   }
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-6 min-h-[70vh]">
+    <div className="flex gap-4 overflow-x-auto pb-6 min-h-[70vh] snap-x snap-mandatory">
       {STAGES.map(({ key, label, color }) => {
         const col = localLeads.filter((l) => l.stage === key);
         return (
           <div
             key={key}
-            className={`shrink-0 w-72 flex flex-col rounded-xl border-t-2 bg-fundiops-card border border-fundiops-border ${color}`}
+            className={`shrink-0 w-[85vw] sm:w-72 snap-start flex flex-col rounded-xl border-t-2 bg-fundiops-card border border-fundiops-border ${color}`}
           >
             <div className="px-4 py-3 flex items-center justify-between">
               <span className="text-sm font-semibold text-fundiops-text">{label}</span>
@@ -49,7 +49,7 @@ export function KanbanBoard({ leads }: { leads: CrmLeadWithContact[] }) {
                   <LeadCard lead={lead} />
                   {/* Stage move dropdown on hover */}
                   <select
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-xs bg-fundiops-bg border border-fundiops-border text-fundiops-muted rounded px-1 py-0.5 transition-opacity"
+                    className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-xs bg-fundiops-bg border border-fundiops-border text-fundiops-muted rounded px-1 py-0.5 transition-opacity"
                     value={lead.stage}
                     onChange={(e) => moveStage(lead.id, e.target.value as LeadStage)}
                     onClick={(e) => e.preventDefault()}
