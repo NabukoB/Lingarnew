@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { CleanedItem } from "@/types/item";
 
 function ImagePlaceholderIcon() {
@@ -18,15 +21,18 @@ function ImagePlaceholderIcon() {
 }
 
 export function ProductImage({ item }: { item: CleanedItem }) {
+  const [failed, setFailed] = useState(false);
+
   return (
     <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-ink-100">
-      {item.image ? (
+      {item.image && !failed ? (
         <img
           src={item.image}
           alt={item.title}
           loading="lazy"
           decoding="async"
           className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
         />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-ink-400">
