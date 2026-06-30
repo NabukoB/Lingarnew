@@ -32,13 +32,21 @@ export function KanbanBoard({ leads }: { leads: CrmLeadWithContact[] }) {
     <div className="flex gap-4 overflow-x-auto pb-6 min-h-[70vh] snap-x snap-mandatory">
       {STAGES.map(({ key, label, color }) => {
         const col = localLeads.filter((l) => l.stage === key);
+        const colValue = col.reduce((sum, l) => sum + (l.value_estimate ?? 0), 0);
         return (
           <div
             key={key}
             className={`shrink-0 w-[85vw] sm:w-72 snap-start flex flex-col rounded-xl border-t-2 bg-fundiops-card border border-fundiops-border ${color}`}
           >
             <div className="px-4 py-3 flex items-center justify-between">
-              <span className="text-sm font-semibold text-fundiops-text">{label}</span>
+              <div className="min-w-0">
+                <span className="text-sm font-semibold text-fundiops-text">{label}</span>
+                {colValue > 0 && (
+                  <span className="block text-[11px] text-fundiops-muted">
+                    {colValue.toLocaleString()}
+                  </span>
+                )}
+              </div>
               <span className="text-xs bg-fundiops-border text-fundiops-muted rounded-full px-2 py-0.5">
                 {col.length}
               </span>

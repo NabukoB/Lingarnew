@@ -104,6 +104,7 @@ export interface CrmAnalysis {
 export interface CrmLeadWithContact extends CrmLead {
   contact: WaContact;
   last_message_at: string | null;
+  last_message_direction: MessageDirection | null;
   message_count: number;
 }
 
