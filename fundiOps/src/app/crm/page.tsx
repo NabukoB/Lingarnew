@@ -14,11 +14,20 @@ export default async function CrmPipelinePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: rawLeads } = await supabase
+  console.log("[crm/page] user.id:", user.id);
+
+  const { data: rawLeads, error: leadsError } = await supabase
     .from("crm_leads")
     .select("*, contact:wa_contacts(*)")
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
+
+  console.log(
+    "[crm/page] rawLeads count:",
+    rawLeads?.length ?? 0,
+    "error:",
+    JSON.stringify(leadsError)
+  );
 
   // Enrich with message counts
   const leads: CrmLeadWithContact[] = await Promise.all(
