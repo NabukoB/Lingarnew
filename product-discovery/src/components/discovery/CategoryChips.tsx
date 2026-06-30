@@ -39,7 +39,7 @@ export function CategoryChips({ onSelect }: { onSelect: (category: Category) => 
       <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-ink-500">
         Browse by category
       </h2>
-      <div className="grid auto-cols-[5.25rem] grid-flow-col grid-rows-2 gap-x-3 gap-y-3 overflow-x-auto pb-2">
+      <div className="grid auto-cols-[5.25rem] grid-flow-col grid-rows-2 md:grid-rows-1 gap-x-3 gap-y-3 overflow-x-auto pb-2">
         {CATEGORIES.map((category) => (
           <button
             key={category}
