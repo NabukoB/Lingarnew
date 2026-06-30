@@ -14,37 +14,19 @@ export default async function CrmPipelinePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: rawLeads, error: leadsError } = await supabase
+  const { data: rawLeads } = await supabase
     .from("crm_leads")
     .select("*")
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
 
-  if (leadsError) {
-    console.error("[crm/page] crm_leads query error:", leadsError);
-  }
-
   const contactIds = Array.from(
     new Set((rawLeads ?? []).map((l) => l.contact_id))
   );
 
-  const { data: contacts, error: contactsError } = contactIds.length
+  const { data: contacts } = contactIds.length
     ? await supabase.from("wa_contacts").select("*").in("id", contactIds)
-    : { data: [] as WaContact[], error: null };
-
-  if (contactsError) {
-    console.error("[crm/page] wa_contacts query error:", contactsError);
-  }
-
-  const debugInfo = {
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    userId: user.id,
-    userEmail: user.email,
-    rawLeadsCount: rawLeads?.length ?? 0,
-    leadsError: leadsError ? JSON.stringify(leadsError) : null,
-    contactsCount: contacts?.length ?? 0,
-    contactsError: contactsError ? JSON.stringify(contactsError) : null,
-  };
+    : { data: [] as WaContact[] };
 
   const contactsById = new Map((contacts ?? []).map((c) => [c.id, c]));
 
@@ -86,9 +68,6 @@ export default async function CrmPipelinePage() {
 
   return (
     <div>
-      <pre className="mb-4 p-3 text-[10px] bg-fundiops-card border border-fundiops-border rounded-lg text-fundiops-muted overflow-x-auto">
-        {JSON.stringify(debugInfo, null, 2)}
-      </pre>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-fundiops-text">Pipeline</h1>
         <p className="text-sm text-fundiops-muted">
