@@ -42,7 +42,7 @@ export default async function CrmPipelinePage() {
 
         const { data: lastMsg } = await supabase
           .from("wa_messages")
-          .select("received_at")
+          .select("received_at, direction")
           .eq("contact_id", lead.contact_id)
           .order("received_at", { ascending: false })
           .limit(1)
@@ -53,6 +53,7 @@ export default async function CrmPipelinePage() {
           contact: contactsById.get(lead.contact_id)!,
           message_count: count ?? 0,
           last_message_at: lastMsg?.received_at ?? null,
+          last_message_direction: lastMsg?.direction ?? null,
         } as CrmLeadWithContact;
       })
   );
@@ -66,6 +67,23 @@ export default async function CrmPipelinePage() {
 
   const hotCount = leads.filter((l) => l.stage === "hot").length;
 
+  const pipelineValue = leads
+    .filter((l) => l.stage !== "closed_won" && l.stage !== "closed_lost")
+    .reduce((sum, l) => sum + (l.value_estimate ?? 0), 0);
+
+  const awaitingReplyCount = leads.filter(
+    (l) => l.last_message_direction === "inbound"
+  ).length;
+
+  const STALE_DAYS = 3;
+  const staleThreshold = Date.now() - STALE_DAYS * 24 * 60 * 60 * 1000;
+  const staleCount = leads.filter(
+    (l) =>
+      l.stage !== "closed_won" &&
+      l.stage !== "closed_lost" &&
+      new Date(l.updated_at).getTime() < staleThreshold
+  ).length;
+
   return (
     <div>
       <div className="mb-6">
@@ -74,7 +92,14 @@ export default async function CrmPipelinePage() {
           {leads.length} lead{leads.length !== 1 ? "s" : ""} tracked
         </p>
       </div>
-      <StatsBar total={leads.length} hot={hotCount} dueFollowUps={dueFollowUps ?? 0} />
+      <StatsBar
+        total={leads.length}
+        hot={hotCount}
+        dueFollowUps={dueFollowUps ?? 0}
+        pipelineValue={pipelineValue}
+        awaitingReply={awaitingReplyCount}
+        stale={staleCount}
+      />
       <KanbanBoard leads={leads} />
     </div>
   );
