@@ -23,8 +23,9 @@ and searched in memory on the client.
 ## What I built
 
 A discovery page where you can search and browse home goods, with results designed
-to feel fast and trustworthy. Search the box, browse by category when the box is
-empty, filter by category / price / availability.
+to feel fast and trustworthy. Search the box, browse by category (a two-row icon
+grid) when the box is empty alongside a row of 12 popular picks, filter by
+category / price / availability.
 
 ---
 
@@ -47,19 +48,30 @@ and title-case them for both search and display, so they're findable and don't
 shout in the grid. A small cleaning layer (`src/lib/cleaning/`) validates every
 item on load — and one issue the brief didn't call out: price sometimes arrives
 as a comma-formatted string (`"1,081.43"`), not a number. The cleaning layer
-coerces that too.
+coerces that too. Any item with an unrecognized category falls back to "Decor"
+rather than crashing or getting dropped — defensive, and not currently triggered
+by this dataset (every item's category is valid today), but a real safety net.
 
 **3. Handle broken records honestly, never show "$0" or a broken image.**
 164 items have no price and 14 are priced ≤ 0 (plus a handful of unparseable
 price strings) — all shown as "Price unavailable" and sorted last, never as "$0."
 183 items have no image — they get a clean placeholder card, not a broken-image
-icon. Missing ratings hide the stars rather than showing zero.
+icon. A separate, sneakier case: 168 items (4.2%) *do* have an image URL, but it
+points at a host that doesn't resolve — the browser would otherwise render its
+native broken-image icon. `ProductImage` catches that with an `onError` fallback
+and swaps in the same placeholder, so a present-but-dead URL degrades exactly
+like a missing one. Missing ratings hide the stars rather than showing zero.
 
 **4. A real browse state, because it's a *discovery* page.**
 An empty search box isn't a dead end — it shows the 10 categories and a row of
 popular in-stock items, so someone with no query still has somewhere to go.
 
-**5. Show out-of-stock, but de-prioritize it.**
+**5. Cap results instead of dumping everything.**
+Search/filter results are capped at 60 cards with a "showing top N, refine to
+see more" note, rather than rendering an unbounded grid — keeps the page fast
+and nudges toward narrowing the query instead of scrolling forever.
+
+**6. Show out-of-stock, but de-prioritize it.**
 ~10% of items are out of stock. I rank in-stock first and badge the rest rather
 than hiding them — a shopper may still want to see a product that's coming back.
 
