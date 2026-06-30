@@ -37,7 +37,9 @@ export default async function CrmPipelinePage() {
   }
 
   const debugInfo = {
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     userId: user.id,
+    userEmail: user.email,
     rawLeadsCount: rawLeads?.length ?? 0,
     leadsError: leadsError ? JSON.stringify(leadsError) : null,
     contactsCount: contacts?.length ?? 0,
