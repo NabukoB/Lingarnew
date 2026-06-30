@@ -3,7 +3,7 @@ import { KanbanBoard } from "@/components/crm/KanbanBoard";
 import { StatsBar } from "@/components/crm/StatsBar";
 import { redirect } from "next/navigation";
 import { endOfToday } from "date-fns";
-import type { CrmLeadWithContact } from "@/types/crm";
+import type { CrmLeadWithContact, WaContact } from "@/types/crm";
 
 export const dynamic = "force-dynamic";
 
@@ -14,43 +14,53 @@ export default async function CrmPipelinePage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  console.log("[crm/page] user.id:", user.id);
-
   const { data: rawLeads, error: leadsError } = await supabase
     .from("crm_leads")
-    .select("*, contact:wa_contacts(*)")
+    .select("*")
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
 
-  console.log(
-    "[crm/page] rawLeads count:",
-    rawLeads?.length ?? 0,
-    "error:",
-    JSON.stringify(leadsError)
-  );
+  if (leadsError) {
+    console.error("[crm/page] crm_leads query error:", leadsError);
+  }
+
+  const contactIds = [...new Set((rawLeads ?? []).map((l) => l.contact_id))];
+
+  const { data: contacts, error: contactsError } = contactIds.length
+    ? await supabase.from("wa_contacts").select("*").in("id", contactIds)
+    : { data: [] as WaContact[], error: null };
+
+  if (contactsError) {
+    console.error("[crm/page] wa_contacts query error:", contactsError);
+  }
+
+  const contactsById = new Map((contacts ?? []).map((c) => [c.id, c]));
 
   // Enrich with message counts
   const leads: CrmLeadWithContact[] = await Promise.all(
-    (rawLeads ?? []).map(async (lead) => {
-      const { count } = await supabase
-        .from("wa_messages")
-        .select("*", { count: "exact", head: true })
-        .eq("contact_id", lead.contact_id);
+    (rawLeads ?? [])
+      .filter((lead) => contactsById.has(lead.contact_id))
+      .map(async (lead) => {
+        const { count } = await supabase
+          .from("wa_messages")
+          .select("*", { count: "exact", head: true })
+          .eq("contact_id", lead.contact_id);
 
-      const { data: lastMsg } = await supabase
-        .from("wa_messages")
-        .select("received_at")
-        .eq("contact_id", lead.contact_id)
-        .order("received_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        const { data: lastMsg } = await supabase
+          .from("wa_messages")
+          .select("received_at")
+          .eq("contact_id", lead.contact_id)
+          .order("received_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      return {
-        ...lead,
-        message_count: count ?? 0,
-        last_message_at: lastMsg?.received_at ?? null,
-      } as CrmLeadWithContact;
-    })
+        return {
+          ...lead,
+          contact: contactsById.get(lead.contact_id)!,
+          message_count: count ?? 0,
+          last_message_at: lastMsg?.received_at ?? null,
+        } as CrmLeadWithContact;
+      })
   );
 
   const { count: dueFollowUps } = await supabase
