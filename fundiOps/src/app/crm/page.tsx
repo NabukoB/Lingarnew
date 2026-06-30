@@ -24,7 +24,9 @@ export default async function CrmPipelinePage() {
     console.error("[crm/page] crm_leads query error:", leadsError);
   }
 
-  const contactIds = [...new Set((rawLeads ?? []).map((l) => l.contact_id))];
+  const contactIds = Array.from(
+    new Set((rawLeads ?? []).map((l) => l.contact_id))
+  );
 
   const { data: contacts, error: contactsError } = contactIds.length
     ? await supabase.from("wa_contacts").select("*").in("id", contactIds)
