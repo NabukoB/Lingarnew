@@ -6,7 +6,7 @@ export function PopularRow({ items }: { items: CleanedItem[] }) {
     .filter((item) => item.inStock)
     .slice()
     .sort((a, b) => b.reviews - a.reviews)
-    .slice(0, 8);
+    .slice(0, 12);
 
   if (popular.length === 0) return null;
 
