@@ -13,12 +13,12 @@ export function SaveHeart() {
         setSaved((s) => !s);
       }}
       aria-label={saved ? "Remove from saved" : "Save item"}
-      className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-surface/80 backdrop-blur-sm transition-colors hover:bg-surface"
+      className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/85 backdrop-blur-sm transition-colors hover:bg-white"
     >
       <svg
         viewBox="0 0 24 24"
-        fill={saved ? "#B5654A" : "none"}
-        stroke={saved ? "#B5654A" : "#5E5A50"}
+        fill={saved ? "#DC2626" : "none"}
+        stroke={saved ? "#DC2626" : "#6B7280"}
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"

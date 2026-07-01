@@ -2,9 +2,9 @@ export function RatingStars({ rating, reviews }: { rating: number | null; review
   if (rating === null) return null;
 
   return (
-    <div className="flex items-center gap-1 text-sm">
-      <span aria-hidden="true" className="text-star">★</span>
-      <span className="font-medium text-ink-700">{rating.toFixed(1)}</span>
+    <div className="flex items-center gap-1 text-xs">
+      <span aria-hidden="true" className="text-amber-400">★</span>
+      <span className="font-semibold text-ink-700">{rating.toFixed(1)}</span>
       <span className="text-ink-400">({reviews.toLocaleString()})</span>
     </div>
   );

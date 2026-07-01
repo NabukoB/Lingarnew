@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { CleanedItem } from "@/types/item";
 
-const SWATCHES = ["#E9E1D2", "#DCE2D7", "#E8DACF", "#DBE0E1", "#EAE1C8"];
+const SWATCHES = ["#EDE9FE", "#FCE7F3", "#D1FAE5", "#FEF3C7", "#DBEAFE"];
 
 function ImagePlaceholderIcon() {
   return (
@@ -51,7 +51,7 @@ export function ProductImage({ item }: { item: CleanedItem }) {
           onError={() => setFailed(true)}
         />
       ) : (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-ink-500">
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-ink-400">
           <ImagePlaceholderIcon />
           <span className="text-xs font-semibold uppercase tracking-[.1em]">
             {item.category}

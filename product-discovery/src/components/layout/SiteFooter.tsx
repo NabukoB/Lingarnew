@@ -7,18 +7,16 @@ const LINKS = {
 
 export function SiteFooter() {
   return (
-    <footer className="bg-ink-800 text-ink-300">
-      <div className="mx-auto max-w-[1240px] px-7 py-16">
+    <footer className="bg-ink-900 text-ink-300">
+      <div className="mx-auto max-w-[1240px] px-5 py-14">
         <div className="grid gap-10 md:grid-cols-5">
-          {/* Brand */}
           <div className="md:col-span-1">
-            <p className="font-display text-xl font-semibold italic text-white">Hearth</p>
+            <p className="font-display text-xl font-bold text-white">Hearth</p>
             <p className="mt-3 text-sm leading-relaxed text-ink-400">
               A curated marketplace for hand-picked home goods from independent makers.
             </p>
           </div>
 
-          {/* Link columns */}
           {Object.entries(LINKS).map(([heading, links]) => (
             <div key={heading}>
               <h4 className="mb-4 text-[11.5px] font-semibold uppercase tracking-[.16em] text-ink-400">
@@ -27,10 +25,7 @@ export function SiteFooter() {
               <ul className="flex flex-col gap-2">
                 {links.map((link) => (
                   <li key={link}>
-                    <a
-                      href="#"
-                      className="text-sm text-ink-400 transition-colors hover:text-white"
-                    >
+                    <a href="#" className="text-sm text-ink-400 transition-colors hover:text-white">
                       {link}
                     </a>
                   </li>
@@ -40,14 +35,14 @@ export function SiteFooter() {
           ))}
         </div>
 
-        <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-ink-700 pt-8 sm:flex-row sm:items-center">
-          <p className="text-xs text-ink-500">
+        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-ink-800 pt-8 sm:flex-row sm:items-center">
+          <p className="text-xs text-ink-400">
             &copy; {new Date().getFullYear()} Hearth. Made with care.
           </p>
-          <div className="flex gap-5 text-xs text-ink-500">
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
-            <a href="#" className="hover:text-white transition-colors">Cookies</a>
+          <div className="flex gap-5 text-xs text-ink-400">
+            <a href="#" className="transition-colors hover:text-white">Privacy</a>
+            <a href="#" className="transition-colors hover:text-white">Terms</a>
+            <a href="#" className="transition-colors hover:text-white">Cookies</a>
           </div>
         </div>
       </div>

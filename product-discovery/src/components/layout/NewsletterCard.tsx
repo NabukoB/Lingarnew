@@ -12,13 +12,13 @@ export function NewsletterCard() {
   }
 
   return (
-    <section className="mx-auto max-w-[1240px] px-7 py-16">
-      <div className="rounded-card bg-surface p-10 shadow-card md:p-14">
+    <section className="mx-auto max-w-[1240px] px-5 py-14">
+      <div className="rounded-card border border-hairline bg-surface p-10 shadow-card md:p-14">
         <div className="mx-auto max-w-lg text-center">
           <p className="mb-3 text-[11.5px] font-semibold uppercase tracking-[.16em] text-ink-400">
             Stay in the loop
           </p>
-          <h2 className="mb-4 font-display text-[clamp(24px,3vw,31px)] font-semibold text-ink-900">
+          <h2 className="mb-4 font-display text-[clamp(22px,3vw,30px)] font-bold text-ink-900">
             New makers, new finds — weekly
           </h2>
           <p className="mb-8 text-sm leading-relaxed text-ink-500">
@@ -26,7 +26,7 @@ export function NewsletterCard() {
           </p>
 
           {submitted ? (
-            <p className="rounded-full bg-pine-tint px-6 py-3 text-sm font-medium text-pine">
+            <p className="rounded-full bg-primary-50 px-6 py-3 text-sm font-medium text-primary">
               You&rsquo;re in — check your inbox soon.
             </p>
           ) : (
@@ -37,11 +37,11 @@ export function NewsletterCard() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 required
-                className="flex-1 rounded-full border border-hairline bg-canvas px-5 py-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine-tint"
+                className="flex-1 rounded-full border border-hairline bg-white px-5 py-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
               />
               <button
                 type="submit"
-                className="rounded-full bg-pine px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-pine-hover"
+                className="rounded-full bg-primary px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-hover"
               >
                 Subscribe
               </button>

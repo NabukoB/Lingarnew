@@ -28,9 +28,9 @@ export function SearchBar({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Search by title, tag, or brand…"
+        placeholder="Search for products, brands and more..."
         aria-label="Search products"
-        className="w-full rounded-full border border-hairline bg-surface py-3.5 pl-12 pr-6 text-base text-ink-900 placeholder:text-ink-400 focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine-tint"
+        className="w-full rounded-full border border-hairline bg-white py-3.5 pl-12 pr-6 text-sm text-ink-800 placeholder:text-ink-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
       />
     </div>
   );

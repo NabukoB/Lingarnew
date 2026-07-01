@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
-import { Fraunces, Hanken_Grotesk } from "next/font/google";
+import { Outfit, DM_Sans } from "next/font/google";
 import "./globals.css";
 
-const fraunces = Fraunces({
+const outfit = Outfit({
   subsets: ["latin"],
-  weight: ["500", "600"],
-  style: ["normal", "italic"],
+  weight: ["600", "700", "800"],
   variable: "--font-display",
   display: "swap",
 });
 
-const hanken = Hanken_Grotesk({
+const dmSans = DM_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
@@ -18,18 +17,14 @@ const hanken = Hanken_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Hearth — Curated Home Goods",
-  description: "Search and browse ~4,000 hand-picked home-goods products.",
+  title: "Hearth — Find What You Love",
+  description: "Search and discover home goods from independent makers.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${hanken.variable}`}>
-      <body className="min-h-screen bg-canvas font-sans antialiased">{children}</body>
+    <html lang="en" className={`${outfit.variable} ${dmSans.variable}`}>
+      <body className="min-h-screen bg-white font-sans antialiased">{children}</body>
     </html>
   );
 }

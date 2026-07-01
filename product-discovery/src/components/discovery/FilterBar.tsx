@@ -2,8 +2,8 @@
 
 import { CATEGORIES } from "@/lib/cleaning/constants";
 import { PRICE_BUCKETS } from "@/lib/search/price-buckets";
-import type { ActiveFilters } from "@/types/filters";
 import { cn } from "@/lib/utils/cn";
+import type { ActiveFilters } from "@/types/filters";
 
 export function FilterBar({
   filters,
@@ -14,10 +14,10 @@ export function FilterBar({
 }) {
   const selectClass = (active: boolean) =>
     cn(
-      "rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-pine-tint bg-surface",
+      "rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-100 bg-white",
       active
-        ? "border-pine text-pine font-medium"
-        : "border-hairline text-ink-700 hover:border-pine"
+        ? "border-primary text-primary font-medium"
+        : "border-hairline text-ink-700 hover:border-primary"
     );
 
   return (
@@ -31,31 +31,23 @@ export function FilterBar({
       >
         <option value="">All categories</option>
         {CATEGORIES.map((category) => (
-          <option key={category} value={category}>
-            {category}
-          </option>
+          <option key={category} value={category}>{category}</option>
         ))}
       </select>
 
       <select
         value={filters.priceBucket ?? ""}
         onChange={(e) =>
-          onChange({
-            ...filters,
-            priceBucket: e.target.value ? (e.target.value as ActiveFilters["priceBucket"]) : null,
-          })
+          onChange({ ...filters, priceBucket: e.target.value ? (e.target.value as ActiveFilters["priceBucket"]) : null })
         }
         className={selectClass(filters.priceBucket !== null)}
       >
         <option value="">Any price</option>
         {PRICE_BUCKETS.map((bucket) => (
-          <option key={bucket.id} value={bucket.id}>
-            {bucket.label}
-          </option>
+          <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
         ))}
       </select>
 
-      {/* iOS-style toggle */}
       <label className="flex cursor-pointer items-center gap-2.5">
         <div className="relative">
           <input
@@ -64,7 +56,7 @@ export function FilterBar({
             onChange={() => onChange({ ...filters, inStockOnly: !filters.inStockOnly })}
             className="peer sr-only"
           />
-          <div className="h-6 w-10 rounded-full border border-hairline bg-hairline transition-colors peer-checked:border-pine peer-checked:bg-pine" />
+          <div className="h-6 w-10 rounded-full border border-hairline bg-ink-200 transition-colors peer-checked:border-primary peer-checked:bg-primary" />
           <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4" />
         </div>
         <span className="text-sm text-ink-700">In stock only</span>

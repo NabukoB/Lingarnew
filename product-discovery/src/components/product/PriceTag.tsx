@@ -4,7 +4,7 @@ export function PriceTag({ price, hasPrice }: { price: number | null; hasPrice: 
   }
 
   return (
-    <span className="text-[17px] font-bold text-ink-900">
+    <span className="text-[16px] font-bold text-ink-900">
       ${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
     </span>
   );

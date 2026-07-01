@@ -27,8 +27,7 @@ function NavIcon({ d }: { d: string }) {
 
 export function SideNav({ filters, onChange }: { filters: ActiveFilters; onChange: (f: ActiveFilters) => void }) {
   return (
-    <aside className="sticky top-[73px] hidden h-[calc(100vh-73px)] w-56 shrink-0 overflow-y-auto pb-8 lg:block">
-      {/* Main nav */}
+    <aside className="sticky top-[65px] hidden h-[calc(100vh-65px)] w-56 shrink-0 overflow-y-auto pb-8 lg:block">
       <nav className="flex flex-col gap-0.5 pt-2">
         {NAV_LINKS.map(({ label, icon }, i) => (
           <button
@@ -40,8 +39,8 @@ export function SideNav({ filters, onChange }: { filters: ActiveFilters; onChang
             className={cn(
               "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
               i === 0
-                ? "bg-pine-tint text-pine"
-                : "text-ink-600 hover:bg-pine-tint/60 hover:text-pine"
+                ? "bg-primary-50 text-primary"
+                : "text-ink-700 hover:bg-primary-50 hover:text-primary"
             )}
           >
             <NavIcon d={icon} />
@@ -66,8 +65,8 @@ export function SideNav({ filters, onChange }: { filters: ActiveFilters; onChang
               className={cn(
                 "flex items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors",
                 filters.category === cat
-                  ? "bg-pine-tint font-semibold text-pine"
-                  : "text-ink-600 hover:bg-pine-tint/60 hover:text-pine"
+                  ? "bg-primary-50 font-semibold text-primary"
+                  : "text-ink-700 hover:bg-primary-50 hover:text-primary"
               )}
             >
               {cat}
@@ -91,7 +90,7 @@ export function SideNav({ filters, onChange }: { filters: ActiveFilters; onChang
           onChange={(e) =>
             onChange({ ...filters, priceBucket: e.target.value ? (e.target.value as ActiveFilters["priceBucket"]) : null })
           }
-          className="w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm text-ink-700 focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine-tint"
+          className="w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm text-ink-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-100"
         >
           <option value="">Any price</option>
           {PRICE_BUCKETS.map((b) => (
@@ -103,7 +102,7 @@ export function SideNav({ filters, onChange }: { filters: ActiveFilters; onChang
       {/* In-stock toggle */}
       <div className="mt-4 px-1">
         <label className="flex cursor-pointer items-center justify-between rounded-xl px-2 py-2">
-          <span className="text-sm text-ink-600">In stock only</span>
+          <span className="text-sm text-ink-700">In stock only</span>
           <div className="relative">
             <input
               type="checkbox"
@@ -111,26 +110,26 @@ export function SideNav({ filters, onChange }: { filters: ActiveFilters; onChang
               onChange={() => onChange({ ...filters, inStockOnly: !filters.inStockOnly })}
               className="peer sr-only"
             />
-            <div className="h-6 w-10 rounded-full border border-hairline bg-hairline transition-colors peer-checked:border-pine peer-checked:bg-pine" />
+            <div className="h-6 w-10 rounded-full border border-hairline bg-ink-200 transition-colors peer-checked:border-primary peer-checked:bg-primary" />
             <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4" />
           </div>
         </label>
       </div>
 
       {/* Promo card */}
-      <div className="mt-8 rounded-2xl bg-pine p-5">
-        <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-pine-tint/60">
+      <div className="mt-8 rounded-2xl bg-gradient-to-br from-violet-600 to-purple-500 p-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[.14em] text-white/60">
           Special Offer
         </p>
-        <p className="mt-1.5 font-display text-lg font-semibold italic leading-tight text-white">
+        <p className="mt-1.5 font-display text-lg font-bold leading-tight text-white">
           Summer Collection
         </p>
-        <p className="mt-2 text-xs leading-relaxed text-pine-tint/70">
+        <p className="mt-2 text-xs leading-relaxed text-white/70">
           Fresh arrivals from our independent makers.
         </p>
         <button
           type="button"
-          className="mt-4 flex items-center gap-1 text-xs font-semibold text-pine-tint transition-opacity hover:opacity-80"
+          className="mt-4 flex items-center gap-1 text-xs font-semibold text-white/90 transition-opacity hover:opacity-80"
         >
           Shop now
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3" aria-hidden="true">
