@@ -14,8 +14,6 @@ import { PopularRow } from "@/components/discovery/PopularRow";
 import { ResultsGrid, RESULT_CAP } from "@/components/discovery/ResultsGrid";
 import { ResultCount } from "@/components/discovery/ResultCount";
 import { EmptyState } from "@/components/discovery/EmptyState";
-import { PromoBanner } from "@/components/layout/PromoBanner";
-
 export function CatalogExplorer({
   items,
   initialQuery = "",
@@ -53,15 +51,11 @@ export function CatalogExplorer({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <SearchBar value={query} onChange={setQuery} />
-        {/* FilterBar only shows on mobile — sidebar handles desktop filtering */}
-        <div className="lg:hidden">
-          <FilterBar filters={filters} onChange={onFiltersChange} />
-        </div>
+        <FilterBar filters={filters} onChange={onFiltersChange} />
       </div>
 
       {isDiscoveryView ? (
         <div className="flex flex-col gap-8">
-          <PromoBanner />
           <CategoryChips onSelect={handleCategorySelect} />
           <PopularRow items={items} />
         </div>
