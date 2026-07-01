@@ -13,7 +13,7 @@ export function PopularRow({ items }: { items: CleanedItem[] }) {
   return (
     <section>
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-ink-900">Best Deals for You</h2>
+        <h2 className="text-lg font-bold text-ink-900">Popular Deals</h2>
         <button type="button" className="text-sm font-semibold text-primary transition-opacity hover:opacity-70">
           View All
         </button>
