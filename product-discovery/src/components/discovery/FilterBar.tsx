@@ -12,6 +12,14 @@ export function FilterBar({
   filters: ActiveFilters;
   onChange: (filters: ActiveFilters) => void;
 }) {
+  const selectClass = (active: boolean) =>
+    cn(
+      "rounded-full border px-4 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-pine-tint bg-surface",
+      active
+        ? "border-pine text-pine font-medium"
+        : "border-hairline text-ink-700 hover:border-pine"
+    );
+
   return (
     <div className="flex flex-wrap items-center gap-3">
       <select
@@ -19,7 +27,7 @@ export function FilterBar({
         onChange={(e) =>
           onChange({ ...filters, category: e.target.value ? (e.target.value as ActiveFilters["category"]) : null })
         }
-        className="rounded-full border border-ink-200 bg-white px-4 py-2 text-sm text-ink-700 focus:border-clay-400 focus:outline-none"
+        className={selectClass(filters.category !== null)}
       >
         <option value="">All categories</option>
         {CATEGORIES.map((category) => (
@@ -37,7 +45,7 @@ export function FilterBar({
             priceBucket: e.target.value ? (e.target.value as ActiveFilters["priceBucket"]) : null,
           })
         }
-        className="rounded-full border border-ink-200 bg-white px-4 py-2 text-sm text-ink-700 focus:border-clay-400 focus:outline-none"
+        className={selectClass(filters.priceBucket !== null)}
       >
         <option value="">Any price</option>
         {PRICE_BUCKETS.map((bucket) => (
@@ -47,18 +55,20 @@ export function FilterBar({
         ))}
       </select>
 
-      <button
-        type="button"
-        onClick={() => onChange({ ...filters, inStockOnly: !filters.inStockOnly })}
-        className={cn(
-          "rounded-full border px-4 py-2 text-sm transition-colors",
-          filters.inStockOnly
-            ? "border-clay-500 bg-clay-500 text-white"
-            : "border-ink-200 bg-white text-ink-700 hover:border-ink-300"
-        )}
-      >
-        In stock only
-      </button>
+      {/* iOS-style toggle */}
+      <label className="flex cursor-pointer items-center gap-2.5">
+        <div className="relative">
+          <input
+            type="checkbox"
+            checked={filters.inStockOnly}
+            onChange={() => onChange({ ...filters, inStockOnly: !filters.inStockOnly })}
+            className="peer sr-only"
+          />
+          <div className="h-6 w-10 rounded-full border border-hairline bg-hairline transition-colors peer-checked:border-pine peer-checked:bg-pine" />
+          <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow transition-transform peer-checked:translate-x-4" />
+        </div>
+        <span className="text-sm text-ink-700">In stock only</span>
+      </label>
     </div>
   );
 }

@@ -11,9 +11,11 @@ export function PopularRow({ items }: { items: CleanedItem[] }) {
   if (popular.length === 0) return null;
 
   return (
-    <section className="mt-10">
-      <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-ink-500">Popular</h2>
-      <div className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+    <section>
+      <h2 className="mb-5 text-[11.5px] font-semibold uppercase tracking-[.16em] text-ink-400">
+        Popular
+      </h2>
+      <div className="grid grid-cols-2 gap-x-5 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
         {popular.map((item) => (
           <ProductCard key={item.id} item={item} />
         ))}

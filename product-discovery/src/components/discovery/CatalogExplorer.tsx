@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { CleanedItem } from "@/types/item";
 import type { Category } from "@/types/item";
 import { DEFAULT_FILTERS, type ActiveFilters } from "@/types/filters";
@@ -15,10 +15,20 @@ import { ResultsGrid, RESULT_CAP } from "@/components/discovery/ResultsGrid";
 import { ResultCount } from "@/components/discovery/ResultCount";
 import { EmptyState } from "@/components/discovery/EmptyState";
 
-export function CatalogExplorer({ items }: { items: CleanedItem[] }) {
-  const [query, setQuery] = useState("");
+export function CatalogExplorer({
+  items,
+  initialQuery = "",
+}: {
+  items: CleanedItem[];
+  initialQuery?: string;
+}) {
+  const [query, setQuery] = useState(initialQuery);
   const [filters, setFilters] = useState<ActiveFilters>(DEFAULT_FILTERS);
   const debouncedQuery = useDebouncedValue(query, 300);
+
+  useEffect(() => {
+    if (initialQuery) setQuery(initialQuery);
+  }, [initialQuery]);
 
   const isDiscoveryView =
     debouncedQuery.trim() === "" &&
@@ -43,7 +53,7 @@ export function CatalogExplorer({ items }: { items: CleanedItem[] }) {
       </div>
 
       {isDiscoveryView ? (
-        <div>
+        <div className="flex flex-col gap-10">
           <CategoryChips onSelect={handleCategorySelect} />
           <PopularRow items={items} />
         </div>

@@ -36,7 +36,7 @@ function CategoryIcon({ category }: { category: Category }) {
 export function CategoryChips({ onSelect }: { onSelect: (category: Category) => void }) {
   return (
     <section>
-      <h2 className="mb-3 text-sm font-medium uppercase tracking-wide text-ink-500">
+      <h2 className="mb-4 text-[11.5px] font-semibold uppercase tracking-[.16em] text-ink-400">
         Browse by category
       </h2>
       <div className="grid auto-cols-[5.25rem] grid-flow-col grid-rows-2 md:grid-rows-1 gap-x-3 gap-y-3 overflow-x-auto pb-2">
@@ -45,13 +45,12 @@ export function CategoryChips({ onSelect }: { onSelect: (category: Category) => 
             key={category}
             type="button"
             onClick={() => onSelect(category)}
-            className="flex flex-col items-center gap-1.5"
+            className="group flex flex-col items-center gap-1.5"
           >
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-ink-100 bg-white text-clay-600 transition-colors hover:border-clay-300">
-
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-hairline bg-pine-tint text-pine transition-colors group-hover:border-pine">
               <CategoryIcon category={category} />
             </span>
-            <span className="text-center text-xs font-medium leading-tight text-ink-600">
+            <span className="text-center text-[11px] font-semibold uppercase leading-tight tracking-[.12em] text-ink-400">
               {category}
             </span>
           </button>

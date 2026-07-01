@@ -1,6 +1,6 @@
 export function StockBadge() {
   return (
-    <span className="absolute left-2 top-2 rounded-full bg-ink-900/80 px-2 py-0.5 text-xs font-medium text-white backdrop-blur-sm">
+    <span className="absolute left-3 top-3 z-10 rounded-full bg-ink-200/90 px-2.5 py-0.5 text-xs font-semibold text-ink-600 backdrop-blur-sm">
       Out of stock
     </span>
   );
