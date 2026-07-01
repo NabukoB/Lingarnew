@@ -60,8 +60,8 @@ function HearthIllustration() {
 
 function TrustChip({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className="flex items-center gap-1.5 text-sm text-ink-600">
-      <span className="text-pine">{icon}</span>
+    <div className="flex items-center gap-1.5 text-xs text-pine-tint/70">
+      <span className="text-pine-tint/60">{icon}</span>
       {label}
     </div>
   );
@@ -77,85 +77,91 @@ export function HeroSection({ onSearch }: { onSearch: (query: string) => void })
   }
 
   return (
-    <section className="mx-auto max-w-[1240px] px-7 py-16 lg:py-24">
-      <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
+    <section className="mx-auto max-w-[1240px] px-7 pt-6">
+      {/* Banner card */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-pine to-[#3C5A47]">
+        <div className="flex items-center justify-between gap-8 px-10 py-12 lg:px-14">
 
-        {/* Left — copy + search */}
-        <div className="flex flex-col gap-6">
-          <p className="text-[11.5px] font-semibold uppercase tracking-[.16em] text-ink-400">
-            Curated home goods
-          </p>
+          {/* Left — copy + search */}
+          <div className="flex max-w-lg flex-col gap-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[.16em] text-pine-tint/60">
+              New Collection
+            </p>
 
-          <h1
-            className="font-display font-semibold leading-[1.08] tracking-[-0.025em] text-ink-900"
-            style={{ fontSize: "clamp(38px, 5.4vw, 62px)" }}
-          >
-            Discover pieces{" "}
-            <em className="font-medium not-italic" style={{ fontStyle: "italic" }}>
-              crafted with care
-            </em>
-          </h1>
-
-          <p className="text-base leading-relaxed text-ink-500">
-            4,000 products from independent makers — searched and sorted to help you find exactly what you&rsquo;re looking for.
-          </p>
-
-          {/* Search */}
-          <form onSubmit={handleSubmit} className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-5 flex items-center">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-ink-400">
-                <circle cx="11" cy="11" r="8" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-            </div>
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by title, tag, or brand…"
-              aria-label="Search products"
-              className="w-full rounded-full border border-hairline bg-surface py-4 pl-14 pr-36 text-base text-ink-900 placeholder:text-ink-400 focus:border-pine focus:outline-none focus:ring-2 focus:ring-pine-tint"
-            />
-            <button
-              type="submit"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-pine px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-pine-hover"
+            <h1
+              className="font-display font-semibold leading-[1.08] tracking-[-0.025em] text-white"
+              style={{ fontSize: "clamp(28px, 4vw, 48px)" }}
             >
-              Search
-            </button>
-          </form>
+              Discover pieces{" "}
+              <em style={{ fontStyle: "italic" }}>crafted with care</em>
+            </h1>
 
-          {/* Trust chips */}
-          <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <TrustChip
-              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M5 12h14M12 5l7 7-7 7"/></svg>}
-              label="Free shipping over $75"
-            />
-            <TrustChip
-              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
-              label="400+ independent makers"
-            />
-            <TrustChip
-              icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><polyline points="20 6 9 17 4 12"/></svg>}
-              label="30-day easy returns"
-            />
+            <p className="text-sm leading-relaxed text-pine-tint/70">
+              4,000 products from independent makers — searched and sorted to find exactly what you&rsquo;re looking for.
+            </p>
+
+            {/* Search */}
+            <form onSubmit={handleSubmit} className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-ink-400">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by title, tag, or brand…"
+                aria-label="Search products"
+                className="w-full rounded-full bg-white/95 py-3.5 pl-11 pr-32 text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-white/50"
+              />
+              <button
+                type="submit"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-pine px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#223328]"
+              >
+                Shop Now →
+              </button>
+            </form>
+
+            {/* Trust chips */}
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              <TrustChip
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>}
+                label="Free shipping over $75"
+              />
+              <TrustChip
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>}
+                label="400+ makers"
+              />
+              <TrustChip
+                icon={<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><polyline points="20 6 9 17 4 12"/></svg>}
+                label="Easy returns"
+              />
+            </div>
           </div>
+
+          {/* Right — illustration */}
+          <div className="relative hidden shrink-0 lg:block">
+            <div className="flex h-[260px] w-[180px] items-center justify-center rounded-2xl bg-white/10 p-6">
+              <HearthIllustration />
+            </div>
+            <div className="absolute -left-4 top-6 rounded-full bg-white px-3.5 py-1.5 shadow-card">
+              <p className="text-[11px] font-semibold text-ink-700">400+ makers</p>
+            </div>
+            <div className="absolute -right-4 bottom-6 rounded-full bg-pine-tint px-3.5 py-1.5 shadow-card">
+              <p className="text-[11px] font-semibold text-pine">Ships today</p>
+            </div>
+          </div>
+
         </div>
 
-        {/* Right — illustration panel */}
-        <div className="relative hidden overflow-hidden rounded-[28px] bg-gradient-to-br from-surface to-swatch-oat lg:flex lg:items-center lg:justify-center lg:py-12">
-          <div className="w-[200px]">
-            <HearthIllustration />
-          </div>
-
-          {/* Floating trust tags */}
-          <div className="absolute left-6 top-8 rounded-full bg-surface px-4 py-2 shadow-card">
-            <p className="text-xs font-semibold text-ink-700">400+ makers</p>
-          </div>
-          <div className="absolute bottom-8 right-6 rounded-full bg-pine px-4 py-2 shadow-card">
-            <p className="text-xs font-semibold text-white">Ships today</p>
-          </div>
+        {/* Pagination dots */}
+        <div className="flex items-center justify-center gap-1.5 pb-4">
+          <span className="h-1.5 w-5 rounded-full bg-white" />
+          <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
+          <span className="h-1.5 w-1.5 rounded-full bg-white/30" />
         </div>
-
       </div>
     </section>
   );

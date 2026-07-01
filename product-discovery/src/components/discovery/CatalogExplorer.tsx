@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import type { CleanedItem } from "@/types/item";
 import type { Category } from "@/types/item";
-import { DEFAULT_FILTERS, type ActiveFilters } from "@/types/filters";
+import type { ActiveFilters } from "@/types/filters";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import { filterItems } from "@/lib/search/filter";
 import { compareItems } from "@/lib/search/rank";
@@ -14,16 +14,20 @@ import { PopularRow } from "@/components/discovery/PopularRow";
 import { ResultsGrid, RESULT_CAP } from "@/components/discovery/ResultsGrid";
 import { ResultCount } from "@/components/discovery/ResultCount";
 import { EmptyState } from "@/components/discovery/EmptyState";
+import { PromoBanner } from "@/components/layout/PromoBanner";
 
 export function CatalogExplorer({
   items,
   initialQuery = "",
+  filters,
+  onFiltersChange,
 }: {
   items: CleanedItem[];
   initialQuery?: string;
+  filters: ActiveFilters;
+  onFiltersChange: (f: ActiveFilters) => void;
 }) {
   const [query, setQuery] = useState(initialQuery);
-  const [filters, setFilters] = useState<ActiveFilters>(DEFAULT_FILTERS);
   const debouncedQuery = useDebouncedValue(query, 300);
 
   useEffect(() => {
@@ -42,18 +46,22 @@ export function CatalogExplorer({
   }, [items, debouncedQuery, filters]);
 
   function handleCategorySelect(category: Category) {
-    setFilters((prev) => ({ ...prev, category }));
+    onFiltersChange({ ...filters, category });
   }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <SearchBar value={query} onChange={setQuery} />
-        <FilterBar filters={filters} onChange={setFilters} />
+        {/* FilterBar only shows on mobile — sidebar handles desktop filtering */}
+        <div className="lg:hidden">
+          <FilterBar filters={filters} onChange={onFiltersChange} />
+        </div>
       </div>
 
       {isDiscoveryView ? (
-        <div className="flex flex-col gap-10">
+        <div className="flex flex-col gap-8">
+          <PromoBanner />
           <CategoryChips onSelect={handleCategorySelect} />
           <PopularRow items={items} />
         </div>
