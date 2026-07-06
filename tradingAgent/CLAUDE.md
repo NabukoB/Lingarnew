@@ -31,8 +31,8 @@ over a fresh Alpaca call before making a trading decision.
    `replace-order` to walk up trailing stops if `strategy.md` calls for it.
    New entries only if within remaining risk budget for the day.
 4. **End-of-day summary** (~4:15 PM ET) — compute the day's P/L vs SPY, append
-   a row to `memory/performance.md`, send the recap (email + push, both
-   best-effort), then commit.
+   a row to `memory/performance.md`, send the recap via push notification,
+   then commit.
 5. **Weekly review** (Fridays only, ~4:45 PM ET) — look back at the week's
    journals and `performance.md`; propose changes to `strategy.md` as a new
    dated entry in its changelog section — never silently rewrite the rules.
@@ -76,5 +76,13 @@ each DST boundary (mid-March, early November) — a manual chore, not automated.
 - `node tradingAgent/scripts/alpaca.mjs <subcommand> [--flag=value]` — all
   Alpaca calls. Run with no arguments to see the subcommand list.
 - `node tradingAgent/scripts/send-recap.mjs --subject "..." --file <path>` —
-  sends the recap email. Failing is non-fatal; always still send the push
-  notification and commit even if this fails.
+  sends the recap by email via Mailgun. **Not currently used by any routine**
+  (recaps go out via push notification only) — kept here in case email gets
+  turned on later. It already no-ops cleanly if Mailgun env vars aren't set.
+
+## Recap delivery
+
+Daily and weekly recaps are sent via the PushNotification tool from within
+the end-of-day / weekly-review sessions — no email. If email is wanted later,
+set the `MAILGUN_*`/`RECAP_EMAIL_TO` vars from `.env.example` and add a call
+to `send-recap.mjs` back into those two routines' trigger prompts.
