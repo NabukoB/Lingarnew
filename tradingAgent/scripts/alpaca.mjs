@@ -1,22 +1,31 @@
 #!/usr/bin/env node
 // CLI wrapper around Alpaca's REST API. No dependencies beyond Node's built-in fetch/fs.
 // Usage: node tradingAgent/scripts/alpaca.mjs <subcommand> [positional args] [--flag=value ...]
+//
+// Stops are managed via separate `trailing_stop` GTC orders (see `buy`), not
+// bracket-order fixed stops — matching the reference strategy where the trailing
+// stop walks up automatically with the price.
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
-const PAUSED_FILE = path.join(SCRIPT_DIR, "..", "memory", "PAUSED");
+const MEMORY_DIR = path.join(SCRIPT_DIR, "..", "memory");
+const PAUSED_FILE = path.join(MEMORY_DIR, "PAUSED");
+const TRADE_LOG = path.join(MEMORY_DIR, "TRADE-LOG.md");
 
 const TRADING_BASE_URL = process.env.ALPACA_BASE_URL || "https://paper-api.alpaca.markets";
 const DATA_BASE_URL = process.env.ALPACA_DATA_URL || "https://data.alpaca.markets";
 const IS_PAPER = TRADING_BASE_URL.includes("paper-api.alpaca.markets");
 const LIVE_CONFIRMED = process.env.LIVE_TRADING_CONFIRMED === "true";
 
-const MAX_POSITION_PCT = Number(process.env.MAX_POSITION_PCT || "10");
-const MAX_OPEN_POSITIONS = Number(process.env.MAX_OPEN_POSITIONS || "5");
+const MAX_POSITION_PCT = Number(process.env.MAX_POSITION_PCT || "20");
+const MAX_OPEN_POSITIONS = Number(process.env.MAX_OPEN_POSITIONS || "6");
+const MAX_TRADES_PER_WEEK = Number(process.env.MAX_TRADES_PER_WEEK || "3");
 const MAX_DAILY_LOSS_PCT = Number(process.env.MAX_DAILY_LOSS_PCT || "3");
+const MAX_DAYTRADE_COUNT = Number(process.env.MAX_DAYTRADE_COUNT || "2");
+const DEFAULT_TRAIL_PERCENT = process.env.DEFAULT_TRAIL_PERCENT || "10";
 
 class RailError extends Error {
   constructor(message) {
@@ -105,12 +114,16 @@ async function estimateNotional(symbol, qty, type, limitPrice) {
 async function assertPositionSizeOk(symbol, qty, type, limitPrice) {
   const account = await getAccount();
   const equity = Number(account.equity);
+  const cash = Number(account.cash);
   const notional = await estimateNotional(symbol, qty, type, limitPrice);
   const pct = (notional / equity) * 100;
   if (pct > MAX_POSITION_PCT) {
     throw new RailError(
       `order notional ~$${notional.toFixed(2)} is ${pct.toFixed(1)}% of equity, exceeds MAX_POSITION_PCT=${MAX_POSITION_PCT}%`
     );
+  }
+  if (notional > cash) {
+    throw new RailError(`order notional ~$${notional.toFixed(2)} exceeds available cash $${cash.toFixed(2)}`);
   }
 }
 
@@ -128,11 +141,56 @@ async function assertDailyLossOk() {
   const account = await getAccount();
   const equity = Number(account.equity);
   const lastEquity = Number(account.last_equity);
-  if (!lastEquity) return; // no prior close to compare against (e.g. brand-new account)
+  if (!lastEquity) return;
   const pnlPct = ((equity - lastEquity) / lastEquity) * 100;
   if (pnlPct <= -MAX_DAILY_LOSS_PCT) {
     throw new RailError(
       `daily P/L ${pnlPct.toFixed(2)}% breaches MAX_DAILY_LOSS_PCT=-${MAX_DAILY_LOSS_PCT}%, no new buys today`
+    );
+  }
+}
+
+async function assertPdtOk() {
+  const account = await getAccount();
+  const daytradeCount = Number(account.daytrade_count || 0);
+  const equity = Number(account.equity);
+  if (equity < 25000 && daytradeCount > MAX_DAYTRADE_COUNT) {
+    throw new RailError(
+      `daytrade_count=${daytradeCount} exceeds MAX_DAYTRADE_COUNT=${MAX_DAYTRADE_COUNT} on a sub-$25k account (PDT rule)`
+    );
+  }
+}
+
+function countTradesThisWeek() {
+  if (!existsSync(TRADE_LOG)) return 0;
+  const contents = readFileSync(TRADE_LOG, "utf8");
+  // Trade log entries are of the form `## YYYY-MM-DD — BUY|SELL SYM ...` (or similar).
+  // We count any header line that starts with "## " and contains "BUY " as a new-position entry
+  // dated within the current Monday-through-today (Mon-Fri trading week) window.
+  const today = new Date();
+  const day = today.getUTCDay(); // 0 = Sun, 1 = Mon, ...
+  const daysSinceMonday = (day + 6) % 7; // days back to most recent Monday
+  const monday = new Date(today);
+  monday.setUTCDate(today.getUTCDate() - daysSinceMonday);
+  monday.setUTCHours(0, 0, 0, 0);
+
+  let count = 0;
+  const lines = contents.split("\n");
+  for (const line of lines) {
+    // Look for lines like: `## 2026-07-06 — BUY AAPL ...`
+    const match = line.match(/^##\s+(\d{4})-(\d{2})-(\d{2}).*\bBUY\b/);
+    if (!match) continue;
+    const entryDate = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    if (entryDate >= monday) count++;
+  }
+  return count;
+}
+
+function assertTradesPerWeekOk() {
+  const count = countTradesThisWeek();
+  if (count >= MAX_TRADES_PER_WEEK) {
+    throw new RailError(
+      `already ${count} BUY entries in TRADE-LOG.md this week, at MAX_TRADES_PER_WEEK=${MAX_TRADES_PER_WEEK}`
     );
   }
 }
@@ -165,6 +223,12 @@ const commands = {
     return request("DELETE", `${TRADING_BASE_URL}/v2/positions/${symbol}${qs}`);
   },
 
+  async "close-all"() {
+    assertNotPaused();
+    assertPaperOrConfirmed();
+    return request("DELETE", `${TRADING_BASE_URL}/v2/positions`);
+  },
+
   async orders({ flags }) {
     const status = flags.status || "open";
     return request("GET", `${TRADING_BASE_URL}/v2/orders?status=${status}`);
@@ -182,6 +246,12 @@ const commands = {
     const [id] = positional;
     if (!id) throw new Error("usage: cancel-order <ORDER_ID>");
     return request("DELETE", `${TRADING_BASE_URL}/v2/orders/${id}`);
+  },
+
+  async "cancel-all-orders"() {
+    assertNotPaused();
+    assertPaperOrConfirmed();
+    return request("DELETE", `${TRADING_BASE_URL}/v2/orders`);
   },
 
   async "replace-order"({ positional, flags }) {
@@ -227,31 +297,61 @@ const commands = {
     return request("GET", `${DATA_BASE_URL}/v1beta1/news?${params.toString()}`);
   },
 
+  // Market buy. Does NOT attach a stop — the trailing stop is placed separately
+  // via `trailing-stop` after the buy fills. Enforces all buy-side rails.
   async buy({ positional, flags }) {
     assertNotPaused();
     assertPaperOrConfirmed();
     const [symbol] = positional;
-    const { qty, type = "market", "limit-price": limitPrice, "stop-loss": stopLoss, "take-profit": takeProfit } = flags;
-    if (!symbol || !qty) throw new Error("usage: buy <SYMBOL> --qty=N --type=market|limit [--limit-price=] --stop-loss=PRICE [--take-profit=PRICE]");
-    if (!stopLoss) throw new Error("--stop-loss is required for every buy: no unprotected positions");
+    const { qty, type = "market", "limit-price": limitPrice } = flags;
+    if (!symbol || !qty) throw new Error("usage: buy <SYMBOL> --qty=N [--type=market|limit] [--limit-price=]");
     if (type === "limit" && !limitPrice) throw new Error("--limit-price is required when --type=limit");
 
+    assertTradesPerWeekOk();
     await assertPositionSizeOk(symbol, Number(qty), type, limitPrice);
     await assertOpenPositionCapOk(symbol);
+    await assertPdtOk();
     await assertDailyLossOk();
 
+    const body = { symbol, qty: String(qty), side: "buy", type, time_in_force: "day" };
+    if (type === "limit") body.limit_price = String(limitPrice);
+
+    return request("POST", `${TRADING_BASE_URL}/v2/orders`, body);
+  },
+
+  // Place a trailing stop as a separate GTC sell order — the reference's core stop mechanic.
+  async "trailing-stop"({ positional, flags }) {
+    assertNotPaused();
+    assertPaperOrConfirmed();
+    const [symbol] = positional;
+    const { qty, "trail-percent": trailPercent = DEFAULT_TRAIL_PERCENT } = flags;
+    if (!symbol || !qty) throw new Error(`usage: trailing-stop <SYMBOL> --qty=N [--trail-percent=${DEFAULT_TRAIL_PERCENT}]`);
     const body = {
       symbol,
       qty: String(qty),
-      side: "buy",
-      type,
-      time_in_force: "day",
-      order_class: "bracket",
-      stop_loss: { stop_price: String(stopLoss) },
+      side: "sell",
+      type: "trailing_stop",
+      trail_percent: String(trailPercent),
+      time_in_force: "gtc",
     };
-    if (type === "limit") body.limit_price = String(limitPrice);
-    if (takeProfit) body.take_profit = { limit_price: String(takeProfit) };
+    return request("POST", `${TRADING_BASE_URL}/v2/orders`, body);
+  },
 
+  // Fallback fixed stop when PDT rules reject a same-day trailing stop.
+  async "fixed-stop"({ positional, flags }) {
+    assertNotPaused();
+    assertPaperOrConfirmed();
+    const [symbol] = positional;
+    const { qty, "stop-price": stopPrice } = flags;
+    if (!symbol || !qty || !stopPrice) throw new Error("usage: fixed-stop <SYMBOL> --qty=N --stop-price=PRICE");
+    const body = {
+      symbol,
+      qty: String(qty),
+      side: "sell",
+      type: "stop",
+      stop_price: String(stopPrice),
+      time_in_force: "gtc",
+    };
     return request("POST", `${TRADING_BASE_URL}/v2/orders`, body);
   },
 

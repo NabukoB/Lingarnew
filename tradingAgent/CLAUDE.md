@@ -11,78 +11,119 @@ Branch: `claude/ai-trading-agent-alpaca-0969h4`. Always `git pull --rebase`
 before reading memory, and `git push` after committing your changes, so
 consecutive same-day routines don't clobber each other.
 
-## Ground truth vs memory
+## Read-me-first (every session, in order)
 
-Alpaca itself (`account`, `positions`, `orders`, `clock`) is always the source
-of truth for money, positions, and orders. `memory/portfolio.md` is a
-human-readable snapshot for continuity between journal entries — never trust it
-over a fresh Alpaca call before making a trading decision.
+- `tradingAgent/memory/TRADING-STRATEGY.md` — the rulebook. Never violate.
+- `tradingAgent/memory/TRADE-LOG.md` — tail for open positions, entries, stops, last EOD snapshot.
+- `tradingAgent/memory/RESEARCH-LOG.md` — today's entry (or add one) before any trade.
+- `tradingAgent/memory/PROJECT-CONTEXT.md` — overall mission and rules.
+- `tradingAgent/memory/WEEKLY-REVIEW.md` — Friday afternoons only, for the template.
+
+## Ground truth vs. memory
+
+Alpaca (`account`, `positions`, `orders`, `clock`) is always the source of truth
+for money, positions, and orders. Memory files document what happened and what
+you intended — never trust them over a fresh Alpaca call before deciding.
 
 ## The five routines
 
-1. **Pre-market research** (~8:00 AM ET) — no orders. Run `clock`, `most-active`,
-   `news`. Pick today's candidate universe with a written rationale into
-   `memory/watchlist.md`.
-2. **Market-open execution** (~9:35 AM ET) — decide buy/skip per
-   `memory/strategy.md` against each watchlist candidate. Every `buy` must
-   include `--stop-loss` (the script won't let you omit it). Update
-   `memory/portfolio.md` with the post-trade snapshot.
-3. **Midday scan** (~12:30 PM ET) — re-check open positions and news. Use
-   `replace-order` to walk up trailing stops if `strategy.md` calls for it.
-   New entries only if within remaining risk budget for the day.
-4. **End-of-day summary** (~4:15 PM ET) — compute the day's P/L vs SPY, append
-   a row to `memory/performance.md`, send the recap via push notification,
-   then commit.
-5. **Weekly review** (Fridays only, ~4:45 PM ET) — look back at the week's
-   journals and `performance.md`; propose changes to `strategy.md` as a new
-   dated entry in its changelog section — never silently rewrite the rules.
+1. **Pre-market research** (~8:00 AM ET) — no orders. Run `clock`, pull account
+   state, run research (Alpaca `most-active`/`news` + WebSearch). Append a
+   dated entry to `RESEARCH-LOG.md` with catalysts, 2-3 trade ideas (catalyst +
+   entry + initial trailing stop + target + R:R), and a TRADE/HOLD decision.
+2. **Market-open execution** (~9:35 AM ET) — read today's `RESEARCH-LOG.md`
+   entry. If missing, run the pre-market research steps inline first — never
+   trade without documented research. For each planned trade, run the buy-side
+   gate from `TRADING-STRATEGY.md`. Place market buys, then **immediately place
+   a 10% trailing_stop as a separate GTC sell order** (see stop mechanics
+   below). Append every trade to `TRADE-LOG.md`.
+3. **Midday scan** (~12:30 PM ET) — cut losers at -7%, tighten trailing stops
+   on winners (+15% → `trail_percent: 7`; +20% → `trail_percent: 5`), thesis
+   check open positions.
+4. **End-of-day summary** (~4:15 PM ET) — compute day P/L (needs yesterday's
+   EOD equity from `TRADE-LOG.md`, so committing the EOD snapshot is
+   mandatory). Append a new EOD Snapshot section to `TRADE-LOG.md`. Send a push
+   notification recap.
+5. **Weekly review** (Fridays only, ~4:45 PM ET) — full week stats, letter
+   grade, appended to `WEEKLY-REVIEW.md`. Rule changes append to
+   `TRADING-STRATEGY.md`'s Changelog section — never silently rewrite.
 
-## Safety rails
+## Stop mechanics — trailing stops, not brackets
 
-The rails below are enforced **inside `scripts/alpaca.mjs` itself**, not just
-as instructions here — if the script refuses a command, do not try to work
-around it. Journal the refusal and move on.
+Every new position gets a **10% trailing stop placed as a separate GTC sell
+order** on Alpaca, right after the buy fills:
 
-- Paper trading only unless `LIVE_TRADING_CONFIRMED=true` is set.
-- Kill switch: if `memory/PAUSED` exists, no orders are placed. Journal that
-  you're paused and stop.
-- Max position size per trade: `MAX_POSITION_PCT` of account equity (default 10%).
-- Max concurrent open positions: `MAX_OPEN_POSITIONS` (default 5).
-- Every new position must carry a stop-loss (bracket order) from entry.
-- Daily loss circuit breaker: `MAX_DAILY_LOSS_PCT` (default 3%) blocks new
-  buys for the rest of the day, but never blocks selling/closing a position.
+```
+node tradingAgent/scripts/alpaca.mjs trailing-stop <SYM> --qty=<N> --trail-percent=10
+```
 
-Before any routine that places orders, run `node tradingAgent/scripts/alpaca.mjs clock`
-first. If `is_open` is false, journal "market closed, skipping" and stop —
-this protects against DST-related cron drift (see below), not just holidays.
+If Alpaca rejects it (usually a same-day PDT issue on same-day buys), fall back
+to a fixed stop 10% below entry:
 
-## Journal format
+```
+node tradingAgent/scripts/alpaca.mjs fixed-stop <SYM> --qty=<N> --stop-price=<PRICE>
+```
 
-One file per trading day at `memory/journal/YYYY-MM-DD.md`. Each routine
-appends its own `## <Routine Name>` section (create the file if it's the
-first routine to run that day). Write enough detail that the next routine —
-or the weekly review, days later — can understand what happened and why
-without re-deriving it.
+If that's also blocked, queue the stop in `TRADE-LOG.md` as
+"PDT-blocked, set tomorrow AM" and set it in the next pre-market run.
+
+To tighten a trailing stop later: `cancel-order` the old one, then place a new
+`trailing-stop` with a smaller `--trail-percent`. Never move a stop down; never
+tighten within 3% of current price.
+
+## Safety rails (enforced in `scripts/alpaca.mjs`)
+
+If the script refuses, respect the refusal. Journal why and move on.
+
+- **Paper only** unless `LIVE_TRADING_CONFIRMED=true`.
+- **Kill switch:** if `memory/PAUSED` exists, no orders are placed.
+- **Position size cap:** `MAX_POSITION_PCT` (default 20%) of equity per trade.
+- **Cash check:** order notional ≤ available cash.
+- **Open positions cap:** `MAX_OPEN_POSITIONS` (default 6).
+- **Trades-per-week cap:** `MAX_TRADES_PER_WEEK` (default 3), counted from BUY
+  entries in `TRADE-LOG.md` since Monday.
+- **PDT guard:** on sub-$25k accounts, refuse a buy if Alpaca's
+  `daytrade_count > MAX_DAYTRADE_COUNT` (default 2).
+- **Daily loss circuit breaker:** if `(equity - last_equity)/last_equity` ≤
+  `-MAX_DAILY_LOSS_PCT` (default 3%), new buys are refused. Sells/closes always
+  allowed.
+
+Before any routine that places orders, run `alpaca.mjs clock` first — if
+`is_open` is false, journal "market closed, skipping" and stop. This protects
+against DST cron drift, weekends, and holidays.
+
+## Do NOT create a `.env` file
+
+Every routine's environment variables are set on the Claude Code Remote
+environment itself — they're already exported into your shell. If a script
+prints "not set in environment", **stop and send one push notification naming
+the missing var**. Do NOT create a `.env` as a workaround — that risks leaking
+credentials into the repo.
+
+## Notification philosophy
+
+- Pre-market: silent unless something is genuinely urgent (a held position
+  already below -7% overnight, a thesis broke, a major geopolitical event).
+- Market-open: silent unless a trade was placed.
+- Midday: silent unless action was taken (a sell, a stop tightened).
+- EOD summary: **always** sends one concise push notification, even on
+  no-trade days.
+- Weekly review: **always** sends one concise push notification.
+
+The cost of a missed notification is low (you can check the branch commits).
+The cost of a chatty bot is high (you stop reading them).
 
 ## Known limitation: DST
 
 The cron schedules are fixed UTC and not DST-aware; during EST they'll fire
 about an hour earlier in ET wall-clock time than intended. The `clock` guard
-above is the primary defense. The schedules should also be shifted ±1 hour at
-each DST boundary (mid-March, early November) — a manual chore, not automated.
+above is the primary defense. Manually shift schedules ±1 hour at each DST
+boundary (mid-March, early November) if precise timing matters.
 
 ## Scripts
 
 - `node tradingAgent/scripts/alpaca.mjs <subcommand> [--flag=value]` — all
   Alpaca calls. Run with no arguments to see the subcommand list.
 - `node tradingAgent/scripts/send-recap.mjs --subject "..." --file <path>` —
-  sends the recap by email via Mailgun. **Not currently used by any routine**
-  (recaps go out via push notification only) — kept here in case email gets
-  turned on later. It already no-ops cleanly if Mailgun env vars aren't set.
-
-## Recap delivery
-
-Daily and weekly recaps are sent via the PushNotification tool from within
-the end-of-day / weekly-review sessions — no email. If email is wanted later,
-set the `MAILGUN_*`/`RECAP_EMAIL_TO` vars from `.env.example` and add a call
-to `send-recap.mjs` back into those two routines' trigger prompts.
+  Mailgun email sender. **Not currently used** by any routine; recaps go out
+  via push notification. Kept for later.
