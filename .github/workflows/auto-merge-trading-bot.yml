@@ -1,0 +1,26 @@
+name: Auto-merge trading bot PRs
+
+# Watches PRs opened from the routine's per-run branches
+# (claude/*) and enables auto-merge on them. GitHub then merges
+# as soon as required checks pass — the repo has no required
+# checks configured, so this is effectively instant. Keeps the
+# memory chain flowing from routine → main every fire.
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    if: startsWith(github.event.pull_request.head.ref, 'claude/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge (squash)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr merge --auto --squash --delete-branch "$PR"
