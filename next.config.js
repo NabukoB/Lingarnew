@@ -9,6 +9,9 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "21mb",
     },
+    outputFileTracingIncludes: {
+      "/trading-bot": ["./trading-bot/memory/**/*"],
+    },
   },
 };
 
