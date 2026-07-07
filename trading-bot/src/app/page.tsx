@@ -1,13 +1,11 @@
-import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   getAccount,
   getPositions,
   getOpenOrders,
   type AlpacaPosition,
   type AlpacaOrder,
-} from "@/lib/trading-bot/alpaca";
-import { readResearchLog, readTradeLogTail } from "@/lib/trading-bot/memory";
+} from "@/lib/alpaca";
+import { readResearchLog, readTradeLogTail } from "@/lib/memory";
 import { Markdown } from "./Markdown";
 
 export const dynamic = "force-dynamic";
@@ -19,16 +17,9 @@ const fmtMoney = (n: number, digits = 2) =>
     maximumFractionDigits: digits,
   });
 
-const fmtPct = (n: number) =>
-  `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
+const fmtPct = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
 
-export default async function TradingBotPage() {
-  const supabase = createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/");
-
+export default async function DashboardPage() {
   const [account, positions, orders, research, tradeTail] = await Promise.all([
     getAccount(),
     getPositions(),
@@ -51,58 +42,65 @@ export default async function TradingBotPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-[11px] text-lingar-gold uppercase tracking-widest font-medium">
-          Trading Bot
-        </p>
-        <h1 className="text-2xl font-bold text-lingar-paper mt-1">
-          Paper Dashboard
-        </h1>
-        <p className="text-[11px] text-lingar-ghost mt-1">
-          {account
-            ? `${account.account_number} · ${account.status} · ${nowLabel}`
-            : nowLabel}
-        </p>
+      <div className="flex items-baseline justify-between">
+        <div>
+          <p className="text-[11px] text-bot-accent uppercase tracking-widest font-medium">
+            Trading Bot
+          </p>
+          <h1 className="text-2xl font-bold text-bot-paper mt-1">
+            Paper Dashboard
+          </h1>
+        </div>
+        <p className="text-[10px] text-bot-muted font-mono">{nowLabel}</p>
       </div>
 
+      {account && (
+        <p className="text-[11px] text-bot-muted font-mono">
+          {account.account_number} · {account.status}
+        </p>
+      )}
+
       {account ? (
-        <div className="bg-lingar-surface rounded-2xl p-5 border border-lingar-surface2">
-          <p className="text-[10px] text-lingar-ghost uppercase tracking-wider">
+        <div className="bg-bot-surface rounded-2xl p-5 border border-bot-border">
+          <p className="text-[10px] text-bot-muted uppercase tracking-wider">
             Equity
           </p>
-          <p className="text-3xl font-bold text-lingar-paper mt-0.5 tabular-nums">
+          <p className="text-3xl font-bold text-bot-paper mt-0.5 tabular-nums">
             ${fmtMoney(equity!)}
           </p>
           {dayPnl !== null && dayPnlPct !== null && (
             <p
               className={`text-xs mt-1 tabular-nums ${
-                dayPnl >= 0 ? "text-lingar-green" : "text-lingar-red"
+                dayPnl >= 0 ? "text-bot-green" : "text-bot-red"
               }`}
             >
               {dayPnl >= 0 ? "+" : ""}${fmtMoney(dayPnl)} ({fmtPct(dayPnlPct)}){" "}
-              <span className="text-lingar-ghost">today</span>
+              <span className="text-bot-muted">today</span>
             </p>
           )}
           <div className="grid grid-cols-3 gap-3 mt-5">
-            <MiniStat label="Cash" value={`$${fmtMoney(parseFloat(account.cash), 0)}`} />
+            <MiniStat
+              label="Cash"
+              value={`$${fmtMoney(parseFloat(account.cash), 0)}`}
+            />
             <MiniStat
               label="Buying Power"
               value={`$${fmtMoney(parseFloat(account.buying_power), 0)}`}
             />
-            <MiniStat label="Day Trades" value={String(account.daytrade_count ?? 0)} />
+            <MiniStat
+              label="Day Trades"
+              value={String(account.daytrade_count ?? 0)}
+            />
           </div>
         </div>
       ) : (
         <ErrorCard
           title="Alpaca unavailable"
-          message="Server can't reach Alpaca. Check ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_ENDPOINT in the Vercel env."
+          message="Server can't reach Alpaca. Check ALPACA_API_KEY, ALPACA_SECRET_KEY, ALPACA_ENDPOINT in Vercel env vars."
         />
       )}
 
-      <Section
-        title="Open Positions"
-        count={positions?.length ?? null}
-      >
+      <Section title="Open Positions" count={positions?.length ?? null}>
         {positions && positions.length > 0 ? (
           <PositionsTable positions={positions} />
         ) : (
@@ -125,7 +123,7 @@ export default async function TradingBotPage() {
         {research.latest ? (
           <Markdown content={research.latest} />
         ) : (
-          <Empty text="No research entries yet — the pre-market routine hasn't written one." />
+          <Empty text="No research entries yet." />
         )}
       </Section>
 
@@ -137,26 +135,25 @@ export default async function TradingBotPage() {
         )}
       </Section>
 
-      <div className="text-center text-[11px] text-lingar-ghost pt-4 border-t border-lingar-surface2 space-y-1">
-        <p>Refresh the page to pull the latest Alpaca state.</p>
+      <div className="text-center text-[11px] text-bot-muted pt-4 border-t border-bot-border space-y-1">
+        <p>Refresh the page to pull fresh Alpaca state.</p>
         <p>
-          Memory files ·{" "}
           <a
             href="https://github.com/NabukoB/Lingarnew/tree/main/trading-bot/memory"
             target="_blank"
             rel="noreferrer"
-            className="text-lingar-gold underline"
+            className="text-bot-accent underline"
           >
-            GitHub
+            Memory
           </a>{" "}
-          · Alpaca ·{" "}
+          ·{" "}
           <a
             href="https://app.alpaca.markets/paper/dashboard/overview"
             target="_blank"
             rel="noreferrer"
-            className="text-lingar-gold underline"
+            className="text-bot-accent underline"
           >
-            Console
+            Alpaca console
           </a>
         </p>
       </div>
@@ -167,10 +164,10 @@ export default async function TradingBotPage() {
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="text-center">
-      <p className="text-[9px] text-lingar-ghost uppercase tracking-wider">
+      <p className="text-[9px] text-bot-muted uppercase tracking-wider">
         {label}
       </p>
-      <p className="text-xs font-semibold text-lingar-paper mt-0.5 tabular-nums">
+      <p className="text-xs font-semibold text-bot-paper mt-0.5 tabular-nums">
         {value}
       </p>
     </div>
@@ -189,18 +186,16 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-lingar-surface rounded-2xl p-5 border border-lingar-surface2">
+    <div className="bg-bot-surface rounded-2xl p-5 border border-bot-border">
       <div className="flex items-baseline justify-between mb-3">
-        <h2 className="text-sm font-semibold text-lingar-paper uppercase tracking-wider">
+        <h2 className="text-sm font-semibold text-bot-paper uppercase tracking-wider">
           {title}
         </h2>
         {typeof count === "number" && (
-          <span className="text-[11px] text-lingar-ghost tabular-nums">
-            {count}
-          </span>
+          <span className="text-[11px] text-bot-muted tabular-nums">{count}</span>
         )}
         {subtitle && (
-          <span className="text-[11px] text-lingar-ghost">{subtitle}</span>
+          <span className="text-[11px] text-bot-muted">{subtitle}</span>
         )}
       </div>
       {children}
@@ -209,13 +204,13 @@ function Section({
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="text-xs text-lingar-ghost italic">{text}</p>;
+  return <p className="text-xs text-bot-muted italic">{text}</p>;
 }
 
 function ErrorCard({ title, message }: { title: string; message: string }) {
   return (
-    <div className="bg-lingar-surface border border-lingar-red/40 rounded-2xl p-5">
-      <p className="text-sm font-semibold text-lingar-red">{title}</p>
+    <div className="bg-bot-surface border border-bot-red/40 rounded-2xl p-5">
+      <p className="text-sm font-semibold text-bot-red">{title}</p>
       <p className="text-xs text-gray-300 mt-1 leading-relaxed">{message}</p>
     </div>
   );
@@ -226,7 +221,7 @@ function PositionsTable({ positions }: { positions: AlpacaPosition[] }) {
     <div className="-mx-1 overflow-x-auto">
       <table className="w-full text-[12px] tabular-nums">
         <thead>
-          <tr className="text-left text-lingar-ghost text-[10px] uppercase tracking-wider">
+          <tr className="text-left text-bot-muted text-[10px] uppercase tracking-wider">
             <th className="py-1 px-1 font-medium">Sym</th>
             <th className="py-1 px-1 font-medium text-right">Qty</th>
             <th className="py-1 px-1 font-medium text-right">Entry</th>
@@ -240,8 +235,8 @@ function PositionsTable({ positions }: { positions: AlpacaPosition[] }) {
             const plpc = parseFloat(p.unrealized_plpc) * 100;
             const green = pl >= 0;
             return (
-              <tr key={p.symbol} className="border-t border-lingar-surface2">
-                <td className="py-2 px-1 font-semibold text-lingar-paper">
+              <tr key={p.symbol} className="border-t border-bot-border">
+                <td className="py-2 px-1 font-semibold text-bot-paper">
                   {p.symbol}
                 </td>
                 <td className="py-2 px-1 text-right text-gray-300">{p.qty}</td>
@@ -253,13 +248,11 @@ function PositionsTable({ positions }: { positions: AlpacaPosition[] }) {
                 </td>
                 <td
                   className={`py-2 px-1 text-right ${
-                    green ? "text-lingar-green" : "text-lingar-red"
+                    green ? "text-bot-green" : "text-bot-red"
                   }`}
                 >
                   {green ? "+" : ""}${fmtMoney(pl)}
-                  <span className="text-[10px] block">
-                    {fmtPct(plpc)}
-                  </span>
+                  <span className="text-[10px] block">{fmtPct(plpc)}</span>
                 </td>
               </tr>
             );
@@ -275,7 +268,7 @@ function OrdersTable({ orders }: { orders: AlpacaOrder[] }) {
     <div className="-mx-1 overflow-x-auto">
       <table className="w-full text-[12px] tabular-nums">
         <thead>
-          <tr className="text-left text-lingar-ghost text-[10px] uppercase tracking-wider">
+          <tr className="text-left text-bot-muted text-[10px] uppercase tracking-wider">
             <th className="py-1 px-1 font-medium">Sym</th>
             <th className="py-1 px-1 font-medium">Side</th>
             <th className="py-1 px-1 font-medium text-right">Qty</th>
@@ -285,13 +278,13 @@ function OrdersTable({ orders }: { orders: AlpacaOrder[] }) {
         </thead>
         <tbody>
           {orders.map((o) => (
-            <tr key={o.id} className="border-t border-lingar-surface2">
-              <td className="py-2 px-1 font-semibold text-lingar-paper">
+            <tr key={o.id} className="border-t border-bot-border">
+              <td className="py-2 px-1 font-semibold text-bot-paper">
                 {o.symbol}
               </td>
               <td
                 className={`py-2 px-1 uppercase text-[10px] font-semibold ${
-                  o.side === "buy" ? "text-lingar-green" : "text-lingar-red"
+                  o.side === "buy" ? "text-bot-green" : "text-bot-red"
                 }`}
               >
                 {o.side}
