@@ -23,4 +23,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
-        run: gh pr merge --auto --squash --delete-branch "$PR"
+          REPO: ${{ github.repository }}
+        run: gh pr merge --auto --squash --delete-branch --repo "$REPO" "$PR"
