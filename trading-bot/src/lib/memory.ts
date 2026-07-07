@@ -1,7 +1,7 @@
 import { readFile } from "fs/promises";
 import path from "path";
 
-const MEMORY_DIR = path.join(process.cwd(), "trading-bot", "memory");
+const MEMORY_DIR = path.join(process.cwd(), "memory");
 
 async function safeRead(file: string): Promise<string | null> {
   try {
@@ -19,7 +19,9 @@ export async function readResearchLog(): Promise<{
   const raw = await safeRead("RESEARCH-LOG.md");
   if (!raw) return { raw: null, latest: null, latestDate: null };
   const dateSections = raw.split(/\n(?=## \d{4}-\d{2}-\d{2})/);
-  const dated = dateSections.filter((s) => /^## \d{4}-\d{2}-\d{2}/.test(s.trim()));
+  const dated = dateSections.filter((s) =>
+    /^## \d{4}-\d{2}-\d{2}/.test(s.trim())
+  );
   const tail = dated.at(-1);
   const latest = tail ? tail.trim() : null;
   const latestDate = latest?.match(/^## (\d{4}-\d{2}-\d{2})/)?.[1] ?? null;
@@ -33,8 +35,4 @@ export async function readTradeLogTail(maxChars = 3000): Promise<string | null> 
   const tail = raw.slice(raw.length - maxChars);
   const firstBreak = tail.indexOf("\n### ");
   return firstBreak >= 0 ? tail.slice(firstBreak + 1) : tail;
-}
-
-export async function readStrategy(): Promise<string | null> {
-  return safeRead("TRADING-STRATEGY.md");
 }
