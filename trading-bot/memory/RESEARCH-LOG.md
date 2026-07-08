@@ -62,3 +62,34 @@ TRADE or HOLD (default HOLD if no edge)
 
 ### Decision
 HOLD — no position currently open, no ticker clears the full entry checklist (specific catalyst + confirmed sector momentum + defined stop/target) yet. Semiconductor rotation is a developing story to watch, not an entry signal today. Patience > activity on Day 0.
+
+## 2026-07-08 — Pre-market Research (run inline during market-open, no prior entry existed)
+
+### Account
+- Equity: $99,990.31 (paper; treating $10,000 as usable capital per strategy)
+- Cash: $99,608.05
+- Buying power: $399,502.53
+- Daytrade count: not returned by this account endpoint (treat as 0/unknown; no same-day round-trips planned)
+- Positions: MSFT x1 @ avg $391.94, current $382.29 (-2.5%), 10% trailing GTC stop live at $355.12 (hwm $394.58)
+- Note: MSFT entry (2026-07-07) was never appended to TRADE-LOG.md by the prior session — logged retroactively below to keep records accurate.
+
+### Market Context
+- Middle East escalation: Trump told NATO summit the Iran ceasefire is "over" amid renewed hostilities — broad risk-off. [CNBC](https://www.cnbc.com/2026/07/07/stock-market-today-live-updates.html)
+- S&P 500 -0.7%, Nasdaq -0.7%, Dow -722pts/-1.4% intraday on the headline.
+- Oil spiking on supply-disruption fear: WTI +5-7.6% to ~$74-75.77/bbl, Brent +5-8% to ~$78-80/bbl. [tradingeconomics.com](https://tradingeconomics.com/commodity/brent-crude-oil)
+- VIX 17.65, +9.4% — fear gauge jumping but not panic-level yet.
+- Sector momentum: XLE +2% intraday (Diamondback, Occidental, Valero leading) on the oil spike; XLK -2% as tech gets sold (Sandisk -4%, Micron -4%).
+- MSFT-specific: down further to ~$382 (-1.7% today, -19% YTD) on AI-spend concerns + reports MSFT is looking to swap OpenAI/Anthropic models for in-house AI in Office apps; gaming division cut 1,600 jobs. Next earnings 2026-07-29. Thesis for existing position (megacap rotation beneficiary) is weakening, not broken — spread is tight ($382.27/$382.36), stop untouched.
+- No earnings of note before open; no CPI/PPI/FOMC/jobs today.
+
+### Trade Ideas
+1. XLE / energy names (Diamondback, Occidental, Valero) — catalyst is a single-day geopolitical spike, not confirmed multi-day sector momentum; chasing a war-headline pop violates "never chase a spike" discipline. Watchlist only — needs 2-3 days of held gains before treating as a real entry.
+2. No other names clear catalyst + confirmed momentum + defined stop/target today.
+
+### Risk Factors
+- Headline-driven, highly reversible risk (ceasefire status can flip on the next statement) — poor day to open new risk.
+- VIX rising, broad tape red — bad expected-value day for fresh longs.
+- Existing MSFT position already showing thesis erosion (down -19% YTD, AI-spend/analyst concerns) — watch for -7% stop or thesis break, no action needed yet (-2.5%, stop intact).
+
+### Decision
+HOLD — no new trades today. Geopolitical-shock day with a single-session energy spike is not a confirmed-momentum entry signal, and no ticker clears the full checklist. Existing MSFT position holds as-is with its GTC trailing stop.
