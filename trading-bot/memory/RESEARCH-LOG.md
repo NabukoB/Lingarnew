@@ -62,3 +62,37 @@ TRADE or HOLD (default HOLD if no edge)
 
 ### Decision
 HOLD — no position currently open, no ticker clears the full entry checklist (specific catalyst + confirmed sector momentum + defined stop/target) yet. Semiconductor rotation is a developing story to watch, not an entry signal today. Patience > activity on Day 0.
+
+## 2026-07-08 — Pre-market Research
+
+### Account
+- Equity: $99,990.84 (paper account; treating $10,000 as usable capital, rest ignored)
+- Cash: $99,608.05
+- Buying power: $399,504.01
+- Daytrade count: 0
+- Positions: MSFT x1, avg entry $391.94, current ~$382.83, unrealized P&L ~-$9.10 (-2.3%)
+- Open orders: MSFT SELL trailing-stop, 10% trail, GTC, stop $355.12, hwm $394.58 (Rule #4 stop in place, untouched)
+
+### Market Context
+- **Iran ceasefire collapse.** Trump declared the Iran ceasefire "over" after US strikes tied to attacks on commercial ships in the Strait of Hormuz; Treasury revoked Iran's oil-export license. [Yahoo Finance](https://finance.yahoo.com/markets/stocks/live/stock-market-today-wednedsay-july-8-dow-sp-nasdaq-fall-oil-rise-230111117.html), [CNBC](https://www.cnbc.com/2026/07/07/stock-market-today-live-updates.html)
+- Oil: WTI >$75/bbl, Brent ~$79/bbl, crude +7% on supply-disruption fears. [Yahoo Finance](https://finance.yahoo.com/markets/stocks/live/stock-market-today-wednedsay-july-8-dow-sp-nasdaq-fall-oil-rise-230111117.html)
+- Equities (intraday, market-open confirmation): S&P 500 -1%, Dow -1.6% (>800pts), Nasdaq Composite -0.9%. [24/7 Wall St.](https://247wallst.com/investing/2026/07/08/stock-market-live-july-8-2026-sp-500-spy-slips-on-end-of-ceasefire/)
+- VIX: 18.28, +13.3% — clear risk-off fear spike vs. prior calm ~15.9. [Yahoo Finance](https://finance.yahoo.com/quote/%5EVIX/)
+- Sector impact: Energy (XOM +1.6%, CVX +1.9%, COP +2.2%) rallying on the oil spike; broader tape risk-off. [TheStreet](https://www.thestreet.com/stock-market-today/stock-market-today-dow-jones-sp-500-nasdaq-updates-july-8-2026)
+- Economic calendar: FOMC June-meeting minutes due this afternoon (first meeting under Chair Kevin Warsh) — second potential volatility event same session. [CNBC](https://www.cnbc.com/2026/07/07/stock-market-today-live-updates.html)
+- Held-ticker news (MSFT): no thesis-breaking company-specific news; -2.3% unrealized is in line with the broad risk-off tape, not a company issue. Stop intact well above -7% cut line.
+- Spread check (market-open): MSFT bid $382.71 / ask $382.83 — tight, no halt.
+
+### Trade Ideas (watchlist only — see Decision)
+1. Energy (XLE, XOM, CVX, COP) — catalyst: Iran/Strait of Hormuz escalation + oil spike reinforces existing YTD sector momentum. Not an entry today: chasing a live geopolitical gap fails the entry checklist (no stable, definable stop/target yet). Watch for pullback/consolidation.
+2. Defense (ITA, RTX, LMT) — same catalyst, same caution. Watchlist only, needs a post-spike stable entry level.
+3. No new tech/semiconductor entries — thesis stays broken (HBM capex doubts, hawkish Fed) and compounded by risk-off flows out of growth/tech. MSFT (existing position) holds; stop is doing its job.
+
+### Risk Factors
+- Active, fluid geopolitical shock — could reverse or escalate further intraday.
+- VIX +13% signals real volatility — wider slippage risk on any new entry today.
+- FOMC minutes this afternoon adds a second same-day volatility event.
+- Oil >$80 Brent sustained would raise inflation/rate risk, pressuring growth/tech further.
+
+### Decision
+HOLD. MSFT position stays open — stop intact, no thesis break, P&L well above the -7% cut line. No new trades: today's dominant catalyst (Iran ceasefire collapse) is a fresh, unstable, fast-moving shock; chasing a same-day gap in energy/defense fails the entry checklist on execution quality. Energy/defense stay on watchlist for a confirmed pullback entry. Patience > activity.
