@@ -1,31 +1,34 @@
 import express from "express";
 import { generateReply } from "./claude";
-import { parseIncomingMessage, sendWhatsAppMessage } from "./whatsapp";
+import {
+  parseIncomingMessage,
+  sendWhatsAppMessage,
+  verifySignature,
+} from "./whatsapp";
 
 const app = express();
-app.use(express.json());
+// Twilio posts form-encoded bodies, not JSON.
+app.use(express.urlencoded({ extended: false }));
 
-// Webhook verification — Meta calls this once when you save the webhook URL.
-app.get("/webhook", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
-
-  if (
-    mode === "subscribe" &&
-    token === process.env.WHATSAPP_VERIFY_TOKEN &&
-    typeof challenge === "string"
-  ) {
-    res.status(200).send(challenge);
-    return;
-  }
-  res.sendStatus(403);
-});
-
-// Incoming message webhook.
 app.post("/webhook", async (req, res) => {
-  // Acknowledge fast so Meta doesn't retry; do the LLM work in the background.
-  res.sendStatus(200);
+  const publicUrl = process.env.PUBLIC_URL;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (publicUrl && authToken) {
+    const valid = verifySignature(
+      authToken,
+      publicUrl,
+      req.header("X-Twilio-Signature") ?? undefined,
+      req.body,
+    );
+    if (!valid) {
+      res.sendStatus(403);
+      return;
+    }
+  }
+
+  // Acknowledge fast so Twilio doesn't retry; do the LLM work in the
+  // background and reply out-of-band via the REST API.
+  res.sendStatus(204);
 
   const incoming = parseIncomingMessage(req.body);
   if (!incoming) return;

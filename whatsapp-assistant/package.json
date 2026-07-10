@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "twilio": "^6.0.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

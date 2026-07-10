@@ -1,73 +1,59 @@
-const GRAPH_API_VERSION = "v20.0";
+import twilio from "twilio";
 
 export interface IncomingMessage {
   from: string;
   text: string;
-  messageId: string;
+  messageSid: string;
 }
 
-interface WhatsAppWebhookPayload {
-  entry?: Array<{
-    changes?: Array<{
-      value?: {
-        messages?: Array<{
-          from: string;
-          id: string;
-          type: string;
-          text?: { body: string };
-        }>;
-      };
-    }>;
-  }>;
-}
-
+// Twilio delivers WhatsApp webhooks as application/x-www-form-urlencoded,
+// so `body` here is a plain string map, not JSON.
 export function parseIncomingMessage(
-  body: unknown,
+  body: Record<string, string> | undefined,
 ): IncomingMessage | null {
-  const payload = body as WhatsAppWebhookPayload;
-  const message = payload?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-  if (!message || message.type !== "text" || !message.text?.body) {
-    return null;
-  }
+  if (!body?.From || !body.Body) return null;
   return {
-    from: message.from,
-    text: message.text.body,
-    messageId: message.id,
+    from: body.From,
+    text: body.Body,
+    messageSid: body.MessageSid ?? "",
   };
+}
+
+// Twilio HMAC-signs every webhook with the account's auth token. When we know
+// our public URL, verify the signature so someone else can't forge inbound
+// messages. See https://www.twilio.com/docs/usage/webhooks/webhooks-security
+export function verifySignature(
+  authToken: string,
+  publicUrl: string,
+  signature: string | undefined,
+  body: Record<string, string>,
+): boolean {
+  if (!signature) return false;
+  const url = new URL("/webhook", publicUrl).toString();
+  return twilio.validateRequest(authToken, signature, url, body);
+}
+
+let cachedClient: twilio.Twilio | null = null;
+function getClient(): twilio.Twilio {
+  if (cachedClient) return cachedClient;
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !token) {
+    throw new Error(
+      "TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN must be set",
+    );
+  }
+  cachedClient = twilio(sid, token);
+  return cachedClient;
 }
 
 export async function sendWhatsAppMessage(
   to: string,
   body: string,
 ): Promise<void> {
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const token = process.env.WHATSAPP_ACCESS_TOKEN;
-  if (!phoneNumberId || !token) {
-    throw new Error(
-      "WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN must be set",
-    );
+  const from = process.env.TWILIO_WHATSAPP_FROM;
+  if (!from) {
+    throw new Error("TWILIO_WHATSAPP_FROM must be set");
   }
-
-  const url = `https://graph.facebook.com/${GRAPH_API_VERSION}/${phoneNumberId}/messages`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to,
-      type: "text",
-      text: { body },
-    }),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(
-      `WhatsApp send failed: ${response.status} ${response.statusText} — ${errText}`,
-    );
-  }
+  await getClient().messages.create({ from, to, body });
 }
