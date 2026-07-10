@@ -62,3 +62,9 @@ TRADE or HOLD (default HOLD if no edge)
 
 ### Decision
 HOLD — no position currently open, no ticker clears the full entry checklist (specific catalyst + confirmed sector momentum + defined stop/target) yet. Semiconductor rotation is a developing story to watch, not an entry signal today. Patience > activity on Day 0.
+
+## 2026-07-10 — Midday Scan — API Outage
+
+- All `scripts/alpaca.sh` calls (account, positions, orders, quote — both trading and data endpoints) returned HTTP 403. Env vars ALPACA_API_KEY/ALPACA_SECRET_KEY/ALPACA_ENDPOINT/ALPACA_DATA_ENDPOINT were confirmed set with plausible lengths; endpoint is `https://paper-api.alpaca.markets/v2`. Failure is consistent across both APIs, so likely an auth/key issue (expired or regenerated key) rather than a single flaky endpoint.
+- Took no action — could not confirm position/order state, so no stops touched and no losers cut. Last known state remains Day 0 baseline (no open positions as of 2026-07-07).
+- Next session: verify ALPACA_API_KEY/ALPACA_SECRET_KEY are current before retrying.
