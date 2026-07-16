@@ -62,3 +62,35 @@ TRADE or HOLD (default HOLD if no edge)
 
 ### Decision
 HOLD — no position currently open, no ticker clears the full entry checklist (specific catalyst + confirmed sector momentum + defined stop/target) yet. Semiconductor rotation is a developing story to watch, not an entry signal today. Patience > activity on Day 0.
+
+## 2026-07-16 — Pre-market Research
+
+### Account
+- **UNAVAILABLE** — `bash scripts/alpaca.sh account/positions/orders` all failed: `curl: (56) CONNECT tunnel failed, response 403`. Confirmed on both `ALPACA_ENDPOINT` (paper-api.alpaca.markets) and `ALPACA_DATA_ENDPOINT` (data.alpaca.markets) with direct curl — this is an outbound network-proxy/egress policy block on the Alpaca hosts, not a missing/invalid key (both `ALPACA_API_KEY` and `ALPACA_SECRET_KEY` are set and non-empty). Per proxy runbook, 403 on a CONNECT tunnel = destination not allowed by org egress policy this session; not to be retried or routed around.
+- Last known state (from memory, unverified today): Day 0 baseline, $10,000 usable capital, no open positions, no trades placed since bot launch.
+
+### Market Context
+- WTI ~$78-79.60/bbl, Brent ~$83-85/bbl — Brent at a ~1-month high. [tradingeconomics.com](https://tradingeconomics.com/commodity/brent-crude-oil), [CNBC](https://www.cnbc.com/2026/07/15/oil-prices-today-brent-wti-hormuz-blockade.html)
+- S&P 500 futures: mixed/choppy — up ~0.2% on cooler CPI read early, then flipped to -0.1% pre-market Thursday per a later check. [Yahoo Finance](https://finance.yahoo.com/markets/stocks/articles/us-stock-market-today-p-081336350.html), [Benzinga](https://www.benzinga.com/markets/prediction-markets/26/07/60489078/sp500-july-16-open-up-or-down-polymarket-ppi-inflation-fed-retail-sales-netflix)
+- VIX: ~16.2-16.3, range 15.88-16.57 — calm. [Yahoo Finance](https://finance.yahoo.com/quote/%5EVIX/)
+- Today's catalysts: **Active Iran-US military conflict** — US struck Tehran again, reimposed naval blockade on Iranian ports near Strait of Hormuz; Iran targeted 7 commercial vessels (~12 crew dead/missing/injured). Hormuz transit volume down >50% week-over-week. Oil "little changed" so far but analysts warn of a retest of $100 if hostilities persist, higher if regional oil infrastructure is hit. Fed Chair Warsh testifies before Congress today (hawkish-leaning). June CPI came in cooler than expected (headline -0.4% MoM, YoY 3.5%; core 2.6%). [CNBC](https://www.cnbc.com/2026/07/15/oil-prices-today-brent-wti-hormuz-blockade.html), [Al Jazeera](https://www.aljazeera.com/economy/2026/7/14/oil-hits-1-month-high-as-us-iran-fighting-clouds-strait-of-hormuz-outlook), [Schwab](https://www.schwab.com/learn/story/stock-market-update-open)
+- Earnings before open: **UnitedHealth (UNH)** headlines premarket earnings; also GE Aerospace, Abbott (ABT), US Bancorp, TSMC (TSM), Prologis reporting around today; Netflix (NFLX) reports after close. [Earnings Whispers](https://www.earningswhispers.com/calendar/20260716/1), [Yahoo Finance](https://finance.yahoo.com/calendar/earnings/)
+- Economic calendar: Initial Claims, Advance Retail Sales, Philly Fed Manufacturing Survey, Business Inventories, NAR Pending Home Sales due today. June PPI (already out) fell -0.3% MoM, annual rate 5.5% (below 6.2% forecast). June jobs report: unemployment 4.2%. No FOMC meeting today. [tradingeconomics.com](https://tradingeconomics.com/united-states/calendar), [BLS](https://www.bls.gov/schedule/news_release/ppi.htm)
+- Sector momentum (2026 YTD, via WebSearch — **Deep Research fetch pass failed again, 21/21 sources empty/failed, same issue as 07-07 entry**): XLK (Tech) leads ~26-33% YTD (wide source disagreement) but flagged by some as downgraded to underperform for 2H26 on AI-capex/valuation risk; XLE (Energy) +21%, boosted further now by Iran conflict supply-disruption premium; XLI (Industrials) +20% on AI data-center buildout + aerospace/defense demand; XLF (Financials) and healthcare/communication services lagging vs. expectations. [Seeking Alpha](https://seekingalpha.com/article/4854947-my-s-and-p-500-prediction-on-sector-out-performers-and-laggards-in-2026), [ETF DB](https://etfdb.com/sector-investing-content-hub/xlk-xle-xli-top-performing-sector-spdrs/)
+- No held positions (per last known state) — no ticker-specific news to review.
+
+### Trade Ideas (documented, not executed — see Decision)
+1. Energy majors / XLE (e.g., XOM, CVX) — catalyst: active Iran-US conflict, Strait of Hormuz blockade, oil at 1-month highs with analyst upside risk to $100 on escalation. Sector already in YTD momentum (+21%). No defined entry/stop yet — needs confirmed relative-strength breakout and a calmer read on account state before sizing. Watchlist only.
+2. Industrials / XLI — AI data-center buildout + aerospace/defense demand sustaining momentum (+20% YTD). No specific single-name catalyst identified yet — watchlist only.
+3. Avoid Financials (XLF) and story-crowded AI/semis names — underperforming vs. expectations / valuation-risk flagged by multiple sources; wait for a clearer setup.
+
+### Risk Factors
+- **BLOCKING: Alpaca API unreachable (proxy 403 on both trading and data hosts).** Cannot verify equity/cash/buying power/daytrade count, cannot see open positions or orders, cannot place or manage any order. No trade can pass the Buy-Side Gate today regardless of catalyst quality.
+- Active, escalating Iran-US military conflict — Strait of Hormuz disruption risk, oil could spike sharply on any infrastructure strike; high headline-risk day.
+- Fed Chair Warsh testifies today — hawkish surprise risk on top of already-hawkish-leaning Fed reads.
+- Heavy earnings day (UNH before open, NFLX after close, TSM, GE, ABT) — index-moving surprise risk.
+- Sector-momentum figures pulled from single-pass WebSearch only; Deep Research fetch stage failed entirely (21/21 sources empty) for the second research cycle in a row — treat YTD sector % as directional, not precise.
+- S&P futures direction itself was inconsistent across sources this morning (+0.2% vs -0.1%) — no clean read on broad market direction pre-open.
+
+### Decision
+HOLD — forced HOLD: Alpaca API is unreachable via the network proxy (403 on CONNECT tunnel to both trading and data endpoints), so account state cannot be verified and the Buy-Side Gate cannot be satisfied even if a trade idea were compelling. Separately, no trade idea today has a fully defined entry/stop/target with confirmed relative strength — this would be a watchlist-only day even with working API access. Patience > activity; flagging the API outage as the priority to resolve before the next session.
