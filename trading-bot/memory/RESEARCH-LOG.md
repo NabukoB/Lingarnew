@@ -62,3 +62,13 @@ TRADE or HOLD (default HOLD if no edge)
 
 ### Decision
 HOLD — no position currently open, no ticker clears the full entry checklist (specific catalyst + confirmed sector momentum + defined stop/target) yet. Semiconductor rotation is a developing story to watch, not an entry signal today. Patience > activity on Day 0.
+
+## 2026-07-20 — Midday Scan (blocked)
+
+### Blocker
+- Alpaca API unreachable: egress proxy returned 403 on CONNECT to `paper-api.alpaca.markets:443` (and `api.alpaca.markets`) — organization network policy denial, not an auth/key issue (ALPACA_API_KEY/ALPACA_SECRET_KEY both confirmed set).
+- Per proxy operating rules, policy denials (403/407) must be reported, not retried or routed around.
+- Could not fetch positions, orders, or place/cancel any orders this cycle. No P&L cut, stop-tightening, or thesis checks performed — no data to act on.
+
+### Decision
+NO ACTION — midday scan could not execute. Needs the paper-api.alpaca.markets host allowlisted for this session/environment before the next scan can run.
