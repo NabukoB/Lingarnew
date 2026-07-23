@@ -62,3 +62,35 @@ TRADE or HOLD (default HOLD if no edge)
 
 ### Decision
 HOLD — no position currently open, no ticker clears the full entry checklist (specific catalyst + confirmed sector momentum + defined stop/target) yet. Semiconductor rotation is a developing story to watch, not an entry signal today. Patience > activity on Day 0.
+
+## 2026-07-23 — Pre-market Research
+
+### Account
+- **UNAVAILABLE** — `scripts/alpaca.sh account|positions|orders` all failed: proxy CONNECT tunnel to `paper-api.alpaca.markets` returned 403 (org egress policy block, per `/root/.ccr/README.md` §"403/407 from the proxy" — not an Alpaca credentials issue). Not retried per proxy guidance. Last known state: Day 0 baseline, $10,000, no positions, no orders (memory/TRADE-LOG.md unchanged since 2026-07-07). User notified via push.
+- Note: RESEARCH-LOG has only one prior entry (2026-07-07) despite 16 calendar days elapsed — scheduled runs appear to have been inactive or silent-HOLD without logging in between; flagging for review, not resolving here.
+
+### Market Context
+- WTI ~$90.14/bbl (+3.8%, highest since June 8); Brent ~$98.44-98.49/bbl (+4-4.6%) — active war premium, not a supply/demand move. [CNBC](https://www.cnbc.com/2026/07/23/oil-prices-today-wti-brent-trump-iran-hormuz.html), [Fortune](https://fortune.com/article/price-of-oil-07-23-2026/)
+- S&P 500 futures: ~7,541 (range 7,504.75–7,554), slightly lower premarket on rising yields (10yr ~4.63%, 2-month high) and energy jitters; surprise crude inventory build (+2.6M bbl) despite the war. [Yahoo Finance](https://finance.yahoo.com/markets/stocks/articles/us-stock-market-today-p-081301441.html)
+- VIX: most recent print 18.65 (close 7/21) — elevated vs. 2026 Day-0 baseline (~15.9) but not panic-level. [Yahoo Finance](https://finance.yahoo.com/quote/%5EVIX/)
+- **Major catalyst — active US-Iran military conflict**: 12th consecutive night of US strikes on Iran; Iran retaliating against Kuwait/Jordan targets and striking tankers in the Strait of Hormuz (IRGC-claimed tanker explosion near Oman route today). Trump threatens to destroy a bridge/power plant per ship targeted; Iran threatens regional energy infrastructure in response. Iran also separately signaling openness to talks. [Al Jazeera](https://www.aljazeera.com/news/2026/7/23/iran-houthis-strike-tankers-as-us-bombing-continues-whats-the-latest), [CNBC](https://www.cnbc.com/2026/07/23/oil-prices-today-wti-brent-trump-iran-hormuz.html), [Wikipedia: 2026 Strait of Hormuz crisis](https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis)
+- Other catalysts: AI/semiconductor strength in Asia (Samsung, SK Hynix +3%+) on AI capex flows; heavy Big Tech earnings week (GOOGL, INTC, IBM, TSLA later this week). [Bloomberg](https://www.bloomberg.com/news/articles/2026-07-22/stock-market-today-dow-s-p-live-updates)
+- Earnings before open today: RTX, T-Mobile, Thermo Fisher, Union Pacific, Blackstone, Lockheed Martin, Freeport-McMoRan, Comcast, Honeywell, Intel, SAP, Newmont — 166 reports scheduled total today. [Earnings Whispers](https://www.earningswhispers.com/calendar/20260723/1)
+- Economic calendar: no CPI/PPI/jobs report today (next CPI 8/12); FOMC meeting is next week (7/28-29, decision 7/29 2pm ET) — not today. ECB rate decision today. Fed H.4.1/H.8/H.10 routine releases only. [Federal Reserve](https://www.federalreserve.gov/newsevents/2026-july.htm)
+- Sector momentum (2026 YTD): Technology leads (+27.5% to +34.7% depending on source), Capital Goods +32.4%, Energy +22.4% (now getting a war-driven tailwind), Transportation +18.5%, Utilities +12.7%. Laggards: Services -3.1%, Consumer Discretionary +0.75%, Retail +5.15%. Large-cap value (+15.5%) far outpacing large-cap growth (+2.1%) — broadening rotation out of mega-cap concentration. [Clark.com](https://clark.com/personal-finance-credit/investing-retirement/the-best-investments-so-far-through-june-2026/), [FT Portfolios](https://www.ftportfolios.com/blogs/MarketBlog/2026/3/10/top-performing-sp-500-index-subsectors-ytd-thru-36)
+- No confirmed held positions per last known state — no ticker-specific news pulled.
+
+### Trade Ideas (documented, not executed — see Decision)
+1. Energy majors/XLE (e.g. XOM, CVX) — catalyst: active Hormuz conflict + tanker strikes pushing Brent/WTI sharply higher, sector already YTD momentum leader (+22%); risk: war premium can reverse violently on any de-escalation/talks headline (Iran signaling openness to talks same day) — NOT an entry until war trajectory and account state are both clear.
+2. Defense primes (LMT, RTX both reporting today) — catalyst: active US military campaign + earnings today could beat/raise guidance on demand outlook; need to see actual earnings prints and price reaction before entry — watchlist only.
+3. Broad tech/value rotation (per sector momentum data) — capital goods and value broadening out beyond mega-cap growth; no single-ticker catalyst identified yet, needs a defined breakout name before it clears the entry checklist.
+
+### Risk Factors
+- **Live shooting war** (US-Iran, Strait of Hormuz) — major geopolitical event, oil up 4%+ intraday, headline risk both directions (escalation vs. talks) within hours.
+- Elevated VIX (18.65) and rising 10yr yield (4.63%, 2-month high) — risk-off pressure independent of the war.
+- **Cannot verify account equity, cash, buying power, existing positions, or open orders** — Alpaca API blocked by proxy egress policy (403). No order should be placed today regardless of thesis quality until this is resolved and confirmed working.
+- Gap in RESEARCH-LOG since 2026-07-07 — no continuity on whether trades were placed/closed in the interim; TRADE-LOG.md shows none, but that file may itself be stale.
+- Heavy earnings day (166 reports) — elevated single-name volatility risk even for uninvolved sectors.
+
+### Decision
+HOLD — hard blocker: Alpaca API unreachable (proxy 403), so no trade can be verified or placed regardless of market read. Even setting that aside, today's setup (active war, earnings-heavy, elevated yields/VIX) argues for watching, not entering. Re-run account pull once API access is confirmed restored.
