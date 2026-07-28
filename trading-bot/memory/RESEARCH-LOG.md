@@ -62,3 +62,34 @@ TRADE or HOLD (default HOLD if no edge)
 
 ### Decision
 HOLD — no position currently open, no ticker clears the full entry checklist (specific catalyst + confirmed sector momentum + defined stop/target) yet. Semiconductor rotation is a developing story to watch, not an entry signal today. Patience > activity on Day 0.
+
+## 2026-07-28 — Market-Open Research (inline, account access blocked)
+
+### Account
+- BLOCKED: `bash scripts/alpaca.sh account|positions|orders` all returned
+  `curl: (22) ... 403` — proxy-level `CONNECT tunnel failed, response 403`
+  to paper-api.alpaca.markets, not an Alpaca auth error. Per
+  /root/.ccr/README.md this is an organization egress-policy block on the
+  destination host, not something to retry or route around.
+- Cannot confirm equity, cash, open positions, or daytrade_count today.
+
+### Market Context (WebSearch)
+- S&P 500 futures ~flat/-0.1%; Nasdaq-100 futures -1% on Korean memory-chip
+  sell-off (AI circular-financing concerns); Dow futures +0.6%. VIX futures
+  ~19.2-19.4. Big Tech earnings + FOMC decision this week. [TheStreet](https://www.thestreet.com/stock-market-today/stock-market-today-dow-jones-sp-500-nasdaq-updates-july-28-2026), [Yahoo Finance](https://finance.yahoo.com/markets/live/stock-market-today-tuesday-july-28-dow-sp-500-nasdaq-082832371.html), [Bloomberg](https://www.bloomberg.com/news/articles/2026-07-27/stock-market-today-dow-s-p-live-updates)
+
+### Trade Ideas
+None generated — no point sourcing entries when the execution/validation
+gate (live account state) is unreachable.
+
+### Risk Factors
+- Primary risk today is infrastructure, not market: no trade can be safely
+  placed without live equity/cash/position/daytrade_count confirmation.
+- Chip-sector volatility continues (see 2026-07-07 entry); FOMC this week
+  adds event risk.
+
+### Decision
+HOLD — blocked on infrastructure. Alpaca API host unreachable through the
+session's egress proxy (403 on CONNECT tunnel). No orders placed. Needs the
+org's network/egress policy to allow paper-api.alpaca.markets and
+data.alpaca.markets before this bot can trade.
