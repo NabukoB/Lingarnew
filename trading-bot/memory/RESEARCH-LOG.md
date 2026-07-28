@@ -62,3 +62,34 @@ TRADE or HOLD (default HOLD if no edge)
 
 ### Decision
 HOLD — no position currently open, no ticker clears the full entry checklist (specific catalyst + confirmed sector momentum + defined stop/target) yet. Semiconductor rotation is a developing story to watch, not an entry signal today. Patience > activity on Day 0.
+
+## 2026-07-28 — Pre-market Research
+
+### Account
+- **UNAVAILABLE THIS RUN** — Alpaca API calls (`account`, `positions`, `orders`) all failed: `curl: (56) CONNECT tunnel failed, response 403` against `paper-api.alpaca.markets`. This session's egress proxy is blocking the Alpaca host outright (not a missing-key issue; keys verified present). Reported to admin via PushNotification. Do not fabricate figures — last confirmed state remains the 2026-07-07 baseline (equity ~$10,000 usable capital, no open positions, no trade-log entries since).
+- Positions/orders: unknown this cycle — could not verify any existing holdings are within stop/risk limits. Flagged as a risk factor below.
+
+### Market Context
+- WTI: ~$80.11/bbl (Sept. delivery), down ~3% intraday. Brent: $86.58/bbl, down 1.54%. Move driven by a holding US–Iran fighting pause easing Middle East supply-risk premium. [CNBC](https://www.cnbc.com/2026/07/28/oil-price-today-wti-brent-us-iran-hormuz.html), [tradingeconomics.com](https://tradingeconomics.com/commodity/brent-crude-oil)
+- S&P 500 futures: mixed/choppy — up ~0.9% early, pared to roughly flat/-0.1% later in premarket as semiconductor weakness deepened (Micron -4%, Nvidia -1.2%, Intel/AMD -3%+ premarket). Nasdaq futures underperforming S&P. 10-yr yield ~4.64%; PMI readings 53-54 (still expansionary). [Bloomberg](https://www.bloomberg.com/news/articles/2026-07-27/stock-market-today-dow-s-p-live-updates?srnd=homepage-asia), [CNBC](https://www.cnbc.com/2026/07/27/stock-market-today-live-updates.html), [Yahoo Finance](https://finance.yahoo.com/markets/live/stock-market-today-tuesday-july-28-dow-sp-500-nasdaq-082832371.html)
+- VIX: 18.67 (last close, 7/27) — calm-to-moderate, up from ~15.9 on 7/7; consistent with sector reallocation rather than broad flight-to-safety. [Yahoo Finance](https://finance.yahoo.com/quote/%5EVIX/history/)
+- Today's catalysts: Deepening semiconductor selloff (AI-capex/financing-circularity worries) — Nvidia reportedly discussing ~$250B of financing guarantees tied to an OpenAI data-center project; TSMC raised 2026 capex guidance to $64B, spooking margin/ROI assumptions. Oil's retreat toward high-$80s is easing inflation anxiety ahead of tomorrow's Fed decision. [Yahoo Finance](https://finance.yahoo.com/markets/live/stock-market-today-tuesday-july-28-dow-sp-500-nasdaq-082832371.html), [Tickmill](https://www.tickmill.com/blog/daily-market-outlook-july-28-2026)
+- Earnings before open: no confirmed major US pre-market reporters found for 7/28 specifically (176 companies report today per Earnings Whispers, but a before-open marquee list wasn't surfaced). Major names (SK Hynix, Visa, Coca-Cola, Boeing, UPS, Ford) report tomorrow, 7/29. [Earnings Whispers](https://www.earningswhispers.com/calendar/20260728/1), [FX Leaders](https://www.fxleaders.com/news/2026/07/27/forex-signals-brief-july-28-skhy-visa-coca-cola-boeing-ups-and-ford-earnings-preview-wednesday/)
+- Economic calendar: Consumer Confidence, Richmond Fed Manufacturing Survey (10:00 ET), Dallas Fed Texas Retail Outlook (10:30 ET) today. **FOMC meeting is today/tomorrow (7/28-7/29)** — policy statement + Chair Warsh press conference tomorrow, 7/29. CME FedWatch: 64.2% probability of a hold (down from 87.2% a week ago) — rate-path uncertainty rising. [tradingeconomics.com](https://tradingeconomics.com/united-states/calendar), [Kiplinger](https://www.kiplinger.com/investing/economy/this-weeks-economic-calendar)
+- Sector momentum (2026 YTD, via deep research): Energy (XLE) and Technology (XLK) led H1 (roughly +20-35% YTD depending on source — wide disagreement, treat as directional only), Industrials (XLI) ~+20%. Laggards: Consumer Discretionary (~-5.6%), Communication Services (~-6.1%), Financials ~flat. **Recent rotation (last 1-2 weeks): clear shift OUT of tech/semis INTO healthcare, financials, and energy** — 7/27 saw XLK -1.44%, SOXX -5.1% in a session, vs. XLV +0.7%, XLF +0.86%, XLE +0.4%. [interactivecrypto.com](https://www.interactivecrypto.com/spy-edges-higher-amid-tech-selloff-and-sector-rotation-toward-healthcare-and-financials-jul-2026), [intellectia.ai](https://intellectia.ai/blog/ai-trade-cracks-chip-stocks-july-2026), [etftrends.com](https://www.etftrends.com/sector-investing-content-hub/top-performing-sector-spdrs-xlk-xle-xli-top-the-list/)
+- No confirmed held positions to review (per last known state) — no ticker-specific news pulled.
+
+### Trade Ideas (documented, not executed — see Decision)
+1. Healthcare (XLV) / Financials (XLF) — catalyst: active rotation destination as capital exits crowded tech/semis; no specific ticker, entry, or stop defined yet — watchlist only until a pullback + relative-strength confirmation appears.
+2. Avoid semiconductors/AI-capex names (SMH, NVDA, MU, INTC, AMD) — thesis broken: AI-financing circularity concerns + TSMC capex/margin worries are driving an active, ongoing selloff. Not a long candidate today.
+3. Energy (XLE) — momentum leader YTD, but today's oil-price move (WTI/Brent both down on Iran de-escalation) conflicts with the "oil near $100 supporting energy" rotation narrative from secondary sources — data is contradictory, do not treat as a clean long until reconciled with a live quote.
+
+### Risk Factors
+- **Alpaca API unreachable this run** (proxy 403 on `paper-api.alpaca.markets`) — cannot confirm current equity, cash, buying power, daytrade count, open positions, or open orders. Any existing position's stop-loss/trailing-stop coverage could not be verified this cycle. PushNotification sent; retry account pull next session.
+- FOMC decision tomorrow (7/29) — meaningful rate-path uncertainty (hold probability dropped from 87% to 64% in a week); high event risk argues against new entries into the event.
+- Sector YTD % figures disagree sharply across sources (e.g., XLE cited anywhere from +3.6% to +52% YTD) — directional signal only, not precise.
+- Oil-price catalyst is internally inconsistent (falling per direct quote vs. "near $100" per rotation commentary) — needs reconciliation.
+- Ongoing semiconductor/AI-financing unwind could spill into broader Nasdaq-100/tech if it doesn't stabilize.
+
+### Decision
+HOLD — no live account/position data to evaluate against the buy-side gate (data outage, not a market call), and FOMC event risk lands tomorrow regardless. Patience > activity; retry the account/positions pull as soon as connectivity is restored.
