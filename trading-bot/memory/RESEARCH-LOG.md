@@ -62,3 +62,35 @@ TRADE or HOLD (default HOLD if no edge)
 
 ### Decision
 HOLD — no position currently open, no ticker clears the full entry checklist (specific catalyst + confirmed sector momentum + defined stop/target) yet. Semiconductor rotation is a developing story to watch, not an entry signal today. Patience > activity on Day 0.
+
+## 2026-07-29 — Pre-market Research
+
+### Account
+- **UNAVAILABLE — Alpaca API blocked at proxy level.** `scripts/alpaca.sh account/positions/orders` all fail: CONNECT tunnel to `paper-api.alpaca.markets` and `data.alpaca.markets` returns 403 from the session's egress proxy (org policy denial, per `/root/.ccr/README.md` — not a missing/invalid key, not retried, not routed around). No orders could be placed even if a setup existed. PushNotification sent to flag this as a blocking infra issue for the whole bot.
+- Per TRADE-LOG.md (last entry: Day 0, 2026-07-07, HOLD, no trades logged since): no open positions on record. Not independently verified live due to the above outage.
+
+### Market Context
+- WTI: ~$79.28/bbl (7/28 close, -4.03% d/d). Brent: ~$87.53–89.53/bbl (5:05am ET 7/29 read ~$89.53). [tradingeconomics.com](https://tradingeconomics.com/commodity/brent-crude-oil), [Fortune](https://fortune.com/article/price-of-oil-07-29-2026/), [Forbes Advisor](https://www.forbes.com/advisor/investing/oil-prices-today/)
+- S&P 500 futures: +0.18–0.2%; Nasdaq-100 futures +0.3%. Polymarket implies ~70% odds of a higher open. [CNBC](https://www.cnbc.com/2026/07/28/stock-market-today-live-updates.html), [Yahoo Finance](https://finance.yahoo.com/markets/live/stock-market-today-wednesday-july-29-dow-sp-500-nasdaq-082009165.html), [Benzinga](https://www.benzinga.com/markets/prediction-markets/26/07/60750402/sp500-july-29-open-up-or-down-polymarket-fed-warsh-microsoft-meta-qualcomm-earnings)
+- VIX: opened ~19.05, ranging 18.22–19.52 — elevated vs. early-July ~15.9, reflects pre-FOMC/earnings jitters. [Investing.com](https://www.investing.com/indices/volatility-s-p-500)
+- Today's catalysts: **FOMC rate decision + Chair Kevin Warsh press conference at 2:00pm ET** (day 2 of the July 28-29 meeting) — market expects a hold. Big Tech earnings (MSFT, META) after today's close — AI capex scrutiny is the dominant tech narrative. Chip weakness continues: SMH down 4 straight sessions, -3%+ recently. [Bloomberg](https://www.bloomberg.com/news/articles/2026-07-28/stock-market-today-dow-s-p-live-updates), [Benzinga](https://www.benzinga.com/markets/equities/26/07/60750897/stock-market-today-dow-jones-sp-500-futures-rise-as-investors-await-federal-reserves-decision-on-interest-rates-ford-motor-bloom-energy-microsoft-in-focus), [Federal Reserve](https://www.federalreserve.gov/newsevents/2026-july.htm)
+- Earnings before open: no major US names flagged before the bell; MSFT and META report **after** today's close (~299 companies reporting total this week). [TipRanks](https://www.tipranks.com/calendars/earnings), [TheStreet](https://www.thestreet.com/stock-market-today/stock-market-today-dow-jones-sp-500-nasdaq-updates-july-28-2026)
+- Economic calendar: FOMC decision 2:00pm ET (headline event). Corporate Bond Market Distress Index (CMDI) 10:00am ET. No CPI today (next CPI is Aug 12); PPI + jobless claims are tomorrow (Thu). [tradingeconomics.com calendar](https://tradingeconomics.com/united-states/calendar), [Federal Reserve](https://www.federalreserve.gov/newsevents/2026-july.htm)
+- Sector momentum (2026 YTD, late July): Energy (XLE) +32.1% (leader), Technology (XLK) +30.7% (cooling, AI-capex doubts), Transportation +26.3%, Capital Goods +25.2%, Healthcare (XLV) +12.6% (safety-flight outperformer), Financials (XLF) +9.8% (laggard). [Investing.com](https://www.investing.com/analysis/sector-rotation-a-guide-to-the-sp-500-momentum-status-200675903), [csimarket.com](https://csimarket.com/markets/markets_glance.php?days=ytd)
+- No verified held positions — no ticker-specific news to review (see Account caveat above).
+
+### Trade Ideas (documented, not executed — see Decision)
+1. Energy majors (XOM/CVX or XLE) — catalyst: sector-leading YTD momentum (+32%) with oil still elevated ($79-89/bbl range); would need a pullback entry post-FOMC with confirmed relative strength. No defined entry/stop yet — watchlist only, not today given FOMC risk.
+2. Healthcare (XLV) — catalyst: emerging as a flight-to-safety trade (+12.6% YTD) if post-FOMC/earnings volatility triggers defensive rotation out of AI-capex-exposed tech. Watchlist only — needs confirmation after the FOMC reaction.
+3. Avoid MSFT/META and broader Nasdaq-100 today — both report earnings after the close; entering ahead of a binary earnings event violates risk discipline (gap risk, no edge on timing). Revisit post-earnings reaction tomorrow.
+
+### Risk Factors
+- **Alpaca API unreachable (proxy 403)** — no trade could be executed today regardless of setup quality; this is an infrastructure blocker, flagged via PushNotification.
+- FOMC decision + Warsh press conference at 2pm ET — binary macro event, high whipsaw risk into and after the print.
+- MSFT/META earnings after close — AI capex scrutiny could move Nasdaq-100 sharply overnight/tomorrow's open.
+- Semiconductor sector (SMH) in a 4-day losing streak — ongoing spillover risk to broader tech.
+- VIX elevated (~19 vs ~16 three weeks ago) — market pricing more near-term uncertainty than Day 0.
+- Account/position state not independently verified live (see Account section) — decisions below are research-only.
+
+### Decision
+HOLD — FOMC decision + Warsh presser this afternoon, MSFT/META earnings after close, and an unreachable Alpaca API (no order execution possible) all argue against any new position today. No ticker clears the full entry checklist. Revisit post-FOMC/earnings reaction once the API access issue is resolved.
