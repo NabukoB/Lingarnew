@@ -1,0 +1,1707 @@
+<title>Market Scan Ep 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@500;700&display=swap">
+
+<style>
+  :root {
+    --ink:      #0E1517;
+    --ink-2:    #12181B;
+    --ink-3:    #1A2226;
+    --line:     #2A343A;
+    --paper:    #EDEEE9;
+    --paper-2:  #C7CCC9;
+    --paper-3:  #8B9490;
+    --green:    #2F9E4F;
+    --green-2:  #55C471;
+    --red:      #C4443B;
+    --red-2:    #E36159;
+    --gold:     #B58A2E;
+    --gold-2:   #D6A94A;
+
+    --font-display: "Anton", "Impact", "Arial Narrow Bold", sans-serif;
+    --font-body:    "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-mono:    "Archivo Narrow", "Archivo", ui-monospace, monospace;
+  }
+
+  html, body { background: var(--ink); color: var(--paper); }
+  body { font-family: var(--font-body); -webkit-font-smoothing: antialiased; letter-spacing: 0.005em; }
+
+  * { box-sizing: border-box; }
+
+  .app {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+    padding: 20px;
+    padding-block: 20px;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; padding: 16px; }
+    .sidebar { order: 2; }
+  }
+
+  header.brand {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand h1 {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 3.2vw, 34px);
+    letter-spacing: 0.05em;
+    margin: 0;
+    color: var(--paper);
+  }
+  .brand .sub {
+    font-family: var(--font-mono);
+    color: var(--paper-3);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 12px;
+  }
+  .brand .credits {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--paper-3);
+    text-transform: uppercase;
+  }
+  .brand .credits b { color: var(--gold-2); font-weight: 700; }
+
+  /* ---------- STAGE ---------- */
+  .stage-wrap { min-width: 0; }
+  .stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background:
+      radial-gradient(120% 90% at 50% 0%, #182126 0%, var(--ink) 60%, #08090A 100%);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    isolation: isolate;
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,0.7);
+    user-select: none;
+  }
+
+  .stage::after {
+    /* subtle vignette */
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(120% 90% at 50% 55%, transparent 55%, rgba(0,0,0,0.55) 100%);
+    pointer-events: none;
+    z-index: 40;
+  }
+
+  .stage-hud {
+    position: absolute; inset: 0;
+    z-index: 30;
+    pointer-events: none;
+    color: var(--paper-3);
+    font-family: var(--font-mono);
+    font-size: clamp(10px, 1.1vw, 12px);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .hud-tl, .hud-tr, .hud-br, .hud-bl {
+    position: absolute;
+    padding: 12px 14px;
+    display: flex; gap: 10px; align-items: center;
+  }
+  .hud-tl { top: 0; left: 0; }
+  .hud-tr { top: 0; right: 0; }
+  .hud-br { bottom: 0; right: 0; }
+  .hud-bl { bottom: 0; left: 0; }
+  .hud-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 8px var(--red);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .hud-tag {
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    color: var(--paper-2);
+    background: rgba(14,21,23,0.6);
+  }
+
+  .shot-layer { position: absolute; inset: 0; z-index: 20; }
+  .shot {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 5% 6%;
+    opacity: 0;
+    visibility: hidden;
+  }
+  .shot[data-active="1"] { opacity: 1; visibility: visible; }
+
+  /* Caption bar (VO transcription) */
+  .caption-bar {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    z-index: 35;
+    padding: 14px 60px 22px;
+    background: linear-gradient(to top, rgba(8,10,11,0.85), rgba(8,10,11,0));
+    text-align: center;
+    pointer-events: none;
+  }
+  .caption {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: clamp(13px, 1.35vw, 17px);
+    line-height: 1.35;
+    color: var(--paper);
+    max-width: 720px;
+    text-wrap: balance;
+    opacity: 0.92;
+  }
+
+  /* ---------- Shot-specific building blocks ---------- */
+
+  .stamp-row {
+    display: flex; flex-direction: column;
+    gap: clamp(6px, 1.2vw, 14px);
+    align-items: center;
+  }
+  .stamp {
+    position: relative;
+    font-family: var(--font-display);
+    font-size: clamp(38px, 8.2vw, 108px);
+    letter-spacing: 0.06em;
+    color: var(--paper);
+    line-height: 0.95;
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+    filter: blur(6px);
+  }
+  .stamp.on {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+    transition: opacity 90ms linear, transform 220ms cubic-bezier(.2,.9,.2,1), filter 180ms linear;
+  }
+  .stamp .strike {
+    position: absolute;
+    left: -4%; right: -4%;
+    top: 52%;
+    height: 8%;
+    background: var(--red);
+    transform-origin: left center;
+    transform: scaleX(0) skewY(-2deg);
+    box-shadow: 0 0 24px rgba(196,68,59,0.4);
+  }
+  .stamp.on .strike { animation: strike 320ms cubic-bezier(.6,.1,.15,1) 180ms forwards; }
+  @keyframes strike { to { transform: scaleX(1) skewY(-2deg); } }
+
+  /* Niche score card */
+  .card {
+    position: relative;
+    width: min(560px, 78%);
+    aspect-ratio: 1 / 1.08;
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 26px 28px 28px;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 18px;
+    opacity: 0;
+    transform: translateX(60px) rotate(1.5deg);
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+  .card.in {
+    opacity: 1;
+    transform: translateX(0) rotate(0);
+    transition: opacity 320ms ease-out, transform 480ms cubic-bezier(.2,.9,.2,1);
+  }
+  .card-eyebrow {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 11px;
+    color: var(--paper-3);
+  }
+  .card-eyebrow .src { color: var(--gold-2); }
+  .card-tags {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .tag {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+  }
+  .tag.green {
+    background: rgba(47, 158, 79, 0.14);
+    color: var(--green-2);
+    border-color: rgba(47, 158, 79, 0.35);
+  }
+  .tag.gold {
+    background: rgba(181, 138, 46, 0.14);
+    color: var(--gold-2);
+    border-color: rgba(181, 138, 46, 0.35);
+  }
+  .tag.red {
+    background: rgba(196, 68, 59, 0.14);
+    color: var(--red-2);
+    border-color: rgba(196, 68, 59, 0.35);
+  }
+
+  .card-figure {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 20px;
+  }
+  .icon-slot {
+    width: 44%;
+    aspect-ratio: 1;
+    background: var(--ink-3);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--paper);
+  }
+  .icon-slot svg { width: 60%; height: 60%; }
+
+  .score {
+    display: flex; flex-direction: column; align-items: flex-end;
+    gap: 4px;
+    font-family: var(--font-display);
+    letter-spacing: 0.02em;
+  }
+  .score .num {
+    font-size: clamp(64px, 9vw, 120px);
+    color: var(--paper);
+    line-height: 0.9;
+    font-variant-numeric: tabular-nums;
+  }
+  .score .num .slash { color: var(--paper-3); }
+  .score .label {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 11px;
+    color: var(--paper-3);
+  }
+
+  .card-foot {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-top: 14px;
+    border-top: 1px dashed rgba(199,204,201,0.14);
+  }
+  .price {
+    font-family: var(--font-display);
+    font-size: clamp(34px, 5.4vw, 60px);
+    color: var(--gold-2);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .price .k { color: var(--paper-3); font-size: 0.55em; margin-right: 6px; }
+  .searches {
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 12px;
+    color: var(--paper-2);
+    text-align: right;
+    line-height: 1.5;
+  }
+  .searches b {
+    color: var(--paper);
+    font-family: var(--font-display);
+    font-size: 1.7em;
+    letter-spacing: 0.04em;
+    display: block;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Debunk stamp over the card */
+  .x-stamp {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 5;
+    pointer-events: none;
+  }
+  .x-stamp svg { width: 240px; height: 240px; max-width: 40vw; max-height: 40vw; }
+  .x-stamp.hit {
+    animation: xhit 260ms cubic-bezier(.4,.9,.2,1) forwards;
+  }
+  @keyframes xhit {
+    0%   { transform: translate(-50%, -50%) scale(2.2) rotate(-8deg); opacity: 0; }
+    60%  { transform: translate(-50%, -50%) scale(0.92) rotate(-4deg); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1) rotate(-6deg); opacity: 1; }
+  }
+  .card.dimmed { filter: brightness(0.55) saturate(0.6); transition: filter 200ms; }
+
+  /* UI screen for shot 3 (Explore Niches) */
+  .ui-screen {
+    width: min(720px, 90%);
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    font-family: var(--font-mono);
+    color: var(--paper-2);
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,0.6);
+  }
+  .ui-topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: #0B1113;
+    border-bottom: 1px solid var(--line);
+  }
+  .ui-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+  .ui-url {
+    margin-left: 6px;
+    font-size: 11px;
+    color: var(--paper-3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .ui-body { padding: 18px 20px; display: grid; gap: 14px; }
+  .ui-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--paper);
+    letter-spacing: 0.04em;
+  }
+  .ui-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--paper-3);
+    background: transparent;
+  }
+  .chip.on { border-color: var(--green); color: var(--green-2); background: rgba(47,158,79,0.08); }
+  .ui-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .ui-tile {
+    aspect-ratio: 1.4;
+    background: var(--ink-3);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    display: grid; grid-template-rows: 1fr auto;
+    padding: 8px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 300ms, transform 300ms;
+  }
+  .ui-tile.in { opacity: 1; transform: none; }
+  .ui-tile .n {
+    font-family: var(--font-display);
+    color: var(--paper);
+    font-size: 22px;
+    align-self: end;
+  }
+  .ui-tile .l {
+    color: var(--paper-3);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+  }
+  .cursor {
+    position: absolute;
+    z-index: 6;
+    width: 22px; height: 22px;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+    pointer-events: none;
+  }
+
+  /* Triple card (shot 6) */
+  .triple {
+    position: relative;
+    width: min(760px, 86%);
+    height: 74%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .triple .mini {
+    position: absolute;
+    width: 46%;
+    aspect-ratio: 0.82;
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+    left: 50%; top: 50%;
+    box-shadow: 0 30px 60px -30px rgba(0,0,0,0.7);
+  }
+  .mini .mini-tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    color: var(--green-2);
+    text-transform: uppercase;
+  }
+  .mini .mini-model {
+    font-family: var(--font-display);
+    color: var(--paper);
+    font-size: 20px;
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+  .mini .mini-foot {
+    font-family: var(--font-mono);
+    color: var(--paper-3);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .mini .mini-foot b { color: var(--paper); font-family: var(--font-display); font-size: 1.4em; }
+
+  /* Platform vs (shot 9) */
+  .versus {
+    display: flex; align-items: center; justify-content: center; gap: 32px;
+    width: 100%;
+  }
+  .plate {
+    position: relative;
+    width: 28%;
+    aspect-ratio: 1;
+    max-width: 260px;
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    display: grid; place-content: center;
+    padding: 20px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  .plate.in { opacity: 1; transform: translateY(0); transition: opacity 260ms, transform 320ms cubic-bezier(.2,.9,.2,1); }
+  .plate.no {
+    filter: grayscale(0.4);
+  }
+  .plate.no .plate-cross {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 3;
+  }
+  .plate .plate-label {
+    font-family: var(--font-display);
+    font-size: 26px;
+    color: var(--paper);
+    letter-spacing: 0.05em;
+    line-height: 1;
+  }
+  .plate .plate-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--paper-3);
+    margin-top: 10px;
+  }
+  .plate.no .plate-cross svg { width: 82%; height: 82%; opacity: 0; transform: scale(1.4); }
+  .plate.no .plate-cross.hit svg {
+    animation: xhit 300ms cubic-bezier(.4,.9,.2,1) forwards;
+  }
+  .plate.yes {
+    border-color: rgba(47,158,79,0.55);
+  }
+  .plate.yes .plate-label { color: var(--green-2); }
+
+  /* Budget bar (shot 10 + 11) */
+  .budget {
+    width: min(760px, 86%);
+    display: grid;
+    gap: 16px;
+  }
+  .budget-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .budget-title {
+    font-family: var(--font-display);
+    font-size: clamp(28px, 3.8vw, 44px);
+    color: var(--paper);
+    letter-spacing: 0.04em;
+  }
+  .budget-total {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    color: var(--paper-3);
+    text-transform: uppercase;
+  }
+  .budget-total b { color: var(--gold-2); font-family: var(--font-display); font-size: 1.6em; letter-spacing: 0.04em; }
+
+  .bar-track {
+    position: relative;
+    height: 56px;
+    background: var(--ink-3);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+  }
+  .bar-seg {
+    height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 11px;
+    color: rgba(255,255,255,0.85);
+    transition: flex-basis 720ms cubic-bezier(.4,.9,.2,1);
+    flex: 0 0 0%;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .bar-seg.red      { background: var(--red);   }
+  .bar-seg.green    { background: var(--green); }
+  .bar-seg.gold     { background: var(--gold);  color: var(--ink); }
+  .bar-seg.neutral  { background: rgba(199,204,201,0.15); color: var(--paper-3); }
+  .bar-legend {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--paper-3);
+    text-transform: uppercase;
+  }
+  .bar-legend .sw {
+    width: 10px; height: 10px; display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+    border-radius: 2px;
+  }
+
+  /* End screen (shot 12) */
+  .endscreen {
+    display: grid; place-items: center; gap: 24px;
+    text-align: center;
+    width: 100%;
+  }
+  .end-teaser {
+    background: var(--ink-2);
+    border: 1px solid var(--gold);
+    border-radius: 8px;
+    padding: 24px 34px;
+    box-shadow: 0 0 60px -10px rgba(181,138,46,0.45);
+    display: grid; gap: 6px;
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  .end-teaser.in { opacity: 1; transform: none; transition: opacity 420ms, transform 500ms cubic-bezier(.2,.9,.2,1); }
+  .end-eyebrow {
+    font-family: var(--font-mono);
+    color: var(--gold-2);
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    font-size: 12px;
+  }
+  .end-title {
+    font-family: var(--font-display);
+    font-size: clamp(30px, 5vw, 56px);
+    color: var(--paper);
+    letter-spacing: 0.05em;
+    line-height: 0.95;
+  }
+  .end-sub {
+    font-family: var(--font-mono);
+    color: var(--paper-3);
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+  .subscribe {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 14px 22px;
+    background: var(--red);
+    border-radius: 4px;
+    font-family: var(--font-display);
+    color: var(--paper);
+    font-size: 22px;
+    letter-spacing: 0.08em;
+    opacity: 0;
+    transform: scale(0.92);
+    box-shadow: 0 0 0 0 rgba(196,68,59,0.6);
+  }
+  .subscribe.in {
+    opacity: 1; transform: scale(1);
+    transition: opacity 240ms, transform 240ms cubic-bezier(.2,.9,.2,1);
+  }
+  .subscribe.pulse { animation: subpulse 700ms ease-out; }
+  @keyframes subpulse {
+    0%   { box-shadow: 0 0 0 0 rgba(196,68,59,0.7); }
+    100% { box-shadow: 0 0 0 22px rgba(196,68,59,0); }
+  }
+  .card-flick {
+    position: absolute;
+    top: 8%; left: 4%;
+    width: 24%; aspect-ratio: 1 / 1.08;
+    background: var(--ink-3);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    opacity: 0;
+  }
+
+  /* ---------- TRANSPORT ---------- */
+  .transport {
+    margin-top: 16px;
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 16px 16px;
+    display: grid;
+    gap: 12px;
+  }
+  .transport-row {
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    appearance: none;
+    background: transparent;
+    color: var(--paper);
+    border: 1px solid var(--line);
+    padding: 8px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color 150ms, background 150ms, color 150ms;
+  }
+  .btn:hover, .btn:focus-visible { border-color: var(--paper-3); background: var(--ink-3); outline: none; }
+  .btn.primary { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+  .btn.primary:hover { background: var(--paper-2); }
+  .btn.icon { display: inline-flex; align-items: center; gap: 8px; }
+  .btn[data-active="1"] { border-color: var(--gold-2); color: var(--gold-2); }
+
+  .tc {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--paper-2);
+    letter-spacing: 0.14em;
+    font-variant-numeric: tabular-nums;
+    min-width: 96px;
+  }
+  .tc .cur { color: var(--paper); }
+  .tc .sep { color: var(--paper-3); margin: 0 4px; }
+
+  .scrub {
+    position: relative;
+    flex: 1;
+    height: 22px;
+    display: flex; align-items: center;
+    cursor: pointer;
+    min-width: 220px;
+  }
+  .scrub-track {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    background: var(--ink-3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .scrub-fill {
+    position: absolute; top: 0; left: 0; bottom: 0;
+    background: var(--paper);
+    width: 0%;
+  }
+  .scrub-ticks {
+    position: absolute; inset: 0;
+    display: flex;
+  }
+  .scrub-tick {
+    flex: 0 0 auto;
+    width: 1px;
+    background: rgba(199,204,201,0.35);
+    height: 100%;
+    margin-left: -1px;
+  }
+  .scrub-head {
+    position: absolute;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--paper);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 4px rgba(237,238,233,0.15);
+  }
+
+  .shot-chips {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .chip-btn {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 6px 10px;
+    color: var(--paper-3);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip-btn:hover { color: var(--paper); border-color: var(--paper-3); }
+  .chip-btn[data-active="1"] {
+    color: var(--paper);
+    border-color: var(--paper);
+    background: rgba(237,238,233,0.05);
+  }
+  .chip-btn .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--line);
+  }
+  .chip-btn.real[data-active="1"] .dot,
+  .chip-btn.real .dot { background: var(--green); }
+  .chip-btn.fake[data-active="1"] .dot,
+  .chip-btn.fake .dot { background: var(--red); }
+  .chip-btn.frame .dot { background: var(--gold); }
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar {
+    display: grid;
+    gap: 16px;
+    align-content: start;
+  }
+  .panel {
+    background: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 16px 16px 18px;
+  }
+  .panel h2 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    color: var(--paper-3);
+    margin: 0 0 12px;
+    font-weight: 700;
+  }
+  .now-shot {
+    display: grid; gap: 10px;
+  }
+  .now-shot .code {
+    font-family: var(--font-mono);
+    color: var(--gold-2);
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+  .now-shot .now-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--paper);
+    letter-spacing: 0.03em;
+    line-height: 1.05;
+  }
+  .now-shot .vo {
+    font-family: var(--font-body);
+    color: var(--paper-2);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .now-shot .motion {
+    font-family: var(--font-mono);
+    color: var(--paper-3);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    line-height: 1.5;
+    text-transform: uppercase;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sw-card {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--paper-3);
+    text-transform: uppercase;
+  }
+  .sw-card i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  .footer {
+    grid-column: 1 / -1;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--paper-3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .stamp, .card, .plate, .ui-tile, .end-teaser, .subscribe { transition: none !important; animation: none !important; }
+    .stamp { opacity: 1; transform: none; filter: none; }
+    .card { opacity: 1; transform: none; }
+  }
+</style>
+
+<div class="app">
+
+  <header class="brand">
+    <div>
+      <h1>Market Scan · Ep 1</h1>
+      <div class="sub">I Used AI to Find "Zero Competition" Products in Kenya — Half of Them Were Fake</div>
+    </div>
+    <div class="credits">Faceless data-explainer · Runtime <b id="totalRuntime">08:45</b></div>
+  </header>
+
+  <section class="stage-wrap">
+
+    <div class="stage" id="stage" role="region" aria-label="Animated explainer stage">
+
+      <div class="stage-hud" aria-hidden="true">
+        <div class="hud-tl">
+          <span class="hud-dot"></span>
+          <span id="hudShotTag" class="hud-tag">SHOT 01</span>
+          <span id="hudSegTag" class="hud-tag">HOOK</span>
+        </div>
+        <div class="hud-tr">
+          <span class="hud-tag">MARKET SCAN · S01E01</span>
+        </div>
+        <div class="hud-bl">
+          <span class="hud-tag">ANTON · ARCHIVO</span>
+        </div>
+        <div class="hud-br">
+          <span id="hudTc" class="hud-tag">00:00 / 08:45</span>
+        </div>
+      </div>
+
+      <div class="shot-layer" id="shotLayer">
+        <!-- populated by JS -->
+      </div>
+
+      <div class="caption-bar" aria-live="off">
+        <div id="caption" class="caption"></div>
+      </div>
+    </div>
+
+    <div class="transport" role="group" aria-label="Playback controls">
+      <div class="transport-row">
+        <button id="btnPlay" class="btn primary icon" aria-label="Play">
+          <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" aria-hidden="true"><path id="playIcon" d="M4 3 L17 10 L4 17 Z"/></svg>
+          <span id="btnPlayLabel">PLAY</span>
+        </button>
+        <button id="btnRestart" class="btn" aria-label="Restart from top">RESTART</button>
+        <div class="tc"><span id="tcCur" class="cur">00:00</span><span class="sep">/</span><span id="tcTotal">08:45</span></div>
+        <div class="scrub" id="scrub" role="slider" aria-label="Scrub" aria-valuemin="0" aria-valuemax="525" aria-valuenow="0" tabindex="0">
+          <div class="scrub-track">
+            <div class="scrub-fill" id="scrubFill"></div>
+            <div class="scrub-ticks" id="scrubTicks"></div>
+          </div>
+          <div class="scrub-head" id="scrubHead" style="left:0%"></div>
+        </div>
+        <button class="btn" data-speed="0.5">0.5×</button>
+        <button class="btn" data-speed="1" data-active="1">1×</button>
+        <button class="btn" data-speed="2">2×</button>
+      </div>
+      <div class="shot-chips" id="shotChips" role="tablist" aria-label="Jump to shot"></div>
+    </div>
+
+  </section>
+
+  <aside class="sidebar">
+    <section class="panel">
+      <h2>Now Playing</h2>
+      <div class="now-shot">
+        <div class="code" id="nowCode">SHOT 01 · HOOK · 00:00 – 00:25</div>
+        <div class="now-title" id="nowTitle">Every video says the same ten things.</div>
+        <div class="vo" id="nowVo">Words slam in one at a time. The top one gets a hard red strike.</div>
+        <div class="motion" id="nowMotion">Motion: kinetic type slam · red strike-through</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Visual System</h2>
+      <div class="swatches">
+        <div class="sw-card"><i style="background:#12181B"></i> Ink · #12181B</div>
+        <div class="sw-card"><i style="background:#EDEEE9"></i> Paper · #EDEEE9</div>
+        <div class="sw-card"><i style="background:#2F9E4F"></i> Green · #2F9E4F</div>
+        <div class="sw-card"><i style="background:#C4443B"></i> Red · #C4443B</div>
+        <div class="sw-card"><i style="background:#B58A2E"></i> Gold · #B58A2E</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Source Material</h2>
+      <div class="vo" style="font-size:12px;line-height:1.55;color:var(--paper-2)">
+        Jiji Scout (Electronics → Nairobi) · Jumia wholesale checks · Carry1st Kenya storefront · Xbox.com platform page. Every number in this cut is drawn from the session research pack.
+      </div>
+    </section>
+  </aside>
+
+  <footer class="footer">
+    <div>Palette: ink · paper · green · red · gold</div>
+    <div>Type: Anton (display) + Archivo (UI/caption)</div>
+    <div>12 shots · 5 segments · 08:45</div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- SHOT DATA ----------
+  const SHOTS = [
+    {
+      n: 1, seg: "HOOK", start: 0, end: 25,
+      title: "Every video says the same ten things.",
+      vo: "Every 'business ideas Kenya' video says the same ten things. Phone cases. Wigs. Mitumba. I wanted actual numbers.",
+      motion: "Text stamps in one word at a time · top word takes a hard red strike",
+      caption: ["Every 'business ideas Kenya' video says the same ten things."],
+      render: renderShot1
+    },
+    {
+      n: 2, seg: "HOOK", start: 25, end: 45,
+      title: "I built a tool that scans real buyer searches.",
+      vo: "I used a tool that tells you exactly how many people are looking for something, and how many sellers are already competing for it.",
+      motion: "Niche-score card slides in from off-frame right, settles center",
+      caption: ["A tool that tells you exactly what people search for on Jiji — and how few sellers are competing."],
+      render: renderShot2
+    },
+    {
+      n: 3, seg: "SETUP", start: 45, end: 75,
+      title: "High score means real demand, barely anyone selling it.",
+      vo: "It scores each niche from one to ten. High score means real demand and barely anyone selling it. But a score isn't proof — every pick got checked against real wholesale prices.",
+      motion: "Cursor filters All → Electronics, region → Nairobi, cards populate",
+      caption: ["Electronics · Nairobi. Score 1–10. Then a real-price check on every pick."],
+      render: renderShot3
+    },
+    {
+      n: 4, seg: "REAL", start: 75, end: 115,
+      title: "Wireless earpods — zero sellers, wholesale from 250 shillings.",
+      vo: "First: wireless earpods in Embakasi. A hundred searches, zero sellers on Jiji, wholesale from about two hundred and fifty shillings.",
+      motion: "Card slides in · price stamp · earbuds silhouette · hold ~3s",
+      caption: ["Wireless earpods · Embakasi · 0 sellers · from KSh 250"],
+      cardIndex: 0,
+      render: renderCardShot
+    },
+    {
+      n: 5, seg: "REAL", start: 115, end: 155,
+      title: "Phone cases — cheapest entry point on the list.",
+      vo: "A hundred and ten searches a month in Nairobi Central, again zero competition, and cases wholesale for under a hundred fifty shillings in bulk.",
+      motion: "Same card template · phone-case icon swap",
+      caption: ["Phone cases · Nairobi Central · 0 sellers · wholesale under KSh 150"],
+      cardIndex: 1,
+      render: renderCardShot
+    },
+    {
+      n: 6, seg: "REAL", start: 155, end: 195,
+      title: "Security cameras — three exact models, zero listed sellers.",
+      vo: "Three different exact camera models, all showing real search volume, all with zero listed sellers. That's not a fluke — that's a whole category nobody's bothered to list properly.",
+      motion: "Three mini-cards fan out · center one snaps to focus",
+      caption: ["3 exact camera models · 0 listed sellers between them."],
+      render: renderShot6
+    },
+    {
+      n: 7, seg: "REAL", start: 195, end: 240,
+      title: "Xdobo speakers — entry unit under three thousand shillings.",
+      vo: "Xdobo. A hundred searches a month, zero competition, and an entry-level unit costs under three thousand shillings wholesale.",
+      motion: "Same card template · speaker icon · closes the 'real' run",
+      caption: ["Xdobo speakers · Nairobi Central · 0 sellers · KSh 2,700+"],
+      cardIndex: 2,
+      render: renderCardShot
+    },
+    {
+      n: 8, seg: "FAKE", start: 240, end: 285,
+      title: "Carry1st already sells this direct, via M-Pesa, near cost.",
+      vo: "Roblox gift cards. Score says zero competition — except Carry1st already sells them straight to Kenyans, paid from M-Pesa, at almost exactly the wholesale rate. There's no gap to fill.",
+      motion: "Card dims to 50% · red X stamps on hard with a snap-scale",
+      caption: ["Roblox gift cards · already sold direct via M-Pesa at near-cost."],
+      render: renderShot8
+    },
+    {
+      n: 9, seg: "FAKE", start: 285, end: 330,
+      title: "Forza Horizon has never been on PlayStation. Ever.",
+      vo: "Forza Horizon on PS5. High search volume. One problem: Forza Horizon has never been released on PlayStation. It's an Xbox and PC exclusive.",
+      motion: "Xbox/PC vs PlayStation plates · PS5 gets a hard cross-out",
+      caption: ["Forza Horizon · Xbox + PC only · PS5 demand is unfillable."],
+      render: renderShot9
+    },
+    {
+      n: 10, seg: "FAKE", start: 330, end: 375,
+      title: "The Samsung A06 eats sixty to eighty percent of the budget.",
+      vo: "Zero competition, sure. But at over twelve thousand shillings, a single A06 eats sixty to eighty percent of a twenty-thousand-shilling starting budget with zero room left if it doesn't sell.",
+      motion: "Budget bar fills red fast · nearly to the end · holds",
+      caption: ["Samsung A06 · one unit consumes 65–80% of a KSh 20,000 starting budget."],
+      render: renderShot10
+    },
+    {
+      n: 11, seg: "PLAY", start: 375, end: 465,
+      title: "Earpods + cases as core stock. Cameras only if you install.",
+      vo: "With twenty thousand: earpods and cases as your core stock. Small enough to hold and ship without a warehouse. Add the camera angle only if you already install them.",
+      motion: "20,000-shilling bar divides into stacked segments · left to right",
+      caption: ["The play: earpods + cases as core stock, a small test-batch slot for a camera pilot."],
+      render: renderShot11
+    },
+    {
+      n: 12, seg: "CLOSE", start: 465, end: 525,
+      title: "Next scan: construction and hardware. Subscribe if useful.",
+      vo: "One market scan, one category, one city. There are a hundred and seventy categories left, and every city in Kenya. Next scan: construction and hardware.",
+      motion: "Card stack flicks past · locks on teaser · subscribe pulses once",
+      caption: ["Next scan: Repair & Construction. Every claim price-checked before it goes to camera."],
+      render: renderShot12
+    }
+  ];
+
+  const TOTAL = SHOTS[SHOTS.length - 1].end;
+
+  const CARDS = [
+    {
+      icon: "earbuds", title: "Wireless Earpods", region: "EMBAKASI",
+      score: 10, price: "250+", searches: 100, label: "Ksh"
+    },
+    {
+      icon: "case", title: "Phone Cases", region: "NAIROBI CENTRAL",
+      score: 10, price: "150+", searches: 110, label: "Ksh"
+    },
+    {
+      icon: "speaker", title: "Xdobo Speakers", region: "NAIROBI CENTRAL",
+      score: 10, price: "2,700+", searches: 100, label: "Ksh"
+    }
+  ];
+
+  // ---------- ICONS ----------
+  const ICONS = {
+    earbuds: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="18" width="24" height="30" rx="12"/><rect x="34" y="18" width="24" height="30" rx="12"/><line x1="18" y1="30" x2="18" y2="42"/><line x1="46" y1="30" x2="46" y2="42"/></svg>`,
+    case: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="18" y="6" width="28" height="52" rx="5"/><rect x="24" y="14" width="16" height="24" rx="1.5"/><circle cx="32" cy="50" r="2"/></svg>`,
+    camera: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="12" y="18" width="34" height="26" rx="4"/><path d="M46 24 L58 20 V42 L46 38 Z"/><circle cx="24" cy="31" r="6"/></svg>`,
+    speaker: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="6" width="36" height="52" rx="6"/><circle cx="32" cy="24" r="6"/><circle cx="32" cy="42" r="9"/></svg>`,
+    xbox: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="32" cy="32" r="22"/><path d="M18 15 C 30 27 34 37 24 55"/><path d="M46 15 C 34 27 30 37 40 55"/></svg>`,
+    ps: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 L22 54 L30 52 L30 22 C 34 24 44 26 44 34 C 44 40 38 42 34 42"/><path d="M14 44 C 20 40 34 42 46 46 C 52 48 52 54 46 54 L14 54"/></svg>`,
+    pc: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="10" width="52" height="34" rx="2"/><line x1="20" y1="54" x2="44" y2="54"/><line x1="32" y1="44" x2="32" y2="54"/></svg>`,
+    cursor: `<svg viewBox="0 0 22 22" fill="var(--paper)" stroke="var(--ink)" stroke-width="1"><path d="M3 2 L3 17 L7.5 13.4 L10.5 20 L13.4 18.7 L10.4 12.1 L16 12 Z"/></svg>`,
+    x: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="none" stroke="#C4443B" stroke-width="5.5"/><line x1="26" y1="26" x2="74" y2="74" stroke="#C4443B" stroke-width="7.5" stroke-linecap="round"/><line x1="74" y1="26" x2="26" y2="74" stroke="#C4443B" stroke-width="7.5" stroke-linecap="round"/></svg>`
+  };
+
+  // ---------- STATE ----------
+  const state = {
+    t: 0,
+    playing: false,
+    speed: 1,
+    last: 0,
+    activeIdx: -1
+  };
+
+  // ---------- DOM ----------
+  const shotLayer = document.getElementById("shotLayer");
+  const caption = document.getElementById("caption");
+  const scrub = document.getElementById("scrub");
+  const scrubFill = document.getElementById("scrubFill");
+  const scrubHead = document.getElementById("scrubHead");
+  const scrubTicks = document.getElementById("scrubTicks");
+  const shotChips = document.getElementById("shotChips");
+  const nowCode = document.getElementById("nowCode");
+  const nowTitle = document.getElementById("nowTitle");
+  const nowVo = document.getElementById("nowVo");
+  const nowMotion = document.getElementById("nowMotion");
+  const hudShotTag = document.getElementById("hudShotTag");
+  const hudSegTag = document.getElementById("hudSegTag");
+  const hudTc = document.getElementById("hudTc");
+  const tcCur = document.getElementById("tcCur");
+  const btnPlay = document.getElementById("btnPlay");
+  const btnPlayLabel = document.getElementById("btnPlayLabel");
+  const playIcon = document.getElementById("playIcon");
+  const btnRestart = document.getElementById("btnRestart");
+
+  // ---------- FORMAT ----------
+  function fmt(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  }
+
+  // ---------- SHOT BUILDERS ----------
+  function el(tag, cls, html) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+
+  function buildAllShots() {
+    SHOTS.forEach((s, i) => {
+      const shot = el("div", "shot");
+      shot.dataset.shot = String(s.n);
+      shot.dataset.idx = String(i);
+      shotLayer.appendChild(shot);
+      s.node = shot;
+      s.build?.(shot);
+    });
+  }
+
+  // Shot 1: HOOK text stamps
+  function renderShot1(shot, tRel) {
+    // 0 - 8s: PHONE CASES appears · strike at 3.5s
+    // 8 - 15s: WIGS appears · strike at 12s
+    // 15 - 22s: MITUMBA appears · strike at 19s
+    // 22 - 25s: hold
+    if (!shot.dataset.built) {
+      shot.dataset.built = "1";
+      const row = el("div", "stamp-row");
+      ["PHONE CASES.", "WIGS.", "MITUMBA."].forEach((w, i) => {
+        const s = el("div", "stamp");
+        s.textContent = w;
+        s.dataset.i = i;
+        const strike = el("span", "strike");
+        s.appendChild(strike);
+        row.appendChild(s);
+      });
+      shot.appendChild(row);
+    }
+    const stamps = shot.querySelectorAll(".stamp");
+    const at = [
+      { in: 1.5, strike: 5.0 },
+      { in: 9.0, strike: 12.5 },
+      { in: 16.5, strike: 20.0 }
+    ];
+    stamps.forEach((sEl, i) => {
+      const cfg = at[i];
+      sEl.classList.toggle("on", tRel >= cfg.in);
+      if (tRel < cfg.in) sEl.classList.remove("on");
+    });
+  }
+
+  // Shot 2: card slides in
+  function renderShot2(shot, tRel) {
+    if (!shot.dataset.built) {
+      shot.dataset.built = "1";
+      shot.appendChild(buildCard(CARDS[0]));
+    }
+    const card = shot.querySelector(".card");
+    card.classList.toggle("in", tRel > 1.2);
+  }
+
+  // Shot 3: UI screen fills
+  function renderShot3(shot, tRel) {
+    if (!shot.dataset.built) {
+      shot.dataset.built = "1";
+      const ui = el("div", "ui-screen", `
+        <div class="ui-topbar">
+          <span class="ui-dot"></span><span class="ui-dot"></span><span class="ui-dot"></span>
+          <span class="ui-url">scout.jiji.co.ke / explore</span>
+        </div>
+        <div class="ui-body">
+          <div class="ui-title">Explore Niches</div>
+          <div class="ui-filters">
+            <span class="chip">ALL</span>
+            <span class="chip cat-electronics">ELECTRONICS</span>
+            <span class="chip">FASHION</span>
+            <span class="chip">HOME</span>
+            <span class="chip">VEHICLES</span>
+            <span class="chip">SERVICES</span>
+          </div>
+          <div class="ui-filters" style="margin-top:-4px">
+            <span class="chip">MOMBASA</span>
+            <span class="chip cat-nairobi">NAIROBI</span>
+            <span class="chip">KISUMU</span>
+            <span class="chip">NAKURU</span>
+          </div>
+          <div class="ui-grid" id="uiGrid"></div>
+        </div>
+      `);
+      const cursor = el("div", "cursor", ICONS.cursor);
+      cursor.id = "cursor3";
+      cursor.style.left = "8%"; cursor.style.top = "88%";
+      shot.appendChild(ui);
+      shot.appendChild(cursor);
+      const grid = ui.querySelector("#uiGrid");
+      const tiles = [
+        ["253", "EARPODS"],
+        ["110", "PHONE CASES"],
+        ["100", "XDOBO"],
+        ["10", "CCTV"],
+        ["100", "ROBLOX"],
+        ["48", "SAMSUNG A06"],
+        ["24", "FORZA PS5"],
+        ["44", "POWER BANK"]
+      ];
+      tiles.forEach((t, i) => {
+        const tl = el("div", "ui-tile");
+        tl.innerHTML = `<span class="l">${t[1]}</span><span class="n">${t[0]}</span>`;
+        tl.dataset.i = i;
+        grid.appendChild(tl);
+      });
+    }
+    // Timeline within shot 3 (duration = 30s)
+    // 0-4s : cursor drifts up
+    // 4-6s : clicks Electronics
+    // 6-10s: cursor drifts right
+    // 10-12s: clicks Nairobi
+    // 12-30s: tiles fill in (staggered), first 4 stay
+    const cursor = shot.querySelector("#cursor3");
+    const cat = shot.querySelector(".cat-electronics");
+    const reg = shot.querySelector(".cat-nairobi");
+    const tiles = shot.querySelectorAll(".ui-tile");
+
+    if (tRel < 5) {
+      cursor.style.left = lerp(8, 22, clamp(tRel / 4, 0, 1)) + "%";
+      cursor.style.top  = lerp(88, 42, clamp(tRel / 4, 0, 1)) + "%";
+    } else if (tRel < 11) {
+      cursor.style.left = lerp(22, 48, clamp((tRel - 5) / 5, 0, 1)) + "%";
+      cursor.style.top = "42%";
+    } else {
+      cursor.style.left = "48%";
+      cursor.style.top = "52%";
+    }
+    cat.classList.toggle("on", tRel >= 5);
+    reg.classList.toggle("on", tRel >= 11);
+
+    tiles.forEach((t, i) => {
+      const showAt = 13 + i * 1.5;
+      t.classList.toggle("in", tRel >= showAt);
+    });
+  }
+
+  // Shots 4, 5, 7: card variants
+  function renderCardShot(shot, tRel) {
+    const idx = SHOTS.find(x => x.node === shot).cardIndex;
+    if (!shot.dataset.built) {
+      shot.dataset.built = "1";
+      shot.appendChild(buildCard(CARDS[idx]));
+    }
+    const card = shot.querySelector(".card");
+    card.classList.toggle("in", tRel > 0.6);
+    // Count-up numbers
+    const dur = 1.4;
+    const p = clamp((tRel - 0.9) / dur, 0, 1);
+    const searchN = shot.querySelector(".searches b");
+    const target = CARDS[idx].searches;
+    if (searchN) searchN.textContent = Math.round(easeOut(p) * target).toString();
+  }
+
+  // Shot 6: triple card
+  function renderShot6(shot, tRel) {
+    if (!shot.dataset.built) {
+      shot.dataset.built = "1";
+      const wrap = el("div", "triple");
+      const positions = [
+        { x: "-58%", y: "-4%", r: "-6deg", model: "CCTV-K3", searches: 20 },
+        { x: "0%",   y: "8%",  r: "0deg",  model: "SEC-CAM 2MP", searches: 20 },
+        { x: "58%",  y: "-4%", r: "6deg",  model: "IP-CAM PRO", searches: 20 }
+      ];
+      positions.forEach((p, i) => {
+        const m = el("div", "mini");
+        m.dataset.i = i;
+        m.dataset.px = p.x; m.dataset.py = p.y; m.dataset.pr = p.r;
+        m.innerHTML = `
+          <div class="mini-tag">No competition · 10/10</div>
+          <div>
+            <div class="mini-model">${p.model}</div>
+            <div class="mini-foot"><b>${p.searches}</b>&nbsp; searches / mo</div>
+          </div>
+          <div class="mini-foot" style="color:var(--paper)">Nairobi West</div>
+        `;
+        wrap.appendChild(m);
+      });
+      shot.appendChild(wrap);
+    }
+    const minis = shot.querySelectorAll(".mini");
+    minis.forEach((m, i) => {
+      const showAt = 0.5 + i * 0.8;
+      const fanned = tRel > showAt;
+      const focus = tRel > 8;
+      let x = m.dataset.px, y = m.dataset.py, r = m.dataset.pr, s = 1;
+      if (focus) {
+        if (i === 1) { x = "0%"; y = "0%"; r = "0deg"; s = 1.08; }
+        else { s = 0.86; }
+      }
+      m.style.opacity = fanned ? "1" : "0";
+      m.style.transform = `translate(calc(-50% + ${x}), calc(-50% + ${y})) rotate(${r}) scale(${s})`;
+      m.style.transition = "opacity 300ms, transform 520ms cubic-bezier(.2,.9,.2,1)";
+      m.style.zIndex = i === 1 && focus ? "3" : "1";
+    });
+  }
+
+  // Shot 8: Roblox / M-Pesa debunk over card
+  function renderShot8(shot, tRel) {
+    if (!shot.dataset.built) {
+      shot.dataset.built = "1";
+      const c = buildCard({
+        icon: "case", title: "Roblox Gift Cards", region: "NAIROBI",
+        score: 10, price: "1,261", searches: 90, label: "Ksh"
+      }, "Score says opportunity");
+      shot.appendChild(c);
+      const stamp = el("div", "x-stamp", ICONS.x);
+      shot.appendChild(stamp);
+      // Payment tag chip
+      const chip = el("div", "hud-tag", "PAID VIA M-PESA · Carry1st ✓");
+      chip.style.position = "absolute";
+      chip.style.bottom = "18%";
+      chip.style.left = "50%";
+      chip.style.transform = "translateX(-50%)";
+      chip.style.background = "rgba(196,68,59,0.15)";
+      chip.style.borderColor = "rgba(196,68,59,0.4)";
+      chip.style.color = "var(--red-2)";
+      chip.style.fontFamily = "var(--font-mono)";
+      chip.style.fontSize = "12px";
+      chip.style.letterSpacing = "0.18em";
+      chip.style.padding = "8px 12px";
+      chip.style.opacity = "0";
+      chip.style.transition = "opacity 260ms";
+      chip.id = "s8chip";
+      shot.appendChild(chip);
+    }
+    const card = shot.querySelector(".card");
+    const stamp = shot.querySelector(".x-stamp");
+    const chip = shot.querySelector("#s8chip");
+    card.classList.toggle("in", tRel > 0.6);
+    if (tRel > 3.6) card.classList.add("dimmed"); else card.classList.remove("dimmed");
+    if (tRel > 3.6) stamp.classList.add("hit"); else stamp.classList.remove("hit");
+    chip.style.opacity = tRel > 5.6 ? "1" : "0";
+  }
+
+  // Shot 9: Xbox / PC vs PS5
+  function renderShot9(shot, tRel) {
+    if (!shot.dataset.built) {
+      shot.dataset.built = "1";
+      const wrap = el("div", "versus");
+      wrap.innerHTML = `
+        <div class="plate yes" data-i="0">
+          <div class="icon-slot" style="width:70%;margin:0 auto 12px;color:var(--green-2)">${ICONS.xbox}</div>
+          <div class="plate-label">XBOX</div>
+          <div class="plate-sub">Console</div>
+        </div>
+        <div class="plate yes" data-i="1">
+          <div class="icon-slot" style="width:70%;margin:0 auto 12px;color:var(--green-2)">${ICONS.pc}</div>
+          <div class="plate-label">PC</div>
+          <div class="plate-sub">Windows</div>
+        </div>
+        <div class="plate no" data-i="2">
+          <div class="icon-slot" style="width:70%;margin:0 auto 12px;color:var(--paper-3)">${ICONS.ps}</div>
+          <div class="plate-label">PLAYSTATION</div>
+          <div class="plate-sub">Never released</div>
+          <div class="plate-cross">${ICONS.x}</div>
+        </div>
+      `;
+      shot.appendChild(wrap);
+    }
+    const plates = shot.querySelectorAll(".plate");
+    plates.forEach((p, i) => {
+      const showAt = 1 + i * 1.2;
+      p.classList.toggle("in", tRel >= showAt);
+    });
+    const cross = shot.querySelector(".plate.no .plate-cross");
+    cross.classList.toggle("hit", tRel >= 5.5);
+  }
+
+  // Shot 10: Samsung A06 budget bar
+  function renderShot10(shot, tRel) {
+    if (!shot.dataset.built) {
+      shot.dataset.built = "1";
+      const wrap = el("div", "budget");
+      wrap.innerHTML = `
+        <div class="budget-head">
+          <div class="budget-title">Samsung A06 · Kenya starter budget</div>
+          <div class="budget-total">Budget · <b>KSh 20,000</b></div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-seg red" data-basis="72">1 PHONE · KSh 12,850+</div>
+          <div class="bar-seg neutral" data-basis="28">NOTHING LEFT</div>
+        </div>
+        <div class="bar-legend">
+          <span><span class="sw" style="background:var(--red)"></span>Consumed</span>
+          <span><span class="sw" style="background:rgba(199,204,201,0.35)"></span>Working capital</span>
+        </div>
+      `;
+      shot.appendChild(wrap);
+    }
+    const segs = shot.querySelectorAll(".bar-seg");
+    const grow = clamp(tRel / 2.4, 0, 1);
+    segs.forEach(s => {
+      const b = parseFloat(s.dataset.basis);
+      s.style.flexBasis = (b * easeOut(grow)) + "%";
+    });
+  }
+
+  // Shot 11: 20K plan bar
+  function renderShot11(shot, tRel) {
+    if (!shot.dataset.built) {
+      shot.dataset.built = "1";
+      const wrap = el("div", "budget");
+      wrap.innerHTML = `
+        <div class="budget-head">
+          <div class="budget-title">The play · KSh 20,000</div>
+          <div class="budget-total">Working budget · <b>KSh 20,000</b></div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-seg green" data-basis="46">EARPODS · ~40 UNITS</div>
+          <div class="bar-seg green" data-basis="30">PHONE CASES · ~50 UNITS</div>
+          <div class="bar-seg gold" data-basis="14">TEST BATCH · CAMERA PILOT</div>
+          <div class="bar-seg neutral" data-basis="10">RESERVE</div>
+        </div>
+        <div class="bar-legend">
+          <span><span class="sw" style="background:var(--green)"></span>Core stock</span>
+          <span><span class="sw" style="background:var(--gold)"></span>Test batch</span>
+          <span><span class="sw" style="background:rgba(199,204,201,0.35)"></span>Reserve</span>
+        </div>
+      `;
+      shot.appendChild(wrap);
+    }
+    const segs = shot.querySelectorAll(".bar-seg");
+    // Sequence: each seg fills in order over ~9s, then hold
+    const perSeg = 2.6;
+    segs.forEach((s, i) => {
+      const start = i * perSeg;
+      const p = clamp((tRel - start) / perSeg, 0, 1);
+      const b = parseFloat(s.dataset.basis);
+      s.style.flexBasis = (b * easeOut(p)) + "%";
+    });
+  }
+
+  // Shot 12: end screen
+  function renderShot12(shot, tRel) {
+    if (!shot.dataset.built) {
+      shot.dataset.built = "1";
+      const wrap = el("div", "endscreen");
+      wrap.innerHTML = `
+        <div class="end-teaser">
+          <div class="end-eyebrow">Next scan</div>
+          <div class="end-title">REPAIR &amp; CONSTRUCTION</div>
+          <div class="end-sub">170 categories left · every city in Kenya</div>
+        </div>
+        <div class="subscribe" id="subBtn">
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M4 3 L17 10 L4 17 Z"/></svg>
+          SUBSCRIBE
+        </div>
+      `;
+      // Card flicks
+      for (let i = 0; i < 4; i++) {
+        const f = el("div", "card-flick");
+        f.style.left = (2 + i * 22) + "%";
+        f.style.top = (6 + (i % 2) * 8) + "%";
+        f.dataset.i = i;
+        shot.appendChild(f);
+      }
+      shot.appendChild(wrap);
+    }
+    const flicks = shot.querySelectorAll(".card-flick");
+    flicks.forEach((f, i) => {
+      const start = i * 0.4;
+      const p = clamp((tRel - start) / 1.6, 0, 1);
+      f.style.opacity = (p < 0.5 ? p * 2 : (1 - p) * 2).toFixed(3);
+      f.style.transform = `translateX(${-40 + p * 40}vw) rotate(${lerp(-6, 6, p)}deg)`;
+    });
+    const teaser = shot.querySelector(".end-teaser");
+    const sub = shot.querySelector(".subscribe");
+    teaser.classList.toggle("in", tRel > 3);
+    sub.classList.toggle("in", tRel > 6);
+    if (tRel > 6 && tRel < 6.9) sub.classList.add("pulse");
+    else if (tRel > 7) sub.classList.remove("pulse");
+  }
+
+  function buildCard(c, eyebrowOverride) {
+    const card = el("div", "card");
+    card.innerHTML = `
+      <div class="card-eyebrow">
+        <span>Jiji Scout</span>
+        <span class="src">${c.region}</span>
+      </div>
+      <div class="card-tags">
+        <span class="tag green">${eyebrowOverride || "No competition"}</span>
+        <span class="tag gold">Top pick</span>
+      </div>
+      <div class="card-figure">
+        <div class="icon-slot">${ICONS[c.icon]}</div>
+        <div class="score">
+          <div class="num">${c.score}<span class="slash">/10</span></div>
+          <div class="label">Score</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <div class="price"><span class="k">${c.label}</span>${c.price}</div>
+        <div class="searches">Searches / mo<b>${c.searches}</b></div>
+      </div>
+    `;
+    return card;
+  }
+
+  // ---------- HELPERS ----------
+  function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+  function currentShotIdx(t) {
+    for (let i = 0; i < SHOTS.length; i++) {
+      if (t < SHOTS[i].end) return i;
+    }
+    return SHOTS.length - 1;
+  }
+
+  // ---------- RENDER LOOP ----------
+  function render() {
+    const idx = currentShotIdx(state.t);
+    const shot = SHOTS[idx];
+    if (state.activeIdx !== idx) {
+      SHOTS.forEach((s, i) => {
+        s.node.dataset.active = i === idx ? "1" : "0";
+      });
+      state.activeIdx = idx;
+      updatePanel(idx);
+      updateChips(idx);
+      hudShotTag.textContent = "SHOT " + String(shot.n).padStart(2, "0");
+      hudSegTag.textContent = shot.seg;
+    }
+    const tRel = state.t - shot.start;
+    shot.render?.(shot.node, tRel);
+
+    caption.textContent = shot.caption?.[0] || "";
+
+    const pct = (state.t / TOTAL) * 100;
+    scrubFill.style.width = pct + "%";
+    scrubHead.style.left = pct + "%";
+    scrub.setAttribute("aria-valuenow", Math.round(state.t));
+    const cur = fmt(state.t);
+    tcCur.textContent = cur;
+    hudTc.textContent = cur + " / " + fmt(TOTAL);
+  }
+
+  function updatePanel(idx) {
+    const s = SHOTS[idx];
+    nowCode.textContent = `SHOT ${String(s.n).padStart(2,"0")} · ${s.seg} · ${fmt(s.start)} – ${fmt(s.end)}`;
+    nowTitle.textContent = s.title;
+    nowVo.textContent = s.vo;
+    nowMotion.textContent = "Motion: " + s.motion;
+  }
+
+  function updateChips(idx) {
+    const chips = shotChips.querySelectorAll(".chip-btn");
+    chips.forEach(c => c.dataset.active = c.dataset.idx == idx ? "1" : "0");
+  }
+
+  // ---------- INIT ----------
+  function buildChips() {
+    SHOTS.forEach((s, i) => {
+      const c = el("button", "chip-btn " + s.seg.toLowerCase());
+      c.dataset.idx = i;
+      c.setAttribute("role", "tab");
+      c.setAttribute("aria-label", `Jump to shot ${s.n}: ${s.title}`);
+      c.innerHTML = `<span class="dot"></span>${String(s.n).padStart(2,"0")} · ${s.seg}`;
+      c.addEventListener("click", () => seek(s.start + 0.05));
+      shotChips.appendChild(c);
+    });
+  }
+
+  function buildScrubTicks() {
+    SHOTS.forEach(s => {
+      const t = el("div", "scrub-tick");
+      const pct = (s.start / TOTAL) * 100;
+      t.style.position = "absolute";
+      t.style.left = pct + "%";
+      scrubTicks.appendChild(t);
+    });
+  }
+
+  function tick(now) {
+    if (!state.last) state.last = now;
+    const dt = (now - state.last) / 1000;
+    state.last = now;
+    if (state.playing) {
+      state.t += dt * state.speed;
+      if (state.t >= TOTAL) {
+        state.t = TOTAL;
+        setPlaying(false);
+      }
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function setPlaying(v) {
+    state.playing = v;
+    btnPlayLabel.textContent = v ? "PAUSE" : (state.t >= TOTAL ? "REPLAY" : "PLAY");
+    playIcon.setAttribute("d", v ? "M4 3 H8 V17 H4 Z M12 3 H16 V17 H12 Z" : "M4 3 L17 10 L4 17 Z");
+    if (v && state.t >= TOTAL) state.t = 0;
+  }
+
+  function seek(t) {
+    state.t = clamp(t, 0, TOTAL);
+    // Reset built shot state so shots animate cleanly when scrubbing back
+    state.activeIdx = -1;
+    render();
+  }
+
+  function bindTransport() {
+    btnPlay.addEventListener("click", () => setPlaying(!state.playing));
+    btnRestart.addEventListener("click", () => { seek(0); setPlaying(true); });
+    document.querySelectorAll("[data-speed]").forEach(b => {
+      b.addEventListener("click", () => {
+        state.speed = parseFloat(b.dataset.speed);
+        document.querySelectorAll("[data-speed]").forEach(o => o.dataset.active = o === b ? "1" : "0");
+      });
+    });
+    let dragging = false;
+    function updateFromEvent(ev) {
+      const r = scrub.getBoundingClientRect();
+      const x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
+      const p = clamp(x / r.width, 0, 1);
+      seek(p * TOTAL);
+    }
+    scrub.addEventListener("mousedown", ev => { dragging = true; updateFromEvent(ev); });
+    window.addEventListener("mousemove", ev => { if (dragging) updateFromEvent(ev); });
+    window.addEventListener("mouseup", () => dragging = false);
+    scrub.addEventListener("touchstart", ev => { dragging = true; updateFromEvent(ev); }, { passive: true });
+    scrub.addEventListener("touchmove", ev => { if (dragging) updateFromEvent(ev); }, { passive: true });
+    scrub.addEventListener("touchend", () => dragging = false);
+    scrub.addEventListener("keydown", ev => {
+      if (ev.key === "ArrowLeft")  { seek(state.t - 5); ev.preventDefault(); }
+      if (ev.key === "ArrowRight") { seek(state.t + 5); ev.preventDefault(); }
+      if (ev.key === "Home")       { seek(0); ev.preventDefault(); }
+      if (ev.key === "End")        { seek(TOTAL); ev.preventDefault(); }
+    });
+    window.addEventListener("keydown", ev => {
+      if (ev.target.tagName === "INPUT" || ev.target.tagName === "TEXTAREA") return;
+      if (ev.key === " " || ev.code === "Space") { setPlaying(!state.playing); ev.preventDefault(); }
+    });
+  }
+
+  // ---------- BOOT ----------
+  buildAllShots();
+  buildChips();
+  buildScrubTicks();
+  bindTransport();
+  render();
+  requestAnimationFrame(tick);
+  // Start playing automatically for a self-playing preview
+  setPlaying(true);
+})();
+</script>
