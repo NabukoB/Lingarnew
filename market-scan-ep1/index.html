@@ -665,6 +665,126 @@
     opacity: 0;
   }
 
+  /* Receipts — on-screen research evidence from the production package */
+  .receipts {
+    position: absolute;
+    z-index: 5;
+    pointer-events: none;
+    display: flex;
+    gap: 10px;
+  }
+  .receipts.side {
+    right: 3%;
+    top: 10%;
+    bottom: 18%;
+    width: 30%;
+    max-width: 280px;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  .receipts.bottom {
+    bottom: 20%;
+    left: 6%;
+    right: 6%;
+    flex-direction: row;
+    justify-content: center;
+    align-items: stretch;
+    height: auto;
+  }
+  .receipts.bottom .receipt {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 360px;
+  }
+  .receipt {
+    position: relative;
+    background: #0A1013;
+    border: 1px solid var(--line);
+    border-top: 2px solid var(--gold);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--paper-2);
+    opacity: 0;
+    transform: translateX(30px);
+    box-shadow: 0 20px 40px -20px rgba(0,0,0,0.7);
+    display: grid;
+    gap: 0;
+    align-content: start;
+  }
+  .receipts.bottom .receipt { transform: translateY(20px); }
+  .receipt.in { opacity: 1; transform: translate(0,0); transition: opacity 260ms, transform 380ms cubic-bezier(.2,.9,.2,1); }
+  .receipt-src {
+    display: flex; justify-content: space-between; align-items: baseline;
+    color: var(--gold-2);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 9.5px;
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+  .receipt-src .provenance {
+    font-size: 8.5px;
+    letter-spacing: 0.2em;
+    color: var(--red-2);
+  }
+  .receipt-src .provenance.research { color: var(--paper-3); }
+  .receipt-src .provenance::before {
+    content: "";
+    display: inline-block;
+    width: 5px; height: 5px; border-radius: 50%;
+    background: currentColor;
+    margin-right: 5px;
+    vertical-align: 1px;
+    opacity: 0.9;
+  }
+  .receipt-url {
+    color: var(--paper-3);
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    word-break: break-word;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed rgba(199,204,201,0.16);
+    line-height: 1.35;
+  }
+  .receipt-metric {
+    font-family: var(--font-display);
+    color: var(--paper);
+    font-size: clamp(18px, 2.2vw, 26px);
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .receipt-metric.small { font-size: clamp(15px, 1.6vw, 18px); }
+  .receipt-metric small {
+    display: inline-block;
+    font-family: var(--font-mono);
+    color: var(--paper-3);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    margin-left: 4px;
+    text-transform: uppercase;
+    font-weight: normal;
+  }
+  .receipt-note {
+    color: var(--paper-3);
+    font-size: 10px;
+    margin-top: 6px;
+    line-height: 1.45;
+    letter-spacing: 0.02em;
+  }
+
+  /* Shift the main visual left when receipts sit on the side */
+  .shot.has-side {
+    justify-content: flex-start;
+    padding-left: 5%;
+    padding-right: 35%;
+  }
+
+  /* Shot 9 & 10 need more room at the bottom for the receipt strip */
+  .shot[data-shot="9"], .shot[data-shot="10"] { padding-bottom: 24%; }
+
   /* ---------- TRANSPORT ---------- */
   .transport {
     margin-top: 16px;
@@ -963,7 +1083,14 @@
     <section class="panel">
       <h2>Source Material</h2>
       <div class="vo" style="font-size:12px;line-height:1.55;color:var(--paper-2)">
-        Jiji Scout (Electronics → Nairobi) · Jumia wholesale checks · Carry1st Kenya storefront · Xbox.com platform page. Every number in this cut is drawn from the session research pack.
+        Every "real" and "fake" shot carries its research evidence on the right or bottom of the stage:
+      </div>
+      <ul style="margin:10px 0 0;padding:0;list-style:none;display:grid;gap:6px;font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.12em;color:var(--paper-3);text-transform:uppercase">
+        <li><span style="color:var(--red-2)">● LIVE</span> — re-check captured this pass</li>
+        <li><span style="color:var(--paper-2)">● ORIGINAL</span> — screenshot from research pack</li>
+      </ul>
+      <div class="vo" style="font-size:12px;line-height:1.55;color:var(--paper-2);margin-top:10px">
+        Sources: Jiji Scout, Jumia, Carry1st Kenya, Xbox.com, CDKeysforgames.
       </div>
     </section>
   </aside>
@@ -1099,6 +1226,37 @@
     }
   ];
 
+  // Research evidence pulled straight from the production package's Research Evidence section.
+  // "live" = a re-check captured this pass; "research" = the original screenshot.
+  const RECEIPTS = {
+    4: [
+      { live: true,  src: "Jiji Scout",       url: "scout.jiji.co.ke · search: wireless earpods",           metric: "50",         unit: "/mo · Embakasi",    note: "No competition · 10/10 · Top pick" },
+      { live: false, src: "Jumia",            url: "jumia.co.ke · search: wireless earpods",                metric: "KSh 253",    unit: "TYNIX Pro3",         note: "Original research screenshot" }
+    ],
+    5: [
+      { live: true,  src: "Jiji Scout",       url: "scout.jiji.co.ke · search: phone cover",                metric: "20",         unit: "/mo · Nairobi Central", note: "No competition. Live volume moved from the original 110/mo pull." },
+      { live: false, src: "Jumia",            url: "jumia.co.ke · search: phone case",                       metric: "KSh 349",    unit: "cheapest single-unit", note: "Say 'wholesale' on camera — KSh 150 is the bulk figure." }
+    ],
+    6: [
+      { live: true,  src: "Jiji Scout",       url: "scout.jiji.co.ke · search: security camera",             metric: "10",         unit: "/mo · Nairobi West", note: "No competition · 10/10. Live re-check surfaces one strong card; original research had three distinct models." }
+    ],
+    7: [
+      { live: true,  src: "Jiji Scout",       url: "scout.jiji.co.ke · search: xdobo",                       metric: "100",        unit: "/mo · Nairobi Central", note: "No competition — matches the script exactly." },
+      { live: false, src: "Jumia",            url: "jumia.co.ke · xdobo brand filter",                       metric: "KSh 2,699",  unit: "Xdobo BMTL Rainbow 15W", note: "Original research · under the KSh 3,000 ceiling." }
+    ],
+    8: [
+      { live: false, src: "Carry1st",         url: "shop.carry1st.com/en/KE/product/roblux-gift-card",       metric: "KSh 1,261",  unit: "$10 card · 3% off",  note: "Official Kenya storefront · KES pricing at near-cost." },
+      { live: false, src: "Carry1st · Checkout", url: "Select Payment Method",                                metric: "M-Pesa · Airtel Money", unit: "", note: "Both listed above Pay with Crypto." }
+    ],
+    9: [
+      { live: true,  src: "Xbox.com",         url: "xbox.com · Forza Horizon 5",                             metric: "XBOX · PC · Handheld · Cloud", unit: "", note: "Platform line. No PlayStation. Ever." },
+      { live: false, src: "CDKeysforgames",   url: "cdkeysforgames.com · Forza Horizon 5 Xbox One",          metric: "Xbox One",    unit: "CD-key category",     note: "Third-party listing corroborates the Xbox/PC exclusive." }
+    ],
+    10: [
+      { live: false, src: "Jumia",            url: "jumia.co.ke · search: samsung a06",                       metric: "KSh 12,850 – 16,725", unit: "", note: "Live listings run above the KSh 12k figure in the script — debunk holds." }
+    ]
+  };
+
   // ---------- ICONS ----------
   const ICONS = {
     earbuds: `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="18" width="24" height="30" rx="12"/><rect x="34" y="18" width="24" height="30" rx="12"/><line x1="18" y1="30" x2="18" y2="42"/><line x1="46" y1="30" x2="46" y2="42"/></svg>`,
@@ -1166,6 +1324,43 @@
       shotLayer.appendChild(shot);
       s.node = shot;
       s.build?.(shot);
+    });
+  }
+
+  // Attach a side/bottom receipt stack to a shot with its research evidence.
+  function attachReceipts(shot, shotNum, position /* "side" | "bottom" */, startAt, stagger) {
+    const list = RECEIPTS[shotNum];
+    if (!list) return null;
+    let wrap = shot.querySelector(":scope > .receipts");
+    if (!wrap) {
+      wrap = el("div", "receipts " + position);
+      list.forEach((r, i) => {
+        const rc = el("div", "receipt");
+        rc.dataset.i = String(i);
+        const prov = r.live ? "LIVE RE-CHECK" : "ORIGINAL RESEARCH";
+        const provCls = r.live ? "" : "research";
+        rc.innerHTML = `
+          <div class="receipt-src">
+            <span>${r.src}</span>
+            <span class="provenance ${provCls}">${prov}</span>
+          </div>
+          <div class="receipt-url">${r.url}</div>
+          <div class="receipt-metric${r.metric.length > 14 ? " small" : ""}">${r.metric}${r.unit ? `<small>${r.unit}</small>` : ""}</div>
+          ${r.note ? `<div class="receipt-note">${r.note}</div>` : ""}
+        `;
+        wrap.appendChild(rc);
+      });
+      shot.appendChild(wrap);
+      if (position === "side") shot.classList.add("has-side");
+    }
+    return wrap;
+  }
+
+  function tickReceipts(shot, tRel, startAt, stagger) {
+    const rEls = shot.querySelectorAll(":scope > .receipts .receipt");
+    rEls.forEach((r, i) => {
+      const showAt = startAt + i * stagger;
+      r.classList.toggle("in", tRel >= showAt);
     });
   }
 
@@ -1292,21 +1487,24 @@
     });
   }
 
-  // Shots 4, 5, 7: card variants
+  // Shots 4, 5, 7: card variants + side-mounted receipts
   function renderCardShot(shot, tRel) {
-    const idx = SHOTS.find(x => x.node === shot).cardIndex;
+    const s = SHOTS.find(x => x.node === shot);
+    const idx = s.cardIndex;
     if (!shot.dataset.built) {
       shot.dataset.built = "1";
       shot.appendChild(buildCard(CARDS[idx]));
+      attachReceipts(shot, s.n, "side");
     }
     const card = shot.querySelector(".card");
     card.classList.toggle("in", tRel > 0.6);
-    // Count-up numbers
     const dur = 1.4;
     const p = clamp((tRel - 0.9) / dur, 0, 1);
     const searchN = shot.querySelector(".searches b");
     const target = CARDS[idx].searches;
     if (searchN) searchN.textContent = Math.round(easeOut(p) * target).toString();
+    // Stagger receipts from ~3s onward.
+    tickReceipts(shot, tRel, 3.2, 1.4);
   }
 
   // Shot 6: triple card
@@ -1334,6 +1532,7 @@
         wrap.appendChild(m);
       });
       shot.appendChild(wrap);
+      attachReceipts(shot, 6, "bottom");
     }
     const minis = shot.querySelectorAll(".mini");
     minis.forEach((m, i) => {
@@ -1350,9 +1549,10 @@
       m.style.transition = "opacity 300ms, transform 520ms cubic-bezier(.2,.9,.2,1)";
       m.style.zIndex = i === 1 && focus ? "3" : "1";
     });
+    tickReceipts(shot, tRel, 10, 1.2);
   }
 
-  // Shot 8: Roblox / M-Pesa debunk over card
+  // Shot 8: Roblox / Carry1st debunk over card + Carry1st receipts on the side
   function renderShot8(shot, tRel) {
     if (!shot.dataset.built) {
       shot.dataset.built = "1";
@@ -1363,31 +1563,14 @@
       shot.appendChild(c);
       const stamp = el("div", "x-stamp", ICONS.x);
       shot.appendChild(stamp);
-      // Payment tag chip
-      const chip = el("div", "hud-tag", "PAID VIA M-PESA · Carry1st ✓");
-      chip.style.position = "absolute";
-      chip.style.bottom = "18%";
-      chip.style.left = "50%";
-      chip.style.transform = "translateX(-50%)";
-      chip.style.background = "rgba(196,68,59,0.15)";
-      chip.style.borderColor = "rgba(196,68,59,0.4)";
-      chip.style.color = "var(--red-2)";
-      chip.style.fontFamily = "var(--font-mono)";
-      chip.style.fontSize = "12px";
-      chip.style.letterSpacing = "0.18em";
-      chip.style.padding = "8px 12px";
-      chip.style.opacity = "0";
-      chip.style.transition = "opacity 260ms";
-      chip.id = "s8chip";
-      shot.appendChild(chip);
+      attachReceipts(shot, 8, "side");
     }
     const card = shot.querySelector(".card");
     const stamp = shot.querySelector(".x-stamp");
-    const chip = shot.querySelector("#s8chip");
     card.classList.toggle("in", tRel > 0.6);
     if (tRel > 3.6) card.classList.add("dimmed"); else card.classList.remove("dimmed");
     if (tRel > 3.6) stamp.classList.add("hit"); else stamp.classList.remove("hit");
-    chip.style.opacity = tRel > 5.6 ? "1" : "0";
+    tickReceipts(shot, tRel, 4.4, 1.6);
   }
 
   // Shot 9: Xbox / PC vs PS5
@@ -1414,6 +1597,7 @@
         </div>
       `;
       shot.appendChild(wrap);
+      attachReceipts(shot, 9, "bottom");
     }
     const plates = shot.querySelectorAll(".plate");
     plates.forEach((p, i) => {
@@ -1422,6 +1606,7 @@
     });
     const cross = shot.querySelector(".plate.no .plate-cross");
     cross.classList.toggle("hit", tRel >= 5.5);
+    tickReceipts(shot, tRel, 6.4, 1.4);
   }
 
   // Shot 10: Samsung A06 budget bar
@@ -1444,6 +1629,7 @@
         </div>
       `;
       shot.appendChild(wrap);
+      attachReceipts(shot, 10, "bottom");
     }
     const segs = shot.querySelectorAll(".bar-seg");
     const grow = clamp(tRel / 2.4, 0, 1);
@@ -1451,6 +1637,7 @@
       const b = parseFloat(s.dataset.basis);
       s.style.flexBasis = (b * easeOut(grow)) + "%";
     });
+    tickReceipts(shot, tRel, 3.6, 1.4);
   }
 
   // Shot 11: 20K plan bar
