@@ -1,0 +1,1734 @@
+<title>Freeze After Hi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&family=Archivo+Narrow:wght@500;700&display=swap">
+
+<style>
+  :root {
+    --void:      #000000;
+    --stage:     #000000;
+    --chrome:    #0A0A0B;
+    --chrome-2:  #121215;
+    --line:      #26262B;
+    --line-2:    #3A3A42;
+    --paper:     #FFFFFF;
+    --paper-2:   #C7C7CC;
+    --paper-3:   #7A7A80;
+    --stop:      #FF3B30;
+    --go:        #34C759;
+    --tension:   #FF3D8F;
+    --pointer:   #FFD60A;
+
+    --font-display: "Anton", "Impact", "Arial Narrow Bold", sans-serif;
+    --font-body:    "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --font-mono:    "Archivo Narrow", "Archivo", ui-monospace, monospace;
+  }
+
+  html, body { background: var(--chrome); color: var(--paper); }
+  body { font-family: var(--font-body); -webkit-font-smoothing: antialiased; letter-spacing: 0.005em; }
+  * { box-sizing: border-box; }
+
+  .app {
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+    padding: 20px;
+    padding-block: 20px;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; padding: 16px; }
+    .sidebar { order: 2; }
+  }
+
+  header.brand {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .brand h1 {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 3.2vw, 32px);
+    letter-spacing: 0.05em;
+    margin: 0;
+  }
+  .brand .sub {
+    font-family: var(--font-mono);
+    color: var(--paper-3);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 11px;
+  }
+  .brand .credits {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--paper-3);
+    text-transform: uppercase;
+  }
+  .brand .credits b { color: var(--paper); font-weight: 700; }
+
+  /* ---------- STAGE ---------- */
+  .stage-wrap { min-width: 0; }
+  .stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--stage);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    isolation: isolate;
+    box-shadow: 0 30px 80px -30px rgba(0,0,0,0.8);
+    user-select: none;
+    color: var(--paper);
+  }
+
+  .stage-hud {
+    position: absolute; inset: 0;
+    z-index: 40;
+    pointer-events: none;
+    color: var(--paper-3);
+    font-family: var(--font-mono);
+    font-size: clamp(10px, 1.1vw, 12px);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .hud-tl, .hud-tr, .hud-br, .hud-bl {
+    position: absolute;
+    padding: 12px 14px;
+    display: flex; gap: 10px; align-items: center;
+  }
+  .hud-tl { top: 0; left: 0; }
+  .hud-tr { top: 0; right: 0; }
+  .hud-br { bottom: 0; right: 0; }
+  .hud-bl { bottom: 0; left: 0; }
+  .hud-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--stop);
+    box-shadow: 0 0 8px var(--stop);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .hud-tag {
+    padding: 3px 8px;
+    border: 1px solid var(--line-2);
+    border-radius: 3px;
+    color: var(--paper-2);
+    background: rgba(0,0,0,0.55);
+  }
+
+  .beat-layer { position: absolute; inset: 0; z-index: 20; }
+  .beat {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 5% 6%;
+    visibility: hidden;
+  }
+  .beat[data-active="1"] { visibility: visible; }
+
+  /* ---------- CHARACTER ---------- */
+  .fig {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: 78%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    filter: drop-shadow(0 0 0 rgba(0,0,0,0));
+  }
+  .fig svg { height: 100%; width: auto; overflow: visible; }
+  .fig.dim { opacity: 0.35; }
+  .fig.flip svg { transform: scaleX(-1); }
+
+  /* ---------- SPEECH BUBBLE ---------- */
+  .bubble {
+    position: absolute;
+    max-width: 32%;
+    padding: 14px 18px;
+    background: transparent;
+    border: 2px solid var(--paper);
+    border-radius: 18px;
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: clamp(14px, 1.6vw, 20px);
+    line-height: 1.25;
+    text-align: center;
+    z-index: 3;
+  }
+  .bubble::before, .bubble::after {
+    content: "";
+    position: absolute;
+    width: 0; height: 0;
+  }
+  .bubble.left  { right: auto; }
+  .bubble.right { left: auto; }
+  .bubble.up-left::after {
+    left: 20%;
+    bottom: -14px;
+    border: 8px solid transparent;
+    border-top-color: var(--stage);
+    border-bottom-width: 0;
+    filter: drop-shadow(0 2px 0 var(--paper));
+  }
+  .bubble.up-left::before {
+    left: 20%;
+    bottom: -18px;
+    border: 10px solid transparent;
+    border-top-color: var(--paper);
+    border-bottom-width: 0;
+  }
+  .bubble.up-right::before {
+    right: 20%;
+    bottom: -18px;
+    border: 10px solid transparent;
+    border-top-color: var(--paper);
+    border-bottom-width: 0;
+  }
+  .bubble.up-right::after {
+    right: 20%;
+    bottom: -14px;
+    border: 8px solid transparent;
+    border-top-color: var(--stage);
+    border-bottom-width: 0;
+  }
+  .bubble.faded {
+    border-color: var(--paper-3);
+    color: var(--paper-3);
+  }
+  .bubble.thought {
+    border-style: dashed;
+  }
+
+  /* ---------- ACCENT STAMPS ---------- */
+  .stamp-x, .stamp-check, .pointer-arrow {
+    position: absolute;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .stamp-x svg, .stamp-check svg { width: 100%; height: 100%; }
+  .stamp-x { color: var(--stop); }
+  .stamp-check { color: var(--go); }
+  .pointer-arrow { color: var(--pointer); }
+
+  /* ---------- SWEAT DROPS ---------- */
+  .sweat {
+    position: absolute;
+    color: var(--paper);
+    font-family: var(--font-body);
+    font-weight: 800;
+    z-index: 4;
+  }
+
+  /* ---------- BEAT TYPE: BIG TITLE ---------- */
+  .big-title {
+    font-family: var(--font-display);
+    font-size: clamp(38px, 9vw, 112px);
+    letter-spacing: 0.06em;
+    line-height: 0.92;
+    color: var(--paper);
+    text-align: center;
+    text-wrap: balance;
+    max-width: 92%;
+  }
+  .big-title .accent-stop { color: var(--stop); }
+  .big-title .accent-go   { color: var(--go); }
+  .big-title .strike {
+    position: relative;
+    display: inline-block;
+  }
+  .big-title .strike::after {
+    content: "";
+    position: absolute;
+    left: -4%; right: -4%;
+    top: 52%;
+    height: 8%;
+    background: var(--stop);
+  }
+  .big-title small {
+    display: block;
+    margin-top: 14px;
+    font-family: var(--font-mono);
+    font-size: clamp(11px, 1.2vw, 15px);
+    letter-spacing: 0.24em;
+    color: var(--paper-3);
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+
+  /* ---------- BEAT TYPE: MOVE TITLE ---------- */
+  .move-title {
+    display: grid; place-items: center; gap: 6px;
+    text-align: center;
+    max-width: 92%;
+  }
+  .move-title .move-n {
+    font-family: var(--font-mono);
+    font-size: clamp(12px, 1.4vw, 15px);
+    letter-spacing: 0.4em;
+    color: var(--paper-3);
+    text-transform: uppercase;
+  }
+  .move-title .move-name {
+    font-family: var(--font-display);
+    font-size: clamp(46px, 8.6vw, 108px);
+    letter-spacing: 0.05em;
+    line-height: 0.95;
+    color: var(--paper);
+  }
+  .move-title .move-sub {
+    margin-top: 12px;
+    font-family: var(--font-body);
+    font-size: clamp(13px, 1.5vw, 17px);
+    color: var(--paper-2);
+    max-width: 620px;
+    text-wrap: balance;
+    line-height: 1.4;
+  }
+  .move-title .move-rule {
+    width: 88px; height: 3px;
+    background: var(--paper);
+    margin: 22px auto 4px;
+  }
+
+  /* ---------- BEAT TYPE: QUOTE CARD ---------- */
+  .quote-wrap {
+    display: grid; place-items: center; gap: 22px;
+    text-align: center;
+    max-width: 92%;
+  }
+  .quote-eyebrow {
+    font-family: var(--font-mono);
+    letter-spacing: 0.32em;
+    font-size: clamp(11px, 1.2vw, 13px);
+    color: var(--paper-3);
+    text-transform: uppercase;
+  }
+  .quote-mark {
+    font-family: var(--font-display);
+    font-size: clamp(48px, 7vw, 80px);
+    line-height: 1;
+    color: var(--paper);
+    letter-spacing: 0;
+  }
+  .quote-text {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-style: italic;
+    font-size: clamp(20px, 3.8vw, 46px);
+    line-height: 1.15;
+    color: var(--paper);
+    text-wrap: balance;
+    max-width: 900px;
+  }
+  .quote-attrib {
+    font-family: var(--font-mono);
+    font-size: clamp(11px, 1.2vw, 13px);
+    letter-spacing: 0.24em;
+    color: var(--paper-3);
+    text-transform: uppercase;
+  }
+
+  /* ---------- BEAT TYPE: CAPTION LINE ---------- */
+  .caption {
+    font-family: var(--font-body);
+    font-size: clamp(13px, 1.4vw, 17px);
+    font-weight: 500;
+    color: var(--paper);
+    text-align: center;
+    max-width: 640px;
+    text-wrap: balance;
+    line-height: 1.4;
+  }
+  .caption em { font-style: normal; color: var(--paper-3); }
+
+  /* ---------- BEAT TYPE: PREVIEW / PAYOFF TILES ---------- */
+  .move-tiles {
+    display: flex; gap: 18px;
+    max-width: 92%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .move-tile {
+    width: min(240px, 30%);
+    aspect-ratio: 3 / 4;
+    border: 2px solid var(--paper);
+    border-radius: 4px;
+    padding: 20px 18px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 8px;
+    color: var(--paper);
+    background: transparent;
+  }
+  .move-tile .n {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--paper-3);
+    text-transform: uppercase;
+  }
+  .move-tile .nm {
+    font-family: var(--font-display);
+    font-size: clamp(24px, 3.4vw, 34px);
+    letter-spacing: 0.04em;
+    line-height: 1;
+    color: var(--paper);
+    align-self: center;
+  }
+  .move-tile .for {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--paper-3);
+    text-transform: uppercase;
+    line-height: 1.4;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-2);
+  }
+
+  /* ---------- CTA BEAT ---------- */
+  .cta {
+    max-width: 92%;
+    text-align: center;
+    display: grid; gap: 18px; place-items: center;
+  }
+  .cta .aside {
+    font-family: var(--font-mono);
+    font-size: clamp(11px, 1.2vw, 13px);
+    letter-spacing: 0.32em;
+    color: var(--pointer);
+    text-transform: uppercase;
+  }
+  .cta .cta-text {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: clamp(17px, 2.4vw, 28px);
+    line-height: 1.35;
+    color: var(--paper);
+    max-width: 780px;
+    text-wrap: balance;
+  }
+  .cta .sub-btn {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 12px 20px;
+    border: 2px solid var(--stop);
+    border-radius: 4px;
+    font-family: var(--font-display);
+    color: var(--stop);
+    font-size: clamp(14px, 1.6vw, 18px);
+    letter-spacing: 0.16em;
+  }
+  .cta .sub-btn::before {
+    content: "";
+    width: 8px; height: 8px;
+    background: var(--stop);
+    border-radius: 50%;
+  }
+
+  /* ---------- CTA BEAT — pitfall/payoff ---------- */
+  .pitfall {
+    max-width: 780px;
+    text-align: center;
+    display: grid; gap: 14px;
+  }
+  .pitfall .warn {
+    font-family: var(--font-mono);
+    font-size: clamp(11px, 1.2vw, 13px);
+    letter-spacing: 0.32em;
+    color: var(--pointer);
+    text-transform: uppercase;
+  }
+  .pitfall .warn::before {
+    content: "!";
+    display: inline-block;
+    width: 20px; height: 20px;
+    line-height: 18px;
+    border: 2px solid var(--pointer);
+    border-radius: 50%;
+    margin-right: 8px;
+    font-family: var(--font-display);
+    font-size: 15px;
+    vertical-align: -2px;
+  }
+  .pitfall .txt {
+    font-family: var(--font-body);
+    font-size: clamp(15px, 2vw, 22px);
+    line-height: 1.4;
+    color: var(--paper);
+    font-weight: 500;
+    text-wrap: balance;
+  }
+  .pitfall .txt em { color: var(--pointer); font-style: normal; }
+
+  /* ---------- CLIMAX MOVE ---------- */
+  .climax {
+    display: grid; place-items: center; gap: 24px;
+    max-width: 92%;
+    text-align: center;
+  }
+  .climax .cx-eyebrow {
+    font-family: var(--font-mono);
+    letter-spacing: 0.36em;
+    color: var(--go);
+    text-transform: uppercase;
+    font-size: clamp(11px, 1.2vw, 13px);
+  }
+  .climax .cx-line {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: clamp(18px, 2.6vw, 30px);
+    color: var(--paper);
+    max-width: 820px;
+    line-height: 1.35;
+    text-wrap: balance;
+  }
+  .climax .cx-line b { color: var(--go); font-weight: 700; }
+
+  /* ---------- END CARD ---------- */
+  .endcard {
+    display: grid; place-items: center; gap: 24px;
+    text-align: center;
+    max-width: 92%;
+  }
+  .endcard .callback {
+    font-family: var(--font-display);
+    font-size: clamp(30px, 6vw, 68px);
+    letter-spacing: 0.05em;
+    line-height: 0.95;
+    color: var(--paper);
+  }
+  .endcard .callback .not { color: var(--stop); text-decoration: line-through; text-decoration-color: var(--stop); text-decoration-thickness: 4px; }
+  .endcard .callback .yes { color: var(--go); }
+  .endcard .end-cta {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 12px 20px;
+    border: 2px solid var(--stop);
+    border-radius: 4px;
+    font-family: var(--font-display);
+    color: var(--stop);
+    font-size: clamp(16px, 2vw, 22px);
+    letter-spacing: 0.16em;
+  }
+  .endcard .end-cta::before {
+    content: "";
+    width: 10px; height: 10px;
+    background: var(--stop);
+    border-radius: 50%;
+  }
+
+  /* ---------- BUBBLE POSITIONS (per figure) ---------- */
+  .bubble.b-fig-left  { left: 3%;  top: 8%; }
+  .bubble.b-fig-right { right: 3%; top: 8%; }
+  .bubble.b-fig-mid   { left: 50%; transform: translateX(-50%); top: 8%; }
+
+  /* ---------- QUOTABLE ambient hush ring ---------- */
+  .beat[data-type="quote"] { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02); }
+
+  /* ---------- TRANSPORT (shared shape with Market Scan) ---------- */
+  .transport {
+    margin-top: 16px;
+    background: var(--chrome-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 14px 16px 16px;
+    display: grid;
+    gap: 12px;
+  }
+  .transport-row {
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    appearance: none;
+    background: transparent;
+    color: var(--paper);
+    border: 1px solid var(--line-2);
+    padding: 8px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color 150ms, background 150ms, color 150ms;
+  }
+  .btn:hover, .btn:focus-visible { border-color: var(--paper); background: rgba(255,255,255,0.03); outline: none; }
+  .btn.primary { background: var(--paper); color: var(--void); border-color: var(--paper); }
+  .btn.primary:hover { background: var(--paper-2); }
+  .btn.icon { display: inline-flex; align-items: center; gap: 8px; }
+  .btn[data-active="1"] { border-color: var(--paper); color: var(--paper); background: rgba(255,255,255,0.05); }
+
+  .tc {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--paper-2);
+    letter-spacing: 0.14em;
+    font-variant-numeric: tabular-nums;
+    min-width: 96px;
+  }
+  .tc .cur { color: var(--paper); }
+  .tc .sep { color: var(--paper-3); margin: 0 4px; }
+
+  .scrub {
+    position: relative;
+    flex: 1;
+    height: 22px;
+    display: flex; align-items: center;
+    cursor: pointer;
+    min-width: 220px;
+  }
+  .scrub-track {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .scrub-fill {
+    position: absolute; top: 0; left: 0; bottom: 0;
+    background: var(--paper);
+    width: 0%;
+  }
+  .scrub-ticks {
+    position: absolute; inset: 0;
+  }
+  .scrub-tick {
+    position: absolute;
+    width: 1px;
+    background: rgba(255,255,255,0.35);
+    height: 100%;
+  }
+  .scrub-head {
+    position: absolute;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--paper);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.12);
+  }
+
+  .beat-chips {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .chip-btn {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--line-2);
+    padding: 6px 10px;
+    color: var(--paper-3);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip-btn:hover { color: var(--paper); border-color: var(--paper-3); }
+  .chip-btn[data-active="1"] {
+    color: var(--paper);
+    border-color: var(--paper);
+    background: rgba(255,255,255,0.05);
+  }
+  .chip-btn .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--line-2);
+  }
+  .chip-btn.problem  .dot { background: var(--stop); }
+  .chip-btn.promise  .dot { background: var(--pointer); }
+  .chip-btn.reframe  .dot { background: var(--paper); }
+  .chip-btn.path     .dot { background: var(--go); }
+  .chip-btn.pitfall  .dot { background: var(--pointer); }
+  .chip-btn.payoff   .dot { background: var(--go); }
+  .chip-btn.cta      .dot { background: var(--stop); }
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar {
+    display: grid;
+    gap: 16px;
+    align-content: start;
+  }
+  .panel {
+    background: var(--chrome-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 16px 16px 18px;
+  }
+  .panel h2 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    color: var(--paper-3);
+    margin: 0 0 12px;
+    font-weight: 700;
+  }
+  .now-beat { display: grid; gap: 10px; }
+  .now-beat .code {
+    font-family: var(--font-mono);
+    color: var(--paper);
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+  .now-beat .now-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--paper);
+    letter-spacing: 0.03em;
+    line-height: 1.05;
+  }
+  .now-beat .vo {
+    font-family: var(--font-body);
+    color: var(--paper-2);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .now-beat .foley {
+    font-family: var(--font-mono);
+    color: var(--paper-3);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    line-height: 1.5;
+    text-transform: uppercase;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+  .now-beat .foley b { color: var(--paper-2); }
+
+  .system-swatches {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  }
+  .sys-sw {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--paper-3);
+    text-transform: uppercase;
+  }
+  .sys-sw i {
+    width: 12px; height: 12px; border-radius: 2px;
+    display: inline-block;
+    border: 1px solid var(--line-2);
+  }
+  .sys-sw b { color: var(--paper); font-weight: 700; }
+
+  .footer {
+    grid-column: 1 / -1;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--paper-3);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fig, .bubble, .stamp-x, .stamp-check { transition: none !important; animation: none !important; }
+  }
+</style>
+
+<div class="app">
+
+  <header class="brand">
+    <div>
+      <h1>What to Say When You Freeze After Saying Hi</h1>
+      <div class="sub">Social Flow · Conversation Field Guide · Line System v3</div>
+    </div>
+    <div class="credits">Line-art explainer · Runtime <b id="totalRuntime">04:30</b></div>
+  </header>
+
+  <section class="stage-wrap">
+
+    <div class="stage" id="stage" role="region" aria-label="Animated explainer stage">
+
+      <div class="stage-hud" aria-hidden="true">
+        <div class="hud-tl">
+          <span class="hud-dot"></span>
+          <span id="hudBeatTag" class="hud-tag">BEAT 01</span>
+          <span id="hudSegTag" class="hud-tag">PROBLEM</span>
+        </div>
+        <div class="hud-tr">
+          <span class="hud-tag">SOCIAL FLOW · S01</span>
+        </div>
+        <div class="hud-bl">
+          <span class="hud-tag">ANTON · ARCHIVO</span>
+        </div>
+        <div class="hud-br">
+          <span id="hudTc" class="hud-tag">00:00 / 04:30</span>
+        </div>
+      </div>
+
+      <div class="beat-layer" id="beatLayer"></div>
+    </div>
+
+    <div class="transport" role="group" aria-label="Playback controls">
+      <div class="transport-row">
+        <button id="btnPlay" class="btn primary icon" aria-label="Play">
+          <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor" aria-hidden="true"><path id="playIcon" d="M4 3 L17 10 L4 17 Z"/></svg>
+          <span id="btnPlayLabel">PLAY</span>
+        </button>
+        <button id="btnRestart" class="btn" aria-label="Restart from top">RESTART</button>
+        <div class="tc"><span id="tcCur" class="cur">00:00</span><span class="sep">/</span><span id="tcTotal">04:30</span></div>
+        <div class="scrub" id="scrub" role="slider" aria-label="Scrub" aria-valuemin="0" aria-valuemax="270" aria-valuenow="0" tabindex="0">
+          <div class="scrub-track">
+            <div class="scrub-fill" id="scrubFill"></div>
+            <div class="scrub-ticks" id="scrubTicks"></div>
+          </div>
+          <div class="scrub-head" id="scrubHead" style="left:0%"></div>
+        </div>
+        <button class="btn" data-speed="0.5">0.5×</button>
+        <button class="btn" data-speed="1" data-active="1">1×</button>
+        <button class="btn" data-speed="2">2×</button>
+      </div>
+      <div class="beat-chips" id="beatChips" role="tablist" aria-label="Jump to beat"></div>
+    </div>
+  </section>
+
+  <aside class="sidebar">
+    <section class="panel">
+      <h2>Now Playing</h2>
+      <div class="now-beat">
+        <div class="code" id="nowCode">BEAT 01 · PROBLEM · 00:00 – 00:08</div>
+        <div class="now-title" id="nowTitle">You say hi. They say hi back.</div>
+        <div class="vo" id="nowVo">Two figures greet. Wrong bubble kind: the safe one that goes nowhere. Sets up the freeze.</div>
+        <div class="foley" id="nowFoley">Foley: soft bed only · <b>−18 dB</b> · no lead melody</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Line System — Accents</h2>
+      <div class="system-swatches">
+        <div class="sys-sw"><i style="background:#FF3B30"></i> <b>Stop</b> · X marks</div>
+        <div class="sys-sw"><i style="background:#34C759"></i> <b>Go</b> · winning path</div>
+        <div class="sys-sw"><i style="background:#FFD60A"></i> <b>Pointer</b> · sparing</div>
+        <div class="sys-sw"><i style="background:#FF3D8F"></i> <b>Tension</b> · reserved</div>
+      </div>
+      <p style="margin:14px 0 0;font-family:var(--font-body);font-size:12px;line-height:1.5;color:var(--paper-2)">
+        Green only after a red has appeared · one idea per beat · hard cuts, no dissolves · locked frame.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>Audio Design</h2>
+      <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;color:var(--paper-3);text-transform:uppercase;display:grid;gap:6px">
+        <div>VO · 150–160 wpm · steady</div>
+        <div>Bed · 80–100 BPM · <b style="color:var(--paper-2)">−18 dB</b></div>
+        <div>Buzzer on each X · pop + chime on each ✓</div>
+        <div>Bed ducks to <b style="color:var(--paper-2)">−26 dB</b> under quote cards</div>
+        <div>+300–400 ms pause bracketing every quote</div>
+      </div>
+    </section>
+  </aside>
+
+  <footer class="footer">
+    <div>True black canvas · pure white line work</div>
+    <div>26 beats · 6-part skeleton · 04:30</div>
+    <div>−14 LUFS final normalize</div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- BEAT DATA ----------
+  // seg = one of PROBLEM PROMISE REFRAME PATH PITFALL PAYOFF CTA
+  const BEATS = [
+    // PROBLEM (0-8%)
+    { start:  0, end:  8, seg: "PROBLEM", type: "sceneGreet",
+      title: "You say hi. They say hi back.",
+      vo: "Two figures greet. Bubbles read HI both ways — that's the whole exchange.",
+      foley: "Bed only · gentle" },
+
+    { start:  8, end: 18, seg: "PROBLEM", type: "sceneFreeze",
+      title: "And then it happens — the blank.",
+      vo: "Wide-eyes freeze on the main figure. Sweat drops. Other figure fades to 30%.",
+      foley: "Bed ducks slightly · no sting yet" },
+
+    { start: 18, end: 26, seg: "PROBLEM", type: "sceneAwkward",
+      title: "Silence. Something forgettable, or nothing.",
+      vo: "'...' thought bubble. The conversation limps along and dies a few exchanges later.",
+      foley: "Silence beat · bed at −22 dB" },
+
+    { start: 26, end: 38, seg: "PROBLEM", type: "sceneReplay",
+      title: "That night you replay it.",
+      vo: "Three rehearsed lines struck through in a thought bubble. Decision: 'you're bad at this.'",
+      foley: "Soft bed · low presence" },
+
+    // PROMISE (8-15%)
+    { start: 38, end: 46, seg: "PROMISE", type: "bigTitle",
+      title: "Not a memory problem.",
+      big: [{ html: "IT'S NOT A", cls: "" }, { html: '<span class="strike">MEMORY PROBLEM.</span>', cls: "" }],
+      note: "The wrong belief this video dismantles.",
+      vo: "Big claim slams in. Wrong belief gets a red strike.",
+      foley: "Buzzer sting on the strike" },
+
+    { start: 46, end: 54, seg: "PROMISE", type: "bigTitle",
+      title: "It's a listening problem.",
+      big: [{ html: "IT'S A", cls: "" }, { html: '<span class="accent-go">LISTENING PROBLEM.</span>', cls: "" }],
+      note: "The reframe locks in — everything below is the how.",
+      vo: "Green replaces the red. Reframe locks the video's causal engine.",
+      foley: "Pop + chime on 'LISTENING PROBLEM'" },
+
+    { start: 54, end: 66, seg: "REFRAME", type: "preview",
+      title: "Three moves.",
+      vo: "Reset / Detail / Echo — the three moves the video will walk through.",
+      foley: "Title sting on card stack landing" },
+
+    // REFRAME — MOVE 1 (RESET)
+    { start: 66, end: 74, seg: "REFRAME", type: "moveTitle",
+      title: "Move 1 · The Reset Move",
+      moveN: "MOVE 01",
+      moveName: "THE RESET MOVE",
+      moveSub: "For the exact second your mind goes blank — the freeze itself.",
+      vo: "First named move lands. Title stamp.",
+      foley: "Title sting (2-note stamp)" },
+
+    { start: 74, end: 82, seg: "REFRAME", type: "wrongBeat",
+      title: "Wrong: the panic-fill.",
+      speaker: "Crazy weather, huh.",
+      voLabel: "PANIC-FILL",
+      note: "Flat, forced, from nowhere.",
+      vo: "Buzzer + red X. Everyone can hear the line came from nowhere.",
+      foley: "Buzzer on X-stamp" },
+
+    { start: 82, end: 90, seg: "REFRAME", type: "rightBeat",
+      title: "Right: one small, genuine question.",
+      speaker: "What'd you end up doing this weekend?",
+      voLabel: "RESET QUESTION",
+      note: "Hands the conversational ball back.",
+      vo: "Pop + chime + green check. Curiosity is the low bar.",
+      foley: "Pop + chime on ✓" },
+
+    { start: 90, end: 102, seg: "REFRAME", type: "quote",
+      quoteMove: "MOVE 01 · THE RESET MOVE",
+      quote: "You don't need a good line. You need a good question.",
+      vo: "Quote card. Bed ducks to −26 dB. 300–400 ms pause on either side.",
+      foley: "Bed ducks · no foley" },
+
+    // REFRAME — MOVE 2 (DETAIL)
+    { start:102, end:110, seg: "REFRAME", type: "moveTitle",
+      title: "Move 2 · The Detail Move",
+      moveN: "MOVE 02",
+      moveName: "THE DETAIL MOVE",
+      moveSub: "For the moment right after they've actually answered you.",
+      vo: "Second named move lands.",
+      foley: "Title sting" },
+
+    { start:110, end:118, seg: "REFRAME", type: "wrongBeat",
+      title: "Wrong: the polite dead end.",
+      speaker: "Oh nice.",
+      voLabel: "GENERIC ACK",
+      note: "Nothing left to respond to.",
+      vo: "Nice ends the thread. Red X.",
+      foley: "Buzzer on X-stamp" },
+
+    { start:118, end:126, seg: "REFRAME", type: "rightBeat",
+      title: "Right: one specific detail + something real back.",
+      speaker: "What part of it surprised you?",
+      voLabel: "DETAIL QUESTION",
+      note: "Narrow, curious — then match with something honest of your own.",
+      vo: "Green check. Turns a passing comment into an actual back-and-forth.",
+      foley: "Pop + chime on ✓" },
+
+    { start:126, end:138, seg: "REFRAME", type: "quote",
+      quoteMove: "MOVE 02 · THE DETAIL MOVE",
+      quote: "Cool ends the conversation. Curious continues it.",
+      vo: "Quote card · bed ducks.",
+      foley: "Bed ducks · no foley" },
+
+    // CTA aside (~55% mark)
+    { start:138, end:152, seg: "CTA", type: "cta",
+      title: "Mid-roll aside.",
+      cta: "If walking through moments like this actually helps — there's more of it here, free to stick around for.",
+      vo: "Threaded aside, not a hard break. Landed close to the 55–60% mark per Line System §mid-roll.",
+      foley: "Bed unchanged" },
+
+    // REFRAME — MOVE 3 (ECHO)
+    { start:152, end:160, seg: "REFRAME", type: "moveTitle",
+      title: "Move 3 · The Echo Move",
+      moveN: "MOVE 03",
+      moveName: "THE ECHO MOVE",
+      moveSub: "For the second blank — once your first question's already been answered.",
+      vo: "Third named move lands.",
+      foley: "Title sting" },
+
+    { start:160, end:168, seg: "REFRAME", type: "wrongBeat",
+      title: "Wrong: the prepared subject change.",
+      speaker: "So — different topic entirely...",
+      voLabel: "SUBJECT CHANGE",
+      note: "Reads as: I was waiting for my turn.",
+      vo: "Buzzer + red X. Prepared topics announce themselves.",
+      foley: "Buzzer on X-stamp" },
+
+    { start:168, end:176, seg: "REFRAME", type: "rightBeat",
+      title: "Right: the next question, out of their last answer.",
+      speaker: "You said rough week — what made it rough?",
+      voLabel: "ECHO QUESTION",
+      note: "The material was already there.",
+      vo: "Green check. The next thing to say is never further than the last thing they said.",
+      foley: "Pop + chime on ✓" },
+
+    { start:176, end:188, seg: "REFRAME", type: "quote",
+      quoteMove: "MOVE 03 · THE ECHO MOVE",
+      quote: "You're not out of things to say. You're just not listening to the last thing they said.",
+      vo: "Quote card · bed ducks.",
+      foley: "Bed ducks · no foley" },
+
+    // PATH — CLIMAX MOVE
+    { start:188, end:202, seg: "PATH", type: "climax",
+      title: "The one that matters more than the other three.",
+      cxEyebrow: "THE CLIMAX MOVE",
+      cxLine: 'When you genuinely go blank — mid-sentence, mid-thought, totally lost — <b>say so. Out loud. Calmly.</b>',
+      speaker: "Sorry, I completely lost my train of thought — what were you saying?",
+      vo: "Silence beat before the example line lands. No apology tour, no over-explaining.",
+      foley: "Silence · then bed returns quietly" },
+
+    { start:202, end:214, seg: "PATH", type: "quote",
+      quoteMove: "THE CLIMAX MOVE",
+      quote: "The freeze isn't the problem. Hiding it is.",
+      vo: "Fourth and final quote card · bed ducks.",
+      foley: "Bed ducks · no foley" },
+
+    // PITFALL
+    { start:214, end:226, seg: "PITFALL", type: "pitfall",
+      title: "One honest caveat.",
+      pitfall: 'None of this fakes interest. Fire questions on autopilot and <em>people can tell</em>. This is a place to put <em>real</em> interest when your mind goes blank.',
+      vo: "Pitfall beat · yellow pointer eyebrow.",
+      foley: "Bed at normal level" },
+
+    // PAYOFF — recap 3 moves
+    { start:226, end:246, seg: "PAYOFF", type: "recap",
+      title: "So — three moves.",
+      vo: "Recap tiles restate Reset · Detail · Echo. Callback in next beat.",
+      foley: "Bed steady" },
+
+    // PAYOFF — callback
+    { start:246, end:262, seg: "PAYOFF", type: "callback",
+      title: "It's not a memory problem. It's a listening problem.",
+      vo: "Hook callback closes the loop per Narration System §08.",
+      foley: "Pop + chime on the GO line" },
+
+    // END CARD
+    { start:262, end:270, seg: "PAYOFF", type: "endCard",
+      title: "You just needed somewhere else to put your attention.",
+      vo: "End card. Subscribe cue holds briefly, then out.",
+      foley: "Bed fades" }
+  ];
+
+  const TOTAL = BEATS[BEATS.length - 1].end;
+
+  // ---------- SVG BUILDERS ----------
+  // The mascot — adult male, broad-shouldered, cream sweater silhouette,
+  // straight-leg jeans, dark sneakers. Rendered as pure white line art
+  // on the true-black canvas per the Line System §01.
+  //
+  // Expression variants are inline swaps of eyes/mouth so the strokes
+  // stay uniform across cuts.
+  function mascotSVG({
+    expr = "neutral",   // "neutral" | "freeze" | "blank" | "speaking"
+    sweat = false,
+    thought = null,     // deprecated — use bubble on beat instead
+    scale = 1
+  } = {}) {
+    const eyes = ({
+      neutral: `
+        <circle cx="90" cy="72" r="2.6" fill="#fff"/>
+        <circle cx="118" cy="72" r="2.6" fill="#fff"/>
+      `,
+      freeze: `
+        <circle cx="90" cy="72" r="6.2" fill="none" stroke="#fff" stroke-width="3"/>
+        <circle cx="118" cy="72" r="6.2" fill="none" stroke="#fff" stroke-width="3"/>
+        <circle cx="90" cy="72" r="2.2" fill="#fff"/>
+        <circle cx="118" cy="72" r="2.2" fill="#fff"/>
+      `,
+      blank: `
+        <circle cx="90" cy="72" r="2.6" fill="#fff"/>
+        <circle cx="118" cy="72" r="2.6" fill="#fff"/>
+      `,
+      speaking: `
+        <circle cx="90" cy="72" r="2.6" fill="#fff"/>
+        <circle cx="118" cy="72" r="2.6" fill="#fff"/>
+      `
+    })[expr] || "";
+
+    const mouth = ({
+      neutral:  `<path d="M 100 92 Q 104 93 108 92" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`,
+      freeze:   `<ellipse cx="104" cy="94" rx="4" ry="5.5" fill="none" stroke="#fff" stroke-width="3"/>`,
+      blank:    `<line x1="98" y1="93" x2="110" y2="93" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`,
+      speaking: `<path d="M 96 92 Q 104 100 112 92" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`
+    })[expr] || "";
+
+    const brows = ({
+      neutral:  `
+        <line x1="82" y1="60" x2="97" y2="60" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <line x1="111" y1="60" x2="126" y2="60" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      `,
+      freeze:   `
+        <line x1="82" y1="58" x2="97" y2="60" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <line x1="111" y1="60" x2="126" y2="58" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      `,
+      blank:    `
+        <line x1="82" y1="60" x2="97" y2="60" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <line x1="111" y1="60" x2="126" y2="60" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      `,
+      speaking: `
+        <line x1="82" y1="60" x2="97" y2="60" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <line x1="111" y1="60" x2="126" y2="60" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      `
+    })[expr] || "";
+
+    const sweatMarks = sweat ? `
+      <path d="M 65 62 Q 61 68 63 74 Q 68 74 68 68 Z" fill="#fff"/>
+      <path d="M 143 60 Q 148 66 145 72 Q 140 72 140 66 Z" fill="#fff"/>
+    ` : "";
+
+    return `
+    <svg viewBox="0 0 208 400" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <!-- Ground line (per §01 canvas rule) -->
+      <line x1="12" y1="386" x2="196" y2="386" stroke-width="2.6"/>
+
+      <!-- Hair -->
+      <path d="
+        M 72 48
+        C 72 22, 90 12, 104 12
+        C 122 12, 140 22, 142 44
+        L 144 26
+        L 138 40
+        L 130 32
+        L 118 42
+        L 108 32
+        L 98 42
+        L 88 34
+        L 80 44
+        Z
+      " fill="#fff"/>
+
+      <!-- Head -->
+      <ellipse cx="104" cy="70" rx="34" ry="38"/>
+
+      <!-- Hair overhang on the right (side-swept tuft) -->
+      <path d="M 130 32 L 138 22 L 144 34 L 142 46 L 136 40 Z" fill="#fff"/>
+
+      <!-- Ears -->
+      <path d="M 70 74 Q 66 76 68 82" />
+      <path d="M 138 74 Q 142 76 140 82" />
+
+      <!-- Face -->
+      ${brows}
+      ${eyes}
+      ${mouth}
+      ${sweatMarks}
+
+      <!-- Neck -->
+      <line x1="96" y1="106" x2="96" y2="118"/>
+      <line x1="112" y1="106" x2="112" y2="118"/>
+
+      <!-- Sweater collar -->
+      <path d="M 92 118 Q 104 124 116 118"/>
+
+      <!-- Sweater body — baggy crewneck, hem past waist -->
+      <path d="
+        M 92 118
+        L 58 132
+        Q 48 138 48 154
+        L 48 244
+        Q 48 254 58 254
+        L 150 254
+        Q 160 254 160 244
+        L 160 154
+        Q 160 138 150 132
+        L 116 118
+      "/>
+
+      <!-- Sweater hem tick -->
+      <line x1="48" y1="244" x2="160" y2="244"/>
+
+      <!-- Arms — hang inside sweater silhouette then out at cuffs -->
+      <path d="M 58 148 Q 48 190 48 232 Q 48 246 54 250"/>
+      <path d="M 150 148 Q 160 190 160 232 Q 160 246 154 250"/>
+
+      <!-- Cuffs at wrists -->
+      <line x1="42" y1="248" x2="60" y2="248"/>
+      <line x1="148" y1="248" x2="166" y2="248"/>
+
+      <!-- Hands -->
+      <path d="M 50 254 Q 46 268 54 268 Q 60 268 58 258 Z"/>
+      <path d="M 158 254 Q 162 268 154 268 Q 148 268 150 258 Z"/>
+
+      <!-- Waist / pants top -->
+      <line x1="72" y1="254" x2="136" y2="254"/>
+
+      <!-- Pants — straight leg with slight taper, center inseam -->
+      <path d="M 72 254 L 68 360 L 96 360 L 100 260"/>
+      <path d="M 136 254 L 140 360 L 112 360 L 108 260"/>
+
+      <!-- Sneakers — low profile with clear white sole line -->
+      <path d="M 60 360 L 60 372 L 100 372 L 100 360" fill="#000"/>
+      <path d="M 108 360 L 108 372 L 148 372 L 148 360" fill="#000"/>
+      <line x1="60" y1="372" x2="100" y2="372"/>
+      <line x1="108" y1="372" x2="148" y2="372"/>
+      <!-- Sneaker tips -->
+      <path d="M 60 372 Q 55 376 60 380 L 100 380 L 100 372 Z" fill="#000"/>
+      <path d="M 148 372 Q 153 376 148 380 L 108 380 L 108 372 Z" fill="#000"/>
+      <line x1="55" y1="378" x2="102" y2="378"/>
+      <line x1="153" y1="378" x2="106" y2="378"/>
+    </svg>`;
+  }
+
+  function fmt(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+  }
+
+  function el(tag, cls, html) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+
+  function stampX({ w = 28 } = {}) {
+    return `
+    <svg viewBox="0 0 100 100" style="width:${w}%; height:auto">
+      <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="6"/>
+      <line x1="30" y1="30" x2="70" y2="70" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+      <line x1="70" y1="30" x2="30" y2="70" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+    </svg>`;
+  }
+  function stampCheck({ w = 28 } = {}) {
+    return `
+    <svg viewBox="0 0 100 100" style="width:${w}%; height:auto">
+      <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="6"/>
+      <path d="M 28 52 L 44 68 L 74 34" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+  }
+
+  // ---------- BEAT RENDERERS ----------
+  function renderBeat(node, beat) {
+    if (node.dataset.built === "1") return;
+    node.dataset.built = "1";
+    node.dataset.type = beat.type;
+
+    switch (beat.type) {
+      case "sceneGreet":     return renderSceneGreet(node);
+      case "sceneFreeze":    return renderSceneFreeze(node);
+      case "sceneAwkward":   return renderSceneAwkward(node);
+      case "sceneReplay":    return renderSceneReplay(node);
+      case "bigTitle":       return renderBigTitle(node, beat);
+      case "preview":        return renderPreview(node);
+      case "moveTitle":      return renderMoveTitle(node, beat);
+      case "wrongBeat":      return renderWrongBeat(node, beat);
+      case "rightBeat":      return renderRightBeat(node, beat);
+      case "quote":          return renderQuote(node, beat);
+      case "cta":            return renderCta(node, beat);
+      case "climax":         return renderClimax(node, beat);
+      case "pitfall":        return renderPitfall(node, beat);
+      case "recap":          return renderRecap(node);
+      case "callback":       return renderCallback(node);
+      case "endCard":        return renderEndCard(node);
+    }
+  }
+
+  function figure({ x, expr = "neutral", flip = false, sweat = false, dim = false, height = "78%" }) {
+    const f = el("div", "fig" + (flip ? " flip" : "") + (dim ? " dim" : ""));
+    f.innerHTML = mascotSVG({ expr, sweat });
+    f.style.left = x + "%";
+    f.style.height = height;
+    return f;
+  }
+
+  function bubble({ text, x, y, side = "up-left", cls = "" }) {
+    const b = el("div", "bubble " + side + " " + cls, text);
+    b.style.left = x + "%";
+    b.style.top = y + "%";
+    return b;
+  }
+
+  function renderSceneGreet(node) {
+    node.appendChild(figure({ x: 30, expr: "neutral" }));
+    node.appendChild(figure({ x: 70, expr: "neutral", flip: true }));
+    const b1 = el("div", "bubble up-left", "HI.");
+    b1.style.left = "22%"; b1.style.top = "12%";
+    const b2 = el("div", "bubble up-right", "HI.");
+    b2.style.right = "22%"; b2.style.top = "22%";
+    node.appendChild(b1); node.appendChild(b2);
+  }
+
+  function renderSceneFreeze(node) {
+    node.appendChild(figure({ x: 30, expr: "freeze", sweat: true }));
+    node.appendChild(figure({ x: 70, expr: "neutral", flip: true, dim: true }));
+    const b = el("div", "bubble thought up-left", "…");
+    b.style.left = "18%"; b.style.top = "8%";
+    b.style.fontSize = "clamp(20px, 2.4vw, 32px)";
+    b.style.letterSpacing = "0.3em";
+    node.appendChild(b);
+    // pointer arrow at the freeze
+    const arrow = el("div", "pointer-arrow");
+    arrow.style.left = "36%"; arrow.style.top = "22%";
+    arrow.style.width = "50px";
+    arrow.innerHTML = `<svg viewBox="0 0 60 60" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 8 28 L 44 28 M 34 18 L 44 28 L 34 38"/>
+    </svg>`;
+    node.appendChild(arrow);
+    const label = el("div", "caption");
+    label.textContent = "The blank.";
+    label.style.position = "absolute";
+    label.style.left = "50%"; label.style.transform = "translateX(-50%)";
+    label.style.bottom = "10%";
+    label.style.color = "var(--pointer)";
+    label.style.fontFamily = "var(--font-mono)";
+    label.style.letterSpacing = "0.3em";
+    label.style.textTransform = "uppercase";
+    label.style.fontSize = "clamp(11px,1.3vw,14px)";
+    node.appendChild(label);
+  }
+
+  function renderSceneAwkward(node) {
+    node.appendChild(figure({ x: 30, expr: "blank" }));
+    node.appendChild(figure({ x: 70, expr: "neutral", flip: true }));
+    // A limp forgettable line from the frozen figure
+    const b1 = el("div", "bubble up-left faded", "Crazy weather, huh.");
+    b1.style.left = "6%"; b1.style.top = "12%"; b1.style.maxWidth = "34%";
+    node.appendChild(b1);
+    // No response bubble on the right — silence
+    const cap = el("div", "caption");
+    cap.innerHTML = "<em>Conversation limps along and dies a few exchanges later.</em>";
+    cap.style.position = "absolute";
+    cap.style.left = "50%"; cap.style.transform = "translateX(-50%)";
+    cap.style.bottom = "8%";
+    node.appendChild(cap);
+  }
+
+  function renderSceneReplay(node) {
+    // One figure, thought bubble with three rehearsed lines struck through
+    node.appendChild(figure({ x: 50, expr: "blank" }));
+    const b = el("div", "bubble thought up-left", "");
+    b.style.left = "56%"; b.style.top = "6%"; b.style.maxWidth = "38%"; b.style.textAlign = "left";
+    b.innerHTML = `
+      <div style="text-decoration:line-through;color:var(--paper-3);margin-bottom:4px;font-size:0.85em">"I should've said — "</div>
+      <div style="text-decoration:line-through;color:var(--paper-3);margin-bottom:4px;font-size:0.85em">"Or maybe — "</div>
+      <div style="text-decoration:line-through;color:var(--paper-3);font-size:0.85em">"Actually — "</div>
+    `;
+    node.appendChild(b);
+    const cap = el("div", "caption");
+    cap.innerHTML = 'You decided: <em>"you\'re just bad at this."</em>';
+    cap.style.position = "absolute";
+    cap.style.left = "50%"; cap.style.transform = "translateX(-50%)";
+    cap.style.bottom = "8%";
+    node.appendChild(cap);
+    // small pointer flag at the wrong conclusion
+    const flag = el("div");
+    flag.textContent = "YOU'RE NOT.";
+    flag.style.position = "absolute";
+    flag.style.left = "6%"; flag.style.top = "72%";
+    flag.style.color = "var(--go)";
+    flag.style.fontFamily = "var(--font-display)";
+    flag.style.fontSize = "clamp(20px, 3.4vw, 44px)";
+    flag.style.letterSpacing = "0.06em";
+    node.appendChild(flag);
+  }
+
+  function renderBigTitle(node, beat) {
+    const wrap = el("div", "big-title");
+    beat.big.forEach((line, i) => {
+      const d = el("div", line.cls || "");
+      d.innerHTML = line.html;
+      if (i > 0) d.style.marginTop = "0.05em";
+      wrap.appendChild(d);
+    });
+    if (beat.note) {
+      const s = el("small");
+      s.textContent = beat.note;
+      wrap.appendChild(s);
+    }
+    node.appendChild(wrap);
+  }
+
+  function renderPreview(node) {
+    const tiles = el("div", "move-tiles");
+    [
+      { n: "MOVE 01", nm: "RESET",  fr: "For the freeze itself." },
+      { n: "MOVE 02", nm: "DETAIL", fr: "For right after they answered." },
+      { n: "MOVE 03", nm: "ECHO",   fr: "For when you're stuck again." }
+    ].forEach(t => {
+      const c = el("div", "move-tile");
+      c.innerHTML = `<div class="n">${t.n}</div><div class="nm">${t.nm}</div><div class="for">${t.fr}</div>`;
+      tiles.appendChild(c);
+    });
+    node.appendChild(tiles);
+    const cap = el("div");
+    cap.textContent = "Three moves.";
+    cap.style.position = "absolute";
+    cap.style.left = "50%"; cap.style.top = "10%";
+    cap.style.transform = "translateX(-50%)";
+    cap.style.fontFamily = "var(--font-display)";
+    cap.style.fontSize = "clamp(22px, 3vw, 36px)";
+    cap.style.letterSpacing = "0.06em";
+    node.appendChild(cap);
+  }
+
+  function renderMoveTitle(node, beat) {
+    const wrap = el("div", "move-title");
+    wrap.innerHTML = `
+      <div class="move-n">${beat.moveN}</div>
+      <div class="move-name">${beat.moveName}</div>
+      <div class="move-rule"></div>
+      <div class="move-sub">${beat.moveSub}</div>
+    `;
+    node.appendChild(wrap);
+  }
+
+  function renderWrongBeat(node, beat) {
+    node.appendChild(figure({ x: 32, expr: "speaking" }));
+    const b = el("div", "bubble up-left", beat.speaker);
+    b.style.left = "48%"; b.style.top = "14%"; b.style.maxWidth = "42%";
+    node.appendChild(b);
+    // Red X centered over the bubble area
+    const x = el("div", "stamp-x");
+    x.style.right = "6%"; x.style.top = "8%"; x.style.width = "18%";
+    x.innerHTML = stampX({ w: 100 });
+    node.appendChild(x);
+    // Wrong label
+    const lb = el("div");
+    lb.textContent = beat.voLabel;
+    lb.style.position = "absolute";
+    lb.style.left = "6%"; lb.style.top = "8%";
+    lb.style.fontFamily = "var(--font-mono)";
+    lb.style.fontSize = "clamp(10px, 1.2vw, 13px)";
+    lb.style.letterSpacing = "0.3em";
+    lb.style.color = "var(--stop)";
+    lb.style.textTransform = "uppercase";
+    node.appendChild(lb);
+    if (beat.note) {
+      const n = el("div", "caption");
+      n.textContent = beat.note;
+      n.style.position = "absolute";
+      n.style.left = "50%"; n.style.transform = "translateX(-50%)";
+      n.style.bottom = "8%";
+      node.appendChild(n);
+    }
+  }
+
+  function renderRightBeat(node, beat) {
+    node.appendChild(figure({ x: 32, expr: "speaking" }));
+    const b = el("div", "bubble up-left", beat.speaker);
+    b.style.left = "48%"; b.style.top = "14%"; b.style.maxWidth = "42%";
+    b.style.borderColor = "var(--go)";
+    node.appendChild(b);
+    // Green check
+    const c = el("div", "stamp-check");
+    c.style.right = "6%"; c.style.top = "8%"; c.style.width = "18%";
+    c.innerHTML = stampCheck({ w: 100 });
+    node.appendChild(c);
+    const lb = el("div");
+    lb.textContent = beat.voLabel;
+    lb.style.position = "absolute";
+    lb.style.left = "6%"; lb.style.top = "8%";
+    lb.style.fontFamily = "var(--font-mono)";
+    lb.style.fontSize = "clamp(10px, 1.2vw, 13px)";
+    lb.style.letterSpacing = "0.3em";
+    lb.style.color = "var(--go)";
+    lb.style.textTransform = "uppercase";
+    node.appendChild(lb);
+    if (beat.note) {
+      const n = el("div", "caption");
+      n.textContent = beat.note;
+      n.style.position = "absolute";
+      n.style.left = "50%"; n.style.transform = "translateX(-50%)";
+      n.style.bottom = "8%";
+      node.appendChild(n);
+    }
+  }
+
+  function renderQuote(node, beat) {
+    const wrap = el("div", "quote-wrap");
+    wrap.innerHTML = `
+      <div class="quote-eyebrow">${beat.quoteMove}</div>
+      <div class="quote-mark">&ldquo;</div>
+      <div class="quote-text">${beat.quote}</div>
+      <div class="quote-attrib">Quotable · bed ducks · 300 ms hush</div>
+    `;
+    node.appendChild(wrap);
+  }
+
+  function renderCta(node, beat) {
+    const wrap = el("div", "cta");
+    wrap.innerHTML = `
+      <div class="aside">Mid-roll · aside</div>
+      <div class="cta-text">${beat.cta}</div>
+      <div class="sub-btn">SUBSCRIBE</div>
+    `;
+    node.appendChild(wrap);
+  }
+
+  function renderClimax(node, beat) {
+    // Show the figure calmly speaking the recovery line
+    node.appendChild(figure({ x: 30, expr: "speaking" }));
+    const b = el("div", "bubble up-left", beat.speaker);
+    b.style.left = "48%"; b.style.top = "12%"; b.style.maxWidth = "44%";
+    b.style.borderColor = "var(--go)";
+    node.appendChild(b);
+    const wrap = el("div");
+    wrap.style.position = "absolute";
+    wrap.style.left = "50%"; wrap.style.bottom = "8%";
+    wrap.style.transform = "translateX(-50%)";
+    wrap.style.textAlign = "center";
+    wrap.style.maxWidth = "88%";
+    wrap.innerHTML = `
+      <div style="font-family:var(--font-mono);letter-spacing:0.36em;color:var(--go);text-transform:uppercase;font-size:clamp(11px,1.2vw,13px);margin-bottom:8px">${beat.cxEyebrow}</div>
+      <div style="font-family:var(--font-body);font-weight:500;font-size:clamp(15px,1.9vw,22px);line-height:1.35;color:var(--paper);text-wrap:balance">${beat.cxLine}</div>
+    `;
+    node.appendChild(wrap);
+  }
+
+  function renderPitfall(node, beat) {
+    const wrap = el("div", "pitfall");
+    wrap.innerHTML = `
+      <div class="warn">One honest caveat</div>
+      <div class="txt">${beat.pitfall}</div>
+    `;
+    node.appendChild(wrap);
+  }
+
+  function renderRecap(node) {
+    const tiles = el("div", "move-tiles");
+    [
+      { n: "MOVE 01", nm: "RESET",  fr: "Ask instead of filling silence." },
+      { n: "MOVE 02", nm: "DETAIL", fr: "Get specific · give something back." },
+      { n: "MOVE 03", nm: "ECHO",   fr: "Question out of their last answer." }
+    ].forEach(t => {
+      const c = el("div", "move-tile");
+      c.innerHTML = `<div class="n">${t.n}</div><div class="nm">${t.nm}</div><div class="for">${t.fr}</div>`;
+      tiles.appendChild(c);
+    });
+    node.appendChild(tiles);
+    const cap = el("div");
+    cap.textContent = "So — three moves.";
+    cap.style.position = "absolute";
+    cap.style.left = "50%"; cap.style.top = "10%";
+    cap.style.transform = "translateX(-50%)";
+    cap.style.fontFamily = "var(--font-display)";
+    cap.style.fontSize = "clamp(22px, 3vw, 36px)";
+    cap.style.letterSpacing = "0.06em";
+    node.appendChild(cap);
+  }
+
+  function renderCallback(node) {
+    const wrap = el("div", "endcard");
+    wrap.innerHTML = `
+      <div class="callback">
+        <span class="not">MEMORY PROBLEM.</span>
+        <br>
+        <span class="yes">LISTENING PROBLEM.</span>
+      </div>
+      <div style="font-family:var(--font-mono);letter-spacing:0.24em;color:var(--paper-3);text-transform:uppercase;font-size:clamp(11px,1.2vw,13px)">Callback · closes the loop</div>
+    `;
+    node.appendChild(wrap);
+  }
+
+  function renderEndCard(node) {
+    const wrap = el("div", "endcard");
+    wrap.innerHTML = `
+      <div style="font-family:var(--font-body);font-weight:500;font-size:clamp(18px,2.4vw,28px);color:var(--paper);text-wrap:balance;max-width:820px;line-height:1.35">
+        You just needed somewhere else to put your attention besides your own panic.
+      </div>
+      <div class="end-cta">SUBSCRIBE</div>
+      <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:0.28em;color:var(--paper-3);text-transform:uppercase">Social Flow · Conversation Field Guide</div>
+    `;
+    node.appendChild(wrap);
+  }
+
+  // ---------- APP SHELL ----------
+  const state = { t: 0, playing: false, speed: 1, last: 0, activeIdx: -1 };
+
+  const beatLayer  = document.getElementById("beatLayer");
+  const scrub      = document.getElementById("scrub");
+  const scrubFill  = document.getElementById("scrubFill");
+  const scrubHead  = document.getElementById("scrubHead");
+  const scrubTicks = document.getElementById("scrubTicks");
+  const beatChips  = document.getElementById("beatChips");
+  const nowCode    = document.getElementById("nowCode");
+  const nowTitle   = document.getElementById("nowTitle");
+  const nowVo      = document.getElementById("nowVo");
+  const nowFoley   = document.getElementById("nowFoley");
+  const hudBeatTag = document.getElementById("hudBeatTag");
+  const hudSegTag  = document.getElementById("hudSegTag");
+  const hudTc      = document.getElementById("hudTc");
+  const tcCur      = document.getElementById("tcCur");
+  const btnPlay    = document.getElementById("btnPlay");
+  const btnPlayLabel = document.getElementById("btnPlayLabel");
+  const playIcon   = document.getElementById("playIcon");
+  const btnRestart = document.getElementById("btnRestart");
+
+  function buildBeats() {
+    BEATS.forEach((b, i) => {
+      const node = el("div", "beat");
+      node.dataset.i = String(i);
+      beatLayer.appendChild(node);
+      b.node = node;
+    });
+  }
+
+  function currentBeatIdx(t) {
+    for (let i = 0; i < BEATS.length; i++) {
+      if (t < BEATS[i].end) return i;
+    }
+    return BEATS.length - 1;
+  }
+
+  function render() {
+    const idx = currentBeatIdx(state.t);
+    const beat = BEATS[idx];
+
+    if (state.activeIdx !== idx) {
+      BEATS.forEach((b, i) => {
+        b.node.dataset.active = i === idx ? "1" : "0";
+      });
+      // Build lazily on first activation
+      renderBeat(beat.node, beat);
+      state.activeIdx = idx;
+      updatePanel(idx);
+      updateChips(idx);
+      hudBeatTag.textContent = "BEAT " + String(idx + 1).padStart(2, "0");
+      hudSegTag.textContent = beat.seg;
+    }
+
+    const pct = (state.t / TOTAL) * 100;
+    scrubFill.style.width = pct + "%";
+    scrubHead.style.left = pct + "%";
+    scrub.setAttribute("aria-valuenow", Math.round(state.t));
+    const cur = fmt(state.t);
+    tcCur.textContent = cur;
+    hudTc.textContent = cur + " / " + fmt(TOTAL);
+  }
+
+  function updatePanel(idx) {
+    const b = BEATS[idx];
+    nowCode.textContent = `BEAT ${String(idx + 1).padStart(2, "0")} · ${b.seg} · ${fmt(b.start)} – ${fmt(b.end)}`;
+    nowTitle.textContent = b.title;
+    nowVo.textContent = b.vo || "";
+    nowFoley.innerHTML = "Foley: <b>" + (b.foley || "—") + "</b>";
+  }
+
+  function updateChips(idx) {
+    beatChips.querySelectorAll(".chip-btn").forEach(c => {
+      c.dataset.active = c.dataset.idx == idx ? "1" : "0";
+    });
+  }
+
+  function buildChips() {
+    BEATS.forEach((b, i) => {
+      const c = el("button", "chip-btn " + b.seg.toLowerCase());
+      c.dataset.idx = String(i);
+      c.setAttribute("role", "tab");
+      c.setAttribute("aria-label", `Jump to beat ${i + 1}: ${b.title}`);
+      c.innerHTML = `<span class="dot"></span>${String(i + 1).padStart(2, "0")} · ${b.seg}`;
+      c.addEventListener("click", () => seek(b.start + 0.05));
+      beatChips.appendChild(c);
+    });
+  }
+
+  function buildScrubTicks() {
+    BEATS.forEach(b => {
+      const t = el("div", "scrub-tick");
+      t.style.left = ((b.start / TOTAL) * 100) + "%";
+      scrubTicks.appendChild(t);
+    });
+  }
+
+  function tick(now) {
+    if (!state.last) state.last = now;
+    const dt = (now - state.last) / 1000;
+    state.last = now;
+    if (state.playing) {
+      state.t += dt * state.speed;
+      if (state.t >= TOTAL) {
+        state.t = TOTAL;
+        setPlaying(false);
+      }
+    }
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  function setPlaying(v) {
+    state.playing = v;
+    btnPlayLabel.textContent = v ? "PAUSE" : (state.t >= TOTAL ? "REPLAY" : "PLAY");
+    playIcon.setAttribute("d", v ? "M4 3 H8 V17 H4 Z M12 3 H16 V17 H12 Z" : "M4 3 L17 10 L4 17 Z");
+    if (v && state.t >= TOTAL) state.t = 0;
+  }
+
+  function seek(t) {
+    state.t = Math.max(0, Math.min(TOTAL, t));
+    state.activeIdx = -1;
+    render();
+  }
+
+  function bindTransport() {
+    btnPlay.addEventListener("click", () => setPlaying(!state.playing));
+    btnRestart.addEventListener("click", () => { seek(0); setPlaying(true); });
+    document.querySelectorAll("[data-speed]").forEach(b => {
+      b.addEventListener("click", () => {
+        state.speed = parseFloat(b.dataset.speed);
+        document.querySelectorAll("[data-speed]").forEach(o => o.dataset.active = o === b ? "1" : "0");
+      });
+    });
+    let dragging = false;
+    function updateFromEvent(ev) {
+      const r = scrub.getBoundingClientRect();
+      const x = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
+      const p = Math.max(0, Math.min(1, x / r.width));
+      seek(p * TOTAL);
+    }
+    scrub.addEventListener("mousedown", ev => { dragging = true; updateFromEvent(ev); });
+    window.addEventListener("mousemove", ev => { if (dragging) updateFromEvent(ev); });
+    window.addEventListener("mouseup", () => dragging = false);
+    scrub.addEventListener("touchstart", ev => { dragging = true; updateFromEvent(ev); }, { passive: true });
+    scrub.addEventListener("touchmove", ev => { if (dragging) updateFromEvent(ev); }, { passive: true });
+    scrub.addEventListener("touchend", () => dragging = false);
+    scrub.addEventListener("keydown", ev => {
+      if (ev.key === "ArrowLeft")  { seek(state.t - 5); ev.preventDefault(); }
+      if (ev.key === "ArrowRight") { seek(state.t + 5); ev.preventDefault(); }
+      if (ev.key === "Home")       { seek(0); ev.preventDefault(); }
+      if (ev.key === "End")        { seek(TOTAL); ev.preventDefault(); }
+    });
+    window.addEventListener("keydown", ev => {
+      if (ev.target.tagName === "INPUT" || ev.target.tagName === "TEXTAREA") return;
+      if (ev.key === " " || ev.code === "Space") { setPlaying(!state.playing); ev.preventDefault(); }
+    });
+  }
+
+  // ---------- BOOT ----------
+  buildBeats();
+  buildChips();
+  buildScrubTicks();
+  bindTransport();
+  render();
+  requestAnimationFrame(tick);
+  setPlaying(true);
+})();
+</script>
