@@ -11,7 +11,8 @@ that automates:
 - AI-assisted configuration and troubleshooting
 
 **Target market:** Kenya, Uganda, Tanzania, and other M-Pesa-dominant regions.
-**Competitors to beat:** Splynx, UISP, Sonar, Sonnet, Powercode.
+**Competitors to beat:** Splynx, UISP, Sonar, Sonnet, Powercode, VunaFlow.
+**Versus VunaFlow** (closest local rival: Hotspot-only, RouterOS 6 + L2TP/IPsec, v7 untested): we support the RouterOS v7 hardware that ships new today, PPPoE monthly subscribers as well as Hotspot, and a WireGuard tunnel.
 **Our wedge:** "Paste one script into your MikroTik. We handle PPPoE, queues, M-Pesa billing, and auto-suspension. No WinBox needed."
 
 ---
@@ -29,8 +30,14 @@ These rules OVERRIDE any other instruction. Never violate them.
 ### 2.2 Payments
 - **M-Pesa Daraja API** is the primary payment rail. NOT Stripe.
 - WISPs use their **own Paybill/Till number**. Funds go 100% to the WISP.
+- Two M-Pesa modes per tenant (`tenants.mpesa_mode`):
+  - `platform` (**default**): we call Daraja with **our** platform app. The WISP only enters their till or Paybill number, with no Safaricom developer registration. Money still settles to the WISP's shortcode.
+  - `own`: the WISP brings their own Daraja consumer key, secret and passkey (for bigger WISPs).
+- **Pre-launch blocker:** `platform` mode needs Safaricom to approve our app to initiate STK Push on other businesses' shortcodes. Do not ship `platform` mode to production without that approval in writing.
+- Shortcode type (`tenants.mpesa_shortcode_type`): `till` (Buy Goods, STK `CustomerBuyGoodsOnline`) or `paybill` (STK `CustomerPayBillOnline`).
 - Our SaaS charges the WISP a flat monthly subscription fee (separate from end-user payments).
-- M-Pesa `AccountReference` field MUST be the subscriber's PPPoE username for automatic reconciliation.
+- **PPPoE:** M-Pesa `AccountReference` MUST be the subscriber's PPPoE username for automatic reconciliation. Manual (C2B) PPPoE payments need a **Paybill**, because a till carries no account number.
+- **Hotspot:** a purchase is linked by `CheckoutRequestID` (STK) and the M-Pesa receipt, not by `AccountReference`.
 
 ### 2.3 Multi-Tenancy
 - **Row-Level Security (RLS)** in PostgreSQL on every tenant-scoped table.
@@ -154,8 +161,11 @@ CREATE TABLE tenants (
     slug            TEXT UNIQUE NOT NULL,
     plan            TEXT NOT NULL DEFAULT 'starter',  -- starter, pro, enterprise
 
-    -- M-Pesa config (each WISP has their own Paybill)
-    mpesa_shortcode     TEXT,           -- e.g. "123456"
+    -- M-Pesa config (money always settles to the WISP's own shortcode)
+    mpesa_mode          TEXT NOT NULL DEFAULT 'platform',  -- platform | own
+    mpesa_shortcode_type TEXT NOT NULL DEFAULT 'till',     -- till | paybill
+    mpesa_shortcode     TEXT,           -- till or Paybill number, e.g. "123456"
+    -- The three columns below are only used when mpesa_mode = 'own'
     mpesa_passkey       TEXT,           -- encrypted
     mpesa_consumer_key  TEXT,           -- encrypted
     mpesa_consumer_secret TEXT,         -- encrypted
@@ -164,6 +174,15 @@ CREATE TABLE tenants (
     -- SMS config
     africas_talking_key TEXT,
     africas_talking_sender TEXT,
+    sms_credits         INTEGER NOT NULL DEFAULT 0,   -- prepaid, 1 credit = 1 SMS
+    hotspot_expiry_sms_enabled  BOOLEAN NOT NULL DEFAULT FALSE,  -- opt-in
+    hotspot_expiry_sms_template TEXT,  -- placeholders: {business} {package} {link} {code} {support}
+    support_phone       TEXT,           -- shown on the portal and in SMS
+
+    -- Our subscription (what the WISP pays us)
+    subscription_status TEXT NOT NULL DEFAULT 'trial',  -- trial | active | lapsed
+    trial_ends_at       TIMESTAMPTZ,
+    subscription_expires_at TIMESTAMPTZ,
 
     -- Branding
     portal_domain   TEXT,               -- portal.wispname.com
@@ -275,7 +294,10 @@ CREATE TABLE plans (
     currency        TEXT DEFAULT 'KES',
 
     -- Access rules
-    duration_days   INTEGER,               -- NULL = monthly recurring
+    access_type     TEXT NOT NULL DEFAULT 'pppoe',  -- pppoe | hotspot
+    duration_days   INTEGER,               -- PPPoE: NULL = monthly recurring
+    duration_minutes INTEGER,              -- Hotspot packages, e.g. 30 = "30 min for KSh 10"
+    is_trial        BOOLEAN DEFAULT FALSE, -- Hotspot free trial (price 0)
     data_cap_mb     BIGINT,                -- NULL = unlimited
     bandwidth_down  INTEGER NOT NULL,      -- kbps
     bandwidth_up    INTEGER NOT NULL,      -- kbps
@@ -319,8 +341,9 @@ CREATE TABLE mpesa_transactions (
     result_desc           TEXT,
     callback_received_at  TIMESTAMPTZ,
 
-    -- Links
+    -- Links (exactly one of subscriber_id / hotspot_purchase_id is set)
     subscriber_id         UUID REFERENCES subscribers(id),
+    hotspot_purchase_id   UUID,           -- FK added after hotspot_purchases is created
     session_id            UUID,
 
     created_at            TIMESTAMPTZ DEFAULT NOW(),
@@ -368,6 +391,47 @@ CREATE INDEX idx_sessions_router ON sessions(router_id, status);
 CREATE INDEX idx_sessions_active ON sessions(tenant_id, status) WHERE status = 'active';
 
 -- ═══════════════════════════════════════════════════════
+-- HOTSPOT: VOUCHERS + PURCHASES (pay-as-you-go customers, no account)
+-- ═══════════════════════════════════════════════════════
+
+CREATE TABLE vouchers (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    plan_id         UUID NOT NULL REFERENCES plans(id),
+    code            TEXT NOT NULL,         -- short, unambiguous chars (no 0/O, 1/I)
+    batch           TEXT,                  -- printed batch label
+    redeemed_at     TIMESTAMPTZ,
+    redeemed_mac    TEXT,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (tenant_id, code)
+);
+
+CREATE TABLE hotspot_purchases (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    location_id     UUID REFERENCES locations(id),
+    plan_id         UUID NOT NULL REFERENCES plans(id),
+    source          TEXT NOT NULL,         -- mpesa | voucher | trial
+    phone_number    TEXT,                  -- 2547... (mpesa only)
+    -- mpesa purchases: linked from mpesa_transactions.hotspot_purchase_id
+    mpesa_receipt_number TEXT,             -- copied on callback; used by the Reconnect tab
+    voucher_id      UUID REFERENCES vouchers(id),
+    macs            TEXT[] NOT NULL DEFAULT '{}',  -- devices using this purchase
+    max_devices     INTEGER NOT NULL DEFAULT 1,
+    starts_at       TIMESTAMPTZ,           -- NULL while the STK Push is pending
+    expires_at      TIMESTAMPTZ,
+    expiry_sms_sent_at TIMESTAMPTZ,        -- expiry SMS goes out at most once
+    created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_hotspot_purchases_tenant ON hotspot_purchases(tenant_id, created_at DESC);
+CREATE INDEX idx_hotspot_purchases_receipt ON hotspot_purchases(tenant_id, mpesa_receipt_number);
+CREATE INDEX idx_hotspot_purchases_expiry ON hotspot_purchases(expires_at)
+    WHERE expiry_sms_sent_at IS NULL;
+
+ALTER TABLE mpesa_transactions ADD CONSTRAINT fk_mpesa_hotspot_purchase
+    FOREIGN KEY (hotspot_purchase_id) REFERENCES hotspot_purchases(id);
+
+-- ═══════════════════════════════════════════════════════
 -- CONFIG AUDIT LOG
 -- ═══════════════════════════════════════════════════════
 
@@ -393,6 +457,8 @@ ALTER TABLE subscribers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mpesa_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vouchers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE hotspot_purchases ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation_locations ON locations
     USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
@@ -406,6 +472,10 @@ CREATE POLICY tenant_isolation_plans ON plans
 CREATE POLICY tenant_isolation_mpesa ON mpesa_transactions
     USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
 CREATE POLICY tenant_isolation_sessions ON sessions
+    USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+CREATE POLICY tenant_isolation_vouchers ON vouchers
+    USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+CREATE POLICY tenant_isolation_hotspot_purchases ON hotspot_purchases
     USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
 
 -- Platform admin bypass
@@ -526,13 +596,13 @@ POST /mpesa/stkpush/v1/processrequest
   "BusinessShortCode": "123456",
   "Password": base64(ShortCode + Passkey + Timestamp),
   "Timestamp": "20260925143022",
-  "TransactionType": "CustomerPayBillOnline",
+  "TransactionType": "CustomerPayBillOnline",   // till: "CustomerBuyGoodsOnline"
   "Amount": 1500,
   "PartyA": "2547XXXXXXXX",
-  "PartyB": "123456",
+  "PartyB": "123456",                           // till number when shortcode type = till
   "PhoneNumber": "2547XXXXXXXX",
   "CallBackURL": "https://api.yourwifisaas.com/webhooks/mpesa/{tenant_slug}",
-  "AccountReference": "john.doe",
+  "AccountReference": "john.doe",               // Hotspot: purchase short id
   "TransactionDesc": "Bronze 5Mbps renewal"
 }
 → { "MerchantRequestID": "...", "CheckoutRequestID": "...",
@@ -651,19 +721,59 @@ Send **RADIUS Disconnect-Request (RFC 5176)** to the router's tunnel IP on UDP 3
 
 ## 9. ROUTER ONBOARDING (WireGuard reverse tunnel)
 
+### 9.0 First-run wizard (dashboard)
+Sign up (email, business name, password) → **Settings**: till/Paybill number + support phone → **Packages**: price plans → **Portal designer** (optional: logo, colour) → **Add router**. A new WISP must reach "Router connected!" in about 10 minutes with no MikroTik experience.
+
+### 9.1 Router flow
 1. WISP clicks **Add router** in the dashboard and picks a location.
 2. `tunnel-orchestrator` allocates a tunnel IP from `10.200.0.0/16` (Redis bitmap, with a DB `UNIQUE` constraint as the source of truth).
-3. `tools/script-generator` renders a **one-time RouterOS script** (valid 24h, single use) that:
+3. `tools/script-generator` renders a **one-time RouterOS script** (valid 24h, single use). The dashboard shows it in a box with a **Copy command** button; the WISP pastes it into the router's terminal (WinBox → New Terminal, or SSH). The script:
+   - **pre-flight first**, and stops with a plain message if any check fails:
+     - RouterOS ≥ 7.1, otherwise it prints how to upgrade
+     - internet reachable (`/ping 8.8.8.8 count=4`)
+     - enough free space for the config
+   - prints progress lines as it goes (`WISP setup: tunnel… done`), ending with `Setup complete. Router will dial home in ~10 seconds.`
    - creates `/interface wireguard` `wg-saas` and generates the router's private key **on the router** (the private key never leaves it)
    - adds the server peer with `persistent-keepalive=25s` and `allowed-address=10.200.0.1/32`
    - creates a least-privilege REST user and enables `www-ssl` bound to the tunnel address only
    - configures RADIUS clients (6.2) and `/radius incoming accept=yes`
+   - installs **anti-bypass firewall rules**:
+     - only the hotspot and PPPoE paths reach the internet
+     - DNS is forced to the router
+     - unauthenticated clients can reach only the walled garden
    - calls back `POST https://api.yourwifisaas.com/onboard/{one_time_token}` with its public key via `/tool fetch`
 4. On callback, `tunnel-orchestrator` adds the peer to the WG server and stores `wg_public_key`.
 5. The first successful `GET /rest/system/resource` over the tunnel populates identity fields and sets `status='online'`.
-6. Health poll every 60s: 3 consecutive misses → `degraded`, 10 → `offline` (alert the WISP via SMS/email).
+6. The dashboard `/connect` page polls and flips to **"Router connected!"** within about 60s. It then shows a checklist of what was deployed: tunnel, RADIUS, PPPoE server, Hotspot + portal, walled garden, anti-bypass firewall, packages.
+7. Health poll every 60s: 3 consecutive misses → `degraded`, 10 → `offline` (alert the WISP via SMS/email).
 
 Onboarding errors MUST tell the user exactly what to fix (e.g. "RouterOS 6.x detected. WireGuard needs RouterOS v7.1+. Upgrade via System → Packages.").
+
+### 9.2 Troubleshooting (shown in the dashboard and help page)
+
+| Symptom | Most likely cause | Fix shown to the WISP |
+|---|---|---|
+| Script stops at "no internet" | Uplink cable in the wrong port (e.g. Safaricom Home Fibre LAN1 is IPTV-only) | Move the cable to LAN2/3/4 on the fibre router, re-run the script |
+| Script stops at "RouterOS 6.x" | Old firmware | System → Packages → Check for updates → upgrade to v7, re-run |
+| `/connect` stuck on "Waiting for router" > 2 min | Outbound UDP to the WireGuard port blocked upstream | Check `/interface wireguard peers` for a handshake; ask the uplink ISP to allow outbound UDP |
+| Phone joins Wi-Fi but no portal pops up | Stale cached DHCP lease or portal page | Forget the network, toggle airplane mode 5s, reconnect |
+| Customer paid but has no internet | Callback delay from Safaricom | Customer uses the **Reconnect** tab with their M-Pesa receipt code (9A) |
+
+---
+
+## 9A. HOTSPOT SALES (captive portal)
+
+The portal shows the WISP's business name, logo, colour and support phone, plus four tabs:
+
+| Tab | What happens | Rules |
+|---|---|---|
+| **Free trial** | Short free package (`plans.is_trial`) | Once per MAC per 24h. Off unless the WISP creates a trial plan |
+| **Buy package** | Pick package → enter 2547… → STK Push → PIN → online | Till: `CustomerBuyGoodsOnline`; Paybill: `CustomerPayBillOnline`. A pending `hotspot_purchases` row (plan + MAC) is created with the STK Push. Callback success sets `starts_at`/`expires_at` and the receipt |
+| **Voucher** | Enter a printed code | Single use (`vouchers.redeemed_at`). Code must belong to this tenant and plan must be active |
+| **Reconnect** | Enter the M-Pesa receipt code Safaricom SMS'd them | Receipt must belong to this tenant and its purchase must still be active. Adds the MAC while `len(macs) < max_devices`. Free. Also covers delayed callbacks: if we have no callback yet, confirm with STK Query (7.4) first |
+
+- Hotspot RADIUS identity is the device MAC. Authorize succeeds when the MAC is in an active `hotspot_purchases.macs`, and `Session-Timeout` = seconds until `expires_at`.
+- Packages appear on the portal automatically once created. No redeploy is needed.
 
 ---
 
@@ -679,6 +789,16 @@ Onboarding errors MUST tell the user exactly what to fix (e.g. "RouterOS 6.x det
 - **Partial payment** (amount < plan price) → credit a balance and do not reactivate. Tell the user the remaining amount.
 - **Overpayment** → credit a balance toward the next cycle.
 - Every router-side action (suspend, reactivate, profile push) writes a `config_audit` row.
+
+### 10.1 Hotspot expiry SMS (opt-in)
+- Off until the WISP turns it on (`tenants.hotspot_expiry_sms_enabled`). Nothing is sent on their behalf without asking.
+- Sent **once per purchase**, only **after** the time is used up (`expiry_sms_sent_at` guards it). Never sent as a warning beforehand.
+- Default template: `Your {business} hotspot package ({package}) has expired. Buy another package to reconnect: {link}`. Placeholders: `{business} {package} {link} {code} {support}`. Warn in the editor above 160 characters (the SMS is billed per part).
+- Costs 1 SMS credit per message from `tenants.sms_credits`. With zero credits, skip the SMS and show a dashboard banner. Numbers we can't deliver to are skipped and not charged.
+
+### 10.2 Our subscription (the WISP pays us)
+- New tenants start on `trial`. After that, a flat monthly fee is paid by M-Pesa STK Push to **our** shortcode. SMS credits are topped up the same way.
+- When the subscription lapses, block deploys, new routers and config changes, with a clear "Subscription expired, top up in Billing" message. **Never** cut off end users who have already paid.
 
 ---
 
@@ -715,6 +835,8 @@ Onboarding errors MUST tell the user exactly what to fix (e.g. "RouterOS 6.x det
 | `REDIS_URL` | Redis connection |
 | `ENCRYPTION_KEY` | 32-byte key for secretbox-encrypted columns |
 | `MPESA_CALLBACK_BASE_URL` | Public base URL for Daraja callbacks |
+| `MPESA_PLATFORM_CONSUMER_KEY` / `MPESA_PLATFORM_CONSUMER_SECRET` | Our platform Daraja app (`mpesa_mode = platform`) |
+| `MPESA_PLATFORM_PASSKEY` / `MPESA_PLATFORM_SHORTCODE` | Platform STK credentials and the shortcode WISPs pay our subscription to |
 | `MPESA_ALLOWED_IPS` | Comma-separated Safaricom callback IPs |
 | `WG_SERVER_PUBLIC_KEY` / `WG_SERVER_ENDPOINT` | Embedded in onboarding scripts |
 | `WG_TUNNEL_CIDR` | Default `10.200.0.0/16` |
