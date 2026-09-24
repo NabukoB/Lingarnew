@@ -539,5 +539,195 @@ POST /mpesa/stkpush/v1/processrequest
     "ResponseCode": "0", "CustomerMessage": "Success. Request accepted for processing" }
 ```
 
-<!-- TODO: The source context was truncated here. Sections after 7.2 (STK callback
-     handling, remaining Daraja endpoints, and any later sections) still need to be added. -->
+### 7.3 STK Push Callback (Safaricom → us)
+```
+POST {CallBackURL}
+{
+  "Body": {
+    "stkCallback": {
+      "MerchantRequestID": "29115-34620561-1",
+      "CheckoutRequestID": "ws_CO_191220191020363925",
+      "ResultCode": 0,
+      "ResultDesc": "The service request is processed successfully.",
+      "CallbackMetadata": {
+        "Item": [
+          { "Name": "Amount", "Value": 1500 },
+          { "Name": "MpesaReceiptNumber", "Value": "RKT8765432" },
+          { "Name": "TransactionDate", "Value": 20260925143055 },
+          { "Name": "PhoneNumber", "Value": 254712345678 }
+        ]
+      }
+    }
+  }
+}
+← { "ResultCode": 0, "ResultDesc": "Accepted" }
+```
+
+Rules:
+- Look up the row by `checkout_request_id`. Unknown ID → log + return Accepted (never 4xx/5xx; Safaricom retries).
+- Idempotent on `mpesa_receipt_number` (UNIQUE). A duplicate callback MUST NOT extend the subscription twice.
+- `CallbackMetadata` is ABSENT on failure. Never assume it exists.
+- Result codes to handle explicitly:
+
+| ResultCode | Meaning | Our status | User-facing message |
+|---|---|---|---|
+| 0 | Success | `success` | "Payment received. You're back online." |
+| 1 | Insufficient balance | `failed` | "Insufficient M-Pesa balance. Top up and retry." |
+| 1032 | Cancelled by user | `failed` | "You cancelled the M-Pesa prompt. Tap Pay to retry." |
+| 1037 | Phone unreachable / timeout | `expired` | "We couldn't reach your phone. Make sure it's on and retry." |
+| 2001 | Wrong PIN | `failed` | "Wrong M-Pesa PIN. Please retry." |
+
+### 7.4 STK Push Query (reconcile stuck transactions)
+```
+POST /mpesa/stkpushquery/v1/query
+{ "BusinessShortCode": "123456", "Password": "...", "Timestamp": "...",
+  "CheckoutRequestID": "ws_CO_191220191020363925" }
+→ { "ResultCode": "0", "ResultDesc": "..." }
+```
+A worker queries every transaction still `pending` after 60s. After 5 minutes with no success → `expired`.
+
+### 7.5 C2B (manual Paybill payments)
+Subscribers who pay via "Lipa na M-Pesa → Paybill" (not STK Push) are captured with C2B.
+```
+POST /mpesa/c2b/v2/registerurl
+{ "ShortCode": "123456", "ResponseType": "Completed",
+  "ConfirmationURL": "https://api.yourwifisaas.com/webhooks/mpesa/{tenant_slug}/{token}/c2b/confirm",
+  "ValidationURL":   "https://api.yourwifisaas.com/webhooks/mpesa/{tenant_slug}/{token}/c2b/validate" }
+
+Confirmation payload (Safaricom → us):
+{ "TransactionType": "Pay Bill", "TransID": "RKT8765432", "TransTime": "20260925143055",
+  "TransAmount": "1500.00", "BusinessShortCode": "123456",
+  "BillRefNumber": "john.doe", "MSISDN": "2547 ***** 678", "FirstName": "JOHN" }
+← { "ResultCode": 0, "ResultDesc": "Accepted" }
+```
+- `BillRefNumber` = PPPoE username. Match case-insensitively after trimming whitespace.
+- Unmatched payments go to a **manual reconciliation queue** in the dashboard. NEVER drop them.
+- `MSISDN` may be masked/hashed. Do not rely on it for matching.
+
+### 7.6 Callback Security
+Daraja does **not** sign callbacks. Section 2.5's "signature check" is implemented as:
+1. **IP allowlist** of Safaricom callback IPs (configurable, not hardcoded).
+2. **Per-tenant random token** (32 bytes, `crypto/rand`) in the callback URL path, compared with `subtle.ConstantTimeCompare`.
+3. **Re-verification**: before crediting an STK payment, confirm it with STK Query (7.4) when the amount or subscriber looks anomalous.
+
+---
+
+## 8. RADIUS FLOW (FreeRADIUS `rlm_rest` → Go `session-svc`)
+
+Reference: `docs/FREERADIUS_CONFIG.md`
+
+FreeRADIUS holds no business logic. Every request is forwarded as JSON:
+```
+POST /radius/authorize      # Access-Request: look up user, return check/reply attrs
+POST /radius/authenticate   # PAP/CHAP verification (MSCHAPv2 needs cleartext password via authorize)
+POST /radius/accounting     # Start / Interim-Update / Stop
+```
+
+The tenant is resolved from the **NAS-IP-Address** (= router tunnel IP) → `routers` → `locations.tenant_id`. Never trust a tenant hint from the request body.
+
+### 8.1 Authorize reply (active subscriber)
+```json
+{
+  "reply:Mikrotik-Rate-Limit": "2M/5M",
+  "reply:Session-Timeout": 86400,
+  "reply:Acct-Interim-Interval": 300,
+  "reply:Framed-Pool": "pppoe-pool"
+}
+```
+- `Mikrotik-Rate-Limit` is derived from `plans.bandwidth_up/down`. RouterOS syntax is `rx/tx` from the router's view, which is **client upload / client download**. A 5 Mbps down / 2 Mbps up plan is therefore `2M/5M`. The same order applies to `/queue/simple` `max-limit`.
+- `Session-Timeout` = seconds until `next_renewal_at`, capped at 24h.
+- Suspended/expired PPPoE → Access-Reject with `Reply-Message` explaining how to pay (`"Account expired. Pay via M-Pesa Paybill 123456, Account: john.doe"`).
+- Hotspot unpaid MAC → reject; the router redirects the user to the captive portal (walled garden allows M-Pesa hosts).
+
+### 8.2 Accounting
+- `Start` → insert `sessions` row (`status='active'`).
+- `Interim-Update` → update `bytes_in/out`, `session_time_sec`. Enforce `data_cap_mb` here.
+- `Stop` → set `terminated_at`, `termination_cause`, `status='terminated'`.
+
+### 8.3 Kicking users (suspension / plan change)
+Send **RADIUS Disconnect-Request (RFC 5176)** to the router's tunnel IP on UDP 3799 (`/radius incoming set accept=yes` in the onboarding script). Fall back to `DELETE /rest/ppp/active/{id}` if CoA fails. Log both to `config_audit`.
+
+---
+
+## 9. ROUTER ONBOARDING (WireGuard reverse tunnel)
+
+1. WISP clicks **Add router** in the dashboard and picks a location.
+2. `tunnel-orchestrator` allocates a tunnel IP from `10.200.0.0/16` (Redis bitmap, with a DB `UNIQUE` constraint as the source of truth).
+3. `tools/script-generator` renders a **one-time RouterOS script** (valid 24h, single use) that:
+   - creates `/interface wireguard` `wg-saas` and generates the router's private key **on the router** (the private key never leaves it)
+   - adds the server peer with `persistent-keepalive=25s` and `allowed-address=10.200.0.1/32`
+   - creates a least-privilege REST user and enables `www-ssl` bound to the tunnel address only
+   - configures RADIUS clients (6.2) and `/radius incoming accept=yes`
+   - calls back `POST https://api.yourwifisaas.com/onboard/{one_time_token}` with its public key via `/tool fetch`
+4. On callback, `tunnel-orchestrator` adds the peer to the WG server and stores `wg_public_key`.
+5. The first successful `GET /rest/system/resource` over the tunnel populates identity fields and sets `status='online'`.
+6. Health poll every 60s: 3 consecutive misses → `degraded`, 10 → `offline` (alert the WISP via SMS/email).
+
+Onboarding errors MUST tell the user exactly what to fix (e.g. "RouterOS 6.x detected. WireGuard needs RouterOS v7.1+. Upgrade via System → Packages.").
+
+---
+
+## 10. BILLING LIFECYCLE
+
+- **Renewal cron** every 15 min, evaluated in the tenant's timezone.
+- **Reminders** (Africa's Talking SMS) 3 days and 1 day before `next_renewal_at`, with Paybill + account number.
+- **Expiry** → configurable grace period (default 0h) → `status='suspended'` → CoA disconnect (8.3).
+- **Successful payment** →
+  - `next_renewal_at = max(now, next_renewal_at) + plan duration`
+  - `status='active'` (the next RADIUS auth succeeds)
+  - SMS receipt with the M-Pesa receipt number and new expiry date
+- **Partial payment** (amount < plan price) → credit a balance and do not reactivate. Tell the user the remaining amount.
+- **Overpayment** → credit a balance toward the next cycle.
+- Every router-side action (suspend, reactivate, profile push) writes a `config_audit` row.
+
+---
+
+## 11. CODING CONVENTIONS
+
+### 11.1 Go
+- Tenant middleware opens a transaction and runs `SET LOCAL app.current_tenant_id = $1`. Repositories take a `pgx.Tx`, never a raw pool, for tenant-scoped queries.
+- Layers: `handler` (HTTP only) → `service` (business rules) → `repository` (sqlc). No SQL in handlers or services.
+- Migrations: `golang-migrate`, sequential numbers `000123_add_x.up.sql` / `.down.sql`. Every migration has a working down.
+- Run `sqlc generate` after query changes and commit the generated code.
+- Logging: `log/slog` JSON with `tenant_id`, `request_id`, `router_id` where relevant. NEVER log secrets, M-Pesa passkeys, or PPPoE passwords.
+- Context everywhere; every outbound call (Daraja, router REST, SMS) has an explicit timeout.
+
+### 11.2 API errors
+```json
+{ "error": { "code": "ROUTER_UNREACHABLE",
+             "message": "Router Tower-Alpha-01 did not respond over the tunnel.",
+             "hint": "Check the router has internet and that wg-saas shows a recent handshake." } }
+```
+
+### 11.3 Data formats
+- Phone numbers: normalize to `2547XXXXXXXX` / `2541XXXXXXXX` on input. Reject anything else with a clear message.
+- Money: integer minor units everywhere. Daraja takes whole KES, so convert at the boundary only.
+- Times: store `TIMESTAMPTZ` in UTC. Render in the tenant or location timezone.
+- Encrypted columns (M-Pesa creds, PPPoE passwords): `golang.org/x/crypto/nacl/secretbox` with a key from Secrets Manager.
+
+---
+
+## 12. ENVIRONMENT VARIABLES
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection (app role, RLS enforced, NOT superuser) |
+| `REDIS_URL` | Redis connection |
+| `ENCRYPTION_KEY` | 32-byte key for secretbox-encrypted columns |
+| `MPESA_CALLBACK_BASE_URL` | Public base URL for Daraja callbacks |
+| `MPESA_ALLOWED_IPS` | Comma-separated Safaricom callback IPs |
+| `WG_SERVER_PUBLIC_KEY` / `WG_SERVER_ENDPOINT` | Embedded in onboarding scripts |
+| `WG_TUNNEL_CIDR` | Default `10.200.0.0/16` |
+| `RADIUS_SECRET_SEED` | Used to derive per-router RADIUS secrets (HKDF) |
+| `AT_API_KEY` / `AT_USERNAME` | Africa's Talking (platform-level; tenants may override) |
+
+---
+
+## 13. WORKING AGREEMENT FOR CLAUDE
+
+- Read Section 2 before every task. If a request conflicts with it, stop and say so.
+- Ask before changing the DB schema, public API contracts, or the onboarding script format.
+- When you add or change a MikroTik or Daraja call, update `docs/MIKROTIK_V7_REST_API.md` or `docs/DARAJA_API_SPEC.md` in the same change.
+- Run `make lint test` before committing. Integration tests need Docker (`testcontainers`).
+- Keep PRs small and single-purpose. One service per PR where possible.
+- Never commit `.env`, real Paybill credentials, or router passwords. Use sandbox shortcode `174379` in tests and examples.
