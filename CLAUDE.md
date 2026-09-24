@@ -36,7 +36,7 @@ These rules OVERRIDE any other instruction. Never violate them.
 - **Pre-launch blocker:** `platform` mode needs Safaricom to approve our app to initiate STK Push on other businesses' shortcodes. Do not ship `platform` mode to production without that approval in writing.
 - Shortcode type (`tenants.mpesa_shortcode_type`): `till` (Buy Goods, STK `CustomerBuyGoodsOnline`) or `paybill` (STK `CustomerPayBillOnline`).
 - Our SaaS charges the WISP a flat monthly subscription fee (separate from end-user payments).
-- **PPPoE:** M-Pesa `AccountReference` MUST be the subscriber's PPPoE username for automatic reconciliation. Manual (C2B) PPPoE payments need a **Paybill**, because a till carries no account number.
+- **PPPoE:** M-Pesa `AccountReference` MUST be the subscriber's PPPoE username for automatic reconciliation. Usernames are system-generated, globally unique account IDs such as `JZM1042` (see `subscribers.pppoe_username`). Examples in this file that show `john.doe` stand for such an ID. Manual (C2B) PPPoE payments need a **Paybill**, because a till carries no account number.
 - **Hotspot:** a purchase is linked by `CheckoutRequestID` (STK) and the M-Pesa receipt, not by `AccountReference`.
 
 ### 2.3 Multi-Tenancy
@@ -57,7 +57,7 @@ These rules OVERRIDE any other instruction. Never violate them.
 - All M-Pesa webhooks must be validated (IP allowlist + signature check).
 - All Stripe-equivalent webhooks must verify signatures.
 - All router REST API calls use HTTP Basic Auth over the WireGuard tunnel.
-- Secrets in AWS Secrets Manager (prod) or `.env` (dev, gitignored).
+- Secrets in AWS Secrets Manager (prod) or `.env` (dev, gitignored). Per-tenant M-Pesa credentials and PPPoE passwords are encrypted in Postgres with a key held in AWS KMS (see 11.4).
 
 ---
 
@@ -81,6 +81,20 @@ These rules OVERRIDE any other instruction. Never violate them.
 | Observability | Prometheus + Grafana + Loki | Industry standard |
 | CI/CD | GitHub Actions | Standard |
 
+### 3.1 Deployables (start with three Go processes, not six services)
+
+One Go module, three binaries. The names used throughout this file (`tenant-svc`, `subscriber-svc`, `billing-svc`, `router-svc`, `session-svc`, `tunnel-orchestrator`) are **packages** under `internal/`, not separate deployments.
+
+| Binary | Contains | Why it is separate |
+|---|---|---|
+| `cmd/api` | tenant, subscriber, billing, hotspot, router packages; HTTP API + M-Pesa callbacks. The same image runs with `--role=worker` for the renewal cron, STK Query sweeps, router health polls and SMS | Most code lives here. One deploy, one migration run, one set of config |
+| `cmd/radius` | session package, run next to FreeRADIUS in the same pod | Customers can't log in if it's down. It must stay up during `api` deploys and scale on RADIUS load |
+| `cmd/wg-gateway` | tunnel-orchestrator package + the WireGuard interface (`NET_ADMIN`, host network) | Needs network privileges nothing else should have. It routes `10.200.0.0/16` for `api` and `radius` |
+
+- Packages talk through Go interfaces, never each other's tables. A package can be split into its own service later without rewriting callers.
+- Split another service out only when a measured need appears (load, deploy cadence, team ownership), and write down the reason in `docs/ARCHITECTURE.md`.
+- Frontend: **one** Next.js app (`web/`) serves the dashboard and the captive portal on separate hostnames via route groups.
+
 ---
 
 ## 4. REPOSITORY STRUCTURE
@@ -97,31 +111,32 @@ wisp-saas/
 │
 ├── .cursorrules                     # Cursor-specific rules (mirror of Section 2)
 │
-├── services/
-│   ├── tenant-svc/                  # Tenant CRUD, auth, branding
-│   │   ├── cmd/server/main.go
-│   │   ├── internal/
-│   │   │   ├── handler/
-│   │   │   ├── service/
-│   │   │   ├── repository/
-│   │   │   └── domain/
-│   │   ├── db/
-│   │   │   ├── migrations/
-│   │   │   └── sqlc/
-│   │   └── go.mod
-│   │
-│   ├── subscriber-svc/              # WISP subscribers (PPPoE + Hotspot users)
-│   ├── router-svc/                  # MikroTik registry, config push, health
-│   ├── billing-svc/                 # Plans, M-Pesa integration, invoices
-│   ├── session-svc/                 # RADIUS proxy handlers, active sessions
-│   └── tunnel-orchestrator/         # WireGuard peer mgmt
+├── cmd/
+│   ├── api/main.go                  # HTTP API + callbacks; --role=worker for crons
+│   ├── radius/main.go               # rlm_rest target (session package)
+│   └── wg-gateway/main.go           # WireGuard interface + peer management
 │
-├── portals/
-│   ├── captive-portal/              # Next.js — end-user payment page
-│   └── dashboard/                   # Next.js — WISP admin UI
+├── internal/                        # one package per domain (see 3.1)
+│   ├── tenant/                      # "tenant-svc": WISPs, auth, branding, our subscription
+│   ├── subscriber/                  # "subscriber-svc": PPPoE subscribers, account numbers
+│   ├── billing/                     # "billing-svc": plans, M-Pesa, renewals, SMS
+│   ├── hotspot/                     # packages, vouchers, purchases, portal tabs
+│   ├── router/                      # "router-svc": MikroTik REST client, config push, health
+│   ├── session/                     # "session-svc": RADIUS logic, accounting, CoA
+│   ├── tunnel/                      # "tunnel-orchestrator": IP allocation, WG peers
+│   ├── secrets/                     # KMS envelope encryption (11.4)
+│   └── platform/                    # db tx + tenant middleware, errors, logging
+│       # inside each domain package: handler.go, service.go, repository.go, domain.go
+│
+├── db/
+│   ├── migrations/                  # golang-migrate, one sequence for the whole schema
+│   └── queries/                     # sqlc input; generated code in internal/*/sqlc
+│
+├── web/                             # ONE Next.js app
+│   └── app/(dashboard)/ , app/(portal)/   # dashboard + captive portal by hostname
 │
 ├── infra/
-│   ├── docker/                      # Dockerfiles per service
+│   ├── docker/                      # Dockerfiles: api, radius, wg-gateway, web
 │   ├── k8s/                         # Helm charts
 │   ├── freeradius/                  # FreeRADIUS configs
 │   └── wireguard/                   # WG server configs
@@ -137,7 +152,7 @@ wisp-saas/
 │   ├── integration/
 │   └── e2e/
 │
-├── go.work                          # Go workspace
+├── go.mod                           # single Go module
 ├── docker-compose.yml               # Local dev (postgres, redis, freeradius, mock)
 └── Makefile
 ```
@@ -165,10 +180,11 @@ CREATE TABLE tenants (
     mpesa_mode          TEXT NOT NULL DEFAULT 'platform',  -- platform | own
     mpesa_shortcode_type TEXT NOT NULL DEFAULT 'till',     -- till | paybill
     mpesa_shortcode     TEXT,           -- till or Paybill number, e.g. "123456"
-    -- The three columns below are only used when mpesa_mode = 'own'
-    mpesa_passkey       TEXT,           -- encrypted
-    mpesa_consumer_key  TEXT,           -- encrypted
-    mpesa_consumer_secret TEXT,         -- encrypted
+    -- Only used when mpesa_mode = 'own'. Envelope-encrypted JSON
+    -- {consumer_key, consumer_secret, passkey}; see 11.4. Never stored in plaintext.
+    mpesa_credentials_enc BYTEA,        -- XChaCha20-Poly1305 ciphertext
+    dek_wrapped         BYTEA NOT NULL, -- this tenant's data key, encrypted by the KMS key (11.4)
+    account_prefix      TEXT UNIQUE NOT NULL,  -- 2-4 letters, e.g. "JZM"; start of every PPPoE account ID
     mpesa_env           TEXT DEFAULT 'sandbox',  -- sandbox | production
 
     -- SMS config
@@ -259,8 +275,11 @@ CREATE TABLE subscribers (
     physical_address TEXT,
 
     -- PPPoE credentials
-    pppoe_username  TEXT UNIQUE,          -- e.g. "john.doe" — also used as M-Pesa AccountReference
-    pppoe_password  TEXT,
+    -- System-generated, globally unique account ID = tenants.account_prefix + sequence,
+    -- e.g. "JZM1042". It is the PPPoE username AND the M-Pesa account number the
+    -- customer types. Never user-chosen, never reused, never changed.
+    pppoe_username  TEXT UNIQUE CHECK (pppoe_username ~ '^[A-Z]{2,4}[0-9]{3,7}$'),
+    pppoe_password_enc BYTEA,             -- encrypted with the tenant's data key (11.4); CHAP/MSCHAPv2 need the cleartext
 
     -- State
     status          TEXT NOT NULL DEFAULT 'active',  -- active|suspended|expired|cancelled
@@ -276,7 +295,7 @@ CREATE TABLE subscribers (
 );
 CREATE INDEX idx_subscribers_tenant ON subscribers(tenant_id);
 CREATE INDEX idx_subscribers_phone ON subscribers(phone_number);
-CREATE INDEX idx_subscribers_pppoe ON subscribers(pppoe_username);
+-- pppoe_username already has a UNIQUE index; no extra index needed.
 CREATE INDEX idx_subscribers_renewal ON subscribers(next_renewal_at) WHERE status = 'active';
 
 -- ═══════════════════════════════════════════════════════
@@ -516,7 +535,7 @@ POST /rest/radius
 ```
 GET  /rest/ppp/profile
 POST /rest/ppp/profile
-{ "name": "plan_bronze_5m", "rate-limit": "5M/2M",
+{ "name": "plan_bronze_5m", "rate-limit": "2M/5M",   // upload/download: 5 Mbps down, 2 Mbps up
   "parent-queue": "plan_bronze_5m" }
 
 GET  /rest/interface/pppoe-server/server
@@ -548,7 +567,7 @@ POST /rest/ip/hotspot/walled-garden
 ```
 POST /rest/queue/simple
 { "name": "pppoe-john.doe", "target": "john.doe",
-  "max-limit": "5M/2M", "priority": 8/8 }
+  "max-limit": "2M/5M", "priority": "8/8" }   // upload/download, same order as rate-limit
 
 DELETE /rest/queue/simple/{id}
 ```
@@ -722,7 +741,7 @@ Send **RADIUS Disconnect-Request (RFC 5176)** to the router's tunnel IP on UDP 3
 ## 9. ROUTER ONBOARDING (WireGuard reverse tunnel)
 
 ### 9.0 First-run wizard (dashboard)
-Sign up (email, business name, password) → **Settings**: till/Paybill number + support phone → **Packages**: price plans → **Portal designer** (optional: logo, colour) → **Add router**. A new WISP must reach "Router connected!" in about 10 minutes with no MikroTik experience.
+Sign up (email, business name, password; we suggest a 2–4 letter account prefix from the business name, e.g. `JZM`, which the WISP can change once before the first subscriber exists) → **Settings**: till/Paybill number + support phone → **Packages**: price plans → **Portal designer** (optional: logo, colour) → **Add router**. A new WISP must reach "Router connected!" in about 10 minutes with no MikroTik experience.
 
 ### 9.1 Router flow
 1. WISP clicks **Add router** in the dashboard and picks a location.
@@ -823,7 +842,26 @@ The portal shows the WISP's business name, logo, colour and support phone, plus 
 - Phone numbers: normalize to `2547XXXXXXXX` / `2541XXXXXXXX` on input. Reject anything else with a clear message.
 - Money: integer minor units everywhere. Daraja takes whole KES, so convert at the boundary only.
 - Times: store `TIMESTAMPTZ` in UTC. Render in the tenant or location timezone.
-- Encrypted columns (M-Pesa creds, PPPoE passwords): `golang.org/x/crypto/nacl/secretbox` with a key from Secrets Manager.
+- Encrypted columns (M-Pesa creds, PPPoE passwords): envelope encryption, see 11.4.
+
+### 11.4 Where secrets live
+
+| Secret | Where | How |
+|---|---|---|
+| Platform Daraja app (consumer key/secret, passkey) | **AWS Secrets Manager** | Loaded at startup by `api` only. Rotation: update the secret, then rolling restart |
+| Per-WISP Daraja creds (`mpesa_mode = own`) | **Postgres, envelope-encrypted** | See below |
+| PPPoE passwords | **Postgres, envelope-encrypted** | Same scheme; `radius` decrypts at auth time |
+| Key-encryption key (KEK) | **AWS KMS** symmetric key `alias/wisp-tenant-secrets`, automatic yearly rotation | Never leaves KMS |
+| DB, Redis, Africa's Talking, WG server private key | AWS Secrets Manager | Injected as env vars / files by k8s |
+
+Envelope scheme (`internal/secrets`), **one data key (DEK) per tenant**:
+1. At tenant signup: KMS `GenerateDataKey` returns a 32-byte DEK. Store only the wrapped copy in `tenants.dek_wrapped`.
+2. Encrypt each value with `golang.org/x/crypto/chacha20poly1305` (XChaCha20-Poly1305, random 24-byte nonce stored with the ciphertext). The **additional data is `tenant_id || table || column || row_id`**, so a ciphertext copied to another tenant, column or row fails to decrypt.
+3. On read: KMS `Decrypt` the tenant's wrapped DEK, then decrypt the value. Cache unwrapped DEKs in process memory for at most 5 minutes. That's one KMS call per tenant per 5 minutes, not one per RADIUS login. Never write DEKs to Redis, disk or logs.
+4. Only the `api` and `radius` IAM roles may call `kms:Decrypt`, and every call is logged in CloudTrail.
+5. Rotating a tenant's DEK (on suspected leak, or yearly) is a background job: generate a new DEK, re-encrypt that tenant's rows, swap `dek_wrapped`.
+
+Dev / self-hosted: `internal/secrets` has a local KEK provider that reads a 32-byte key from `LOCAL_KEK` (`.env`, gitignored). Same interface, no AWS needed.
 
 ---
 
@@ -833,7 +871,8 @@ The portal shows the WISP's business name, logo, colour and support phone, plus 
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection (app role, RLS enforced, NOT superuser) |
 | `REDIS_URL` | Redis connection |
-| `ENCRYPTION_KEY` | 32-byte key for secretbox-encrypted columns |
+| `KMS_KEY_ID` | KMS key (`alias/wisp-tenant-secrets`) wrapping per-tenant data keys (prod) |
+| `LOCAL_KEK` | 32-byte base64 key used instead of KMS in dev / self-hosted |
 | `MPESA_CALLBACK_BASE_URL` | Public base URL for Daraja callbacks |
 | `MPESA_PLATFORM_CONSUMER_KEY` / `MPESA_PLATFORM_CONSUMER_SECRET` | Our platform Daraja app (`mpesa_mode = platform`) |
 | `MPESA_PLATFORM_PASSKEY` / `MPESA_PLATFORM_SHORTCODE` | Platform STK credentials and the shortcode WISPs pay our subscription to |
@@ -851,5 +890,5 @@ The portal shows the WISP's business name, logo, colour and support phone, plus 
 - Ask before changing the DB schema, public API contracts, or the onboarding script format.
 - When you add or change a MikroTik or Daraja call, update `docs/MIKROTIK_V7_REST_API.md` or `docs/DARAJA_API_SPEC.md` in the same change.
 - Run `make lint test` before committing. Integration tests need Docker (`testcontainers`).
-- Keep PRs small and single-purpose. One service per PR where possible.
+- Keep PRs small and single-purpose. One domain package per PR where possible.
 - Never commit `.env`, real Paybill credentials, or router passwords. Use sandbox shortcode `174379` in tests and examples.
