@@ -46,13 +46,13 @@ WHERE id = $1
 RETURNING *;
 
 -- name: ListExpiredActive :many
-SELECT * FROM subscribers WHERE status = 'active' AND next_renewal_at IS NOT NULL AND next_renewal_at <= NOW();
-
--- name: ListGraceOver :many
-SELECT * FROM subscribers WHERE status = 'expired' AND next_renewal_at + make_interval(hours => @grace_hours::int) <= NOW();
+-- Active accounts whose paid period plus the tenant's grace period is over.
+SELECT * FROM subscribers
+WHERE status = 'active' AND next_renewal_at IS NOT NULL
+  AND next_renewal_at + make_interval(hours => @grace_hours::int) <= NOW();
 
 -- name: ListReminderCandidates :many
-SELECT s.*, p.price_cents AS plan_price_cents FROM subscribers s LEFT JOIN plans p ON p.id = s.plan_id
+SELECT s.*, p.price_cents AS plan_price_cents, p.name AS plan_name FROM subscribers s LEFT JOIN plans p ON p.id = s.plan_id
 WHERE s.status = 'active' AND s.next_renewal_at IS NOT NULL
   AND ((s.reminder_stage < 1 AND s.next_renewal_at <= NOW() + INTERVAL '3 days' AND s.next_renewal_at > NOW() + INTERVAL '1 day')
     OR (s.reminder_stage < 2 AND s.next_renewal_at <= NOW() + INTERVAL '1 day' AND s.next_renewal_at > NOW()));

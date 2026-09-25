@@ -148,7 +148,8 @@ func (s *Service) authorizePPPoE(ctx context.Context, q *store.Queries, user str
 		return nil, err
 	}
 	now := s.now()
-	active := sub.Status == "active" && (sub.NextRenewalAt == nil || sub.NextRenewalAt.After(now))
+	grace := time.Duration(t.GraceHours) * time.Hour
+	active := sub.Status == "active" && (sub.NextRenewalAt == nil || sub.NextRenewalAt.Add(grace).After(now))
 	if !active {
 		return Reject(payMessage(t, sub)), nil
 	}
@@ -178,7 +179,7 @@ func (s *Service) authorizePPPoE(ctx context.Context, q *store.Queries, user str
 	}
 	timeout := int64(maxSessionTimeout)
 	if sub.NextRenewalAt != nil {
-		timeout = timeoutUntil(now, *sub.NextRenewalAt)
+		timeout = timeoutUntil(now, sub.NextRenewalAt.Add(grace))
 	}
 	return Accept(string(pw), routeros.RateLimit(plan.BandwidthUpKbps, plan.BandwidthDownKbps), timeout), nil
 }

@@ -80,3 +80,10 @@ SELECT t.email_taken::bool AS email_taken, t.slug_taken::bool AS slug_taken, t.p
 
 -- name: ActiveTenantIDs :many
 SELECT active_tenant_ids()::uuid AS tenant_id;
+
+-- name: LapseSubscription :one
+UPDATE tenants SET subscription_status = 'lapsed', updated_at = NOW()
+WHERE id = app_tenant()
+  AND ((subscription_status = 'trial' AND trial_ends_at < NOW())
+    OR (subscription_status = 'active' AND subscription_expires_at < NOW()))
+RETURNING id;

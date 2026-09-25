@@ -207,6 +207,21 @@ func (q *Queries) GetTenant(ctx context.Context) (Tenant, error) {
 	return i, err
 }
 
+const lapseSubscription = `-- name: LapseSubscription :one
+UPDATE tenants SET subscription_status = 'lapsed', updated_at = NOW()
+WHERE id = app_tenant()
+  AND ((subscription_status = 'trial' AND trial_ends_at < NOW())
+    OR (subscription_status = 'active' AND subscription_expires_at < NOW()))
+RETURNING id
+`
+
+func (q *Queries) LapseSubscription(ctx context.Context) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, lapseSubscription)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const nextAccountNumber = `-- name: NextAccountNumber :one
 UPDATE tenants SET next_account_no = next_account_no + 1
 WHERE id = app_tenant()

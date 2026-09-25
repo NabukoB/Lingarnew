@@ -241,53 +241,14 @@ func (q *Queries) GetSubscriberForUpdate(ctx context.Context, id uuid.UUID) (Sub
 }
 
 const listExpiredActive = `-- name: ListExpiredActive :many
-SELECT id, tenant_id, location_id, full_name, phone_number, email, physical_address, pppoe_username, pppoe_password_enc, status, plan_id, next_renewal_at, credit_cents, auto_renew, reminder_stage, created_at, updated_at FROM subscribers WHERE status = 'active' AND next_renewal_at IS NOT NULL AND next_renewal_at <= NOW()
+SELECT id, tenant_id, location_id, full_name, phone_number, email, physical_address, pppoe_username, pppoe_password_enc, status, plan_id, next_renewal_at, credit_cents, auto_renew, reminder_stage, created_at, updated_at FROM subscribers
+WHERE status = 'active' AND next_renewal_at IS NOT NULL
+  AND next_renewal_at + make_interval(hours => $1::int) <= NOW()
 `
 
-func (q *Queries) ListExpiredActive(ctx context.Context) ([]Subscriber, error) {
-	rows, err := q.db.Query(ctx, listExpiredActive)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Subscriber{}
-	for rows.Next() {
-		var i Subscriber
-		if err := rows.Scan(
-			&i.ID,
-			&i.TenantID,
-			&i.LocationID,
-			&i.FullName,
-			&i.PhoneNumber,
-			&i.Email,
-			&i.PhysicalAddress,
-			&i.PppoeUsername,
-			&i.PppoePasswordEnc,
-			&i.Status,
-			&i.PlanID,
-			&i.NextRenewalAt,
-			&i.CreditCents,
-			&i.AutoRenew,
-			&i.ReminderStage,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listGraceOver = `-- name: ListGraceOver :many
-SELECT id, tenant_id, location_id, full_name, phone_number, email, physical_address, pppoe_username, pppoe_password_enc, status, plan_id, next_renewal_at, credit_cents, auto_renew, reminder_stage, created_at, updated_at FROM subscribers WHERE status = 'expired' AND next_renewal_at + make_interval(hours => $1::int) <= NOW()
-`
-
-func (q *Queries) ListGraceOver(ctx context.Context, graceHours int32) ([]Subscriber, error) {
-	rows, err := q.db.Query(ctx, listGraceOver, graceHours)
+// Active accounts whose paid period plus the tenant's grace period is over.
+func (q *Queries) ListExpiredActive(ctx context.Context, graceHours int32) ([]Subscriber, error) {
+	rows, err := q.db.Query(ctx, listExpiredActive, graceHours)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +286,7 @@ func (q *Queries) ListGraceOver(ctx context.Context, graceHours int32) ([]Subscr
 }
 
 const listReminderCandidates = `-- name: ListReminderCandidates :many
-SELECT s.id, s.tenant_id, s.location_id, s.full_name, s.phone_number, s.email, s.physical_address, s.pppoe_username, s.pppoe_password_enc, s.status, s.plan_id, s.next_renewal_at, s.credit_cents, s.auto_renew, s.reminder_stage, s.created_at, s.updated_at, p.price_cents AS plan_price_cents FROM subscribers s LEFT JOIN plans p ON p.id = s.plan_id
+SELECT s.id, s.tenant_id, s.location_id, s.full_name, s.phone_number, s.email, s.physical_address, s.pppoe_username, s.pppoe_password_enc, s.status, s.plan_id, s.next_renewal_at, s.credit_cents, s.auto_renew, s.reminder_stage, s.created_at, s.updated_at, p.price_cents AS plan_price_cents, p.name AS plan_name FROM subscribers s LEFT JOIN plans p ON p.id = s.plan_id
 WHERE s.status = 'active' AND s.next_renewal_at IS NOT NULL
   AND ((s.reminder_stage < 1 AND s.next_renewal_at <= NOW() + INTERVAL '3 days' AND s.next_renewal_at > NOW() + INTERVAL '1 day')
     OR (s.reminder_stage < 2 AND s.next_renewal_at <= NOW() + INTERVAL '1 day' AND s.next_renewal_at > NOW()))
@@ -350,6 +311,7 @@ type ListReminderCandidatesRow struct {
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
 	PlanPriceCents   *int32     `json:"plan_price_cents"`
+	PlanName         *string    `json:"plan_name"`
 }
 
 func (q *Queries) ListReminderCandidates(ctx context.Context) ([]ListReminderCandidatesRow, error) {
@@ -380,6 +342,7 @@ func (q *Queries) ListReminderCandidates(ctx context.Context) ([]ListReminderCan
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PlanPriceCents,
+			&i.PlanName,
 		); err != nil {
 			return nil, err
 		}
