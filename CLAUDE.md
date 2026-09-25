@@ -892,3 +892,29 @@ Dev / self-hosted: `internal/secrets` has a local KEK provider that reads a 32-b
 - Run `make lint test` before committing. Integration tests need Docker (`testcontainers`).
 - Keep PRs small and single-purpose. One domain package per PR where possible.
 - Never commit `.env`, real Paybill credentials, or router passwords. Use sandbox shortcode `174379` in tests and examples.
+
+---
+
+## 14. FRONTEND DESIGN RULES (`wisp-saas/web`)
+
+The approved look is clean and minimal. Screens are read at a glance, not explained.
+
+- **Copy:** no explanatory sentences. A card has a title, a value, and at most a 1–3 word caption. Use icons, badges and placeholders instead of hint text. Errors are one short line, e.g. "Check the code and try again".
+- **Font:** Plus Jakarta Sans for everything, weights 400–800. Use tabular numbers for money and counts.
+- **Colour:**
+  - Page `#f4f5f7`, cards white.
+  - One accent, blue `#2563eb`. The captive portal uses the tenant's `primary_color` through the `--accent` CSS variable.
+  - Status colours: green = good/online, amber = needs attention, red = offline/failed. Categorical colours for money split: PPPoE blue, Hotspot green, Vouchers orange.
+- **Shape:**
+  - Cards `rounded-card` (26px), tiles `rounded-tile` (22px), soft `shadow-card`, no borders.
+  - Pills and buttons are fully rounded or 16–18px.
+  - Touch targets are at least 44px.
+- **Patterns:**
+  - Gradient blue hero card for the headline number.
+  - 2×2 icon stat tiles with a delta badge.
+  - A single alert row with a red dot.
+  - Round quick-action buttons.
+  - Floating bottom tab bar on phones; a borderless sidebar with a white active pill on desktop.
+- **Layout:** one responsive app. Below `lg` the dashboard becomes the phone app (Home · Money · Network · Customers tabs). The captive portal is max 430px wide.
+- **Data:** components never import `lib/mock.ts` directly. Everything goes through `lib/api.ts`, so swapping in the Go API changes one file.
+- **Code layout:** this repo's root is the unrelated Lingar app, so the WISP project lives under `wisp-saas/`. The structure in §4 is relative to that folder.
