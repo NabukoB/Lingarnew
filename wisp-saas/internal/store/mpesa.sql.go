@@ -250,6 +250,37 @@ func (q *Queries) GetTxByCheckoutForUpdate(ctx context.Context, checkoutRequestI
 	return i, err
 }
 
+const latestTxForPurchase = `-- name: LatestTxForPurchase :one
+SELECT id, tenant_id, source, purpose, merchant_request_id, checkout_request_id, mpesa_receipt_number, phone_number, amount_cents, account_reference, transaction_desc, status, result_code, result_desc, callback_received_at, subscriber_id, hotspot_purchase_id, created_at, updated_at FROM mpesa_transactions WHERE hotspot_purchase_id = $1 ORDER BY created_at DESC LIMIT 1
+`
+
+func (q *Queries) LatestTxForPurchase(ctx context.Context, hotspotPurchaseID *uuid.UUID) (MpesaTransaction, error) {
+	row := q.db.QueryRow(ctx, latestTxForPurchase, hotspotPurchaseID)
+	var i MpesaTransaction
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Source,
+		&i.Purpose,
+		&i.MerchantRequestID,
+		&i.CheckoutRequestID,
+		&i.MpesaReceiptNumber,
+		&i.PhoneNumber,
+		&i.AmountCents,
+		&i.AccountReference,
+		&i.TransactionDesc,
+		&i.Status,
+		&i.ResultCode,
+		&i.ResultDesc,
+		&i.CallbackReceivedAt,
+		&i.SubscriberID,
+		&i.HotspotPurchaseID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listPayments = `-- name: ListPayments :many
 SELECT t.id, t.tenant_id, t.source, t.purpose, t.merchant_request_id, t.checkout_request_id, t.mpesa_receipt_number, t.phone_number, t.amount_cents, t.account_reference, t.transaction_desc, t.status, t.result_code, t.result_desc, t.callback_received_at, t.subscriber_id, t.hotspot_purchase_id, t.created_at, t.updated_at, s.pppoe_username, s.full_name, p.name AS plan_name
 FROM mpesa_transactions t

@@ -83,3 +83,6 @@ ORDER BY cents DESC LIMIT @lim::int;
 
 -- name: CountUnmatched :one
 SELECT count(*)::int FROM mpesa_transactions WHERE status = 'unmatched';
+
+-- name: LatestTxForPurchase :one
+SELECT * FROM mpesa_transactions WHERE hotspot_purchase_id = $1 ORDER BY created_at DESC LIMIT 1;

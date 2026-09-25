@@ -23,7 +23,7 @@ func newService(t *testing.T) *Service {
 func signup(t *testing.T, s *Service, name string) (store.Tenant, string) {
 	t.Helper()
 	tn, token, err := s.Signup(context.Background(), SignupInput{
-		Email: strings.ToLower(strings.ReplaceAll(name, " ", "")) + uuid.NewString()[:6] + "@example.com",
+		Email:    strings.ToLower(strings.ReplaceAll(name, " ", "")) + uuid.NewString()[:6] + "@example.com",
 		Password: "longenough", BusinessName: name, SupportPhone: "0712345678",
 	})
 	if err != nil {

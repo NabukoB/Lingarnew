@@ -35,6 +35,7 @@ type Config struct {
 	MpesaPasskey        string
 	MpesaShortcode      string // our own shortcode, for the WISP subscription + SMS credits
 	MpesaAllowedIPs     []netip.Prefix
+	TrustProxyHeaders   bool  // read the client IP from CF-Connecting-IP / X-Forwarded-For (behind Cloudflare/ingress)
 	SubscriptionPrice   int64 // KES cents per month
 	SMSCreditPrice      int64 // KES cents per SMS credit
 
@@ -78,6 +79,7 @@ func Load() (Config, error) {
 		MpesaConsumerSecret: os.Getenv("MPESA_PLATFORM_CONSUMER_SECRET"),
 		MpesaPasskey:        os.Getenv("MPESA_PLATFORM_PASSKEY"),
 		MpesaShortcode:      get("MPESA_PLATFORM_SHORTCODE", "174379"),
+		TrustProxyHeaders:   get("TRUST_PROXY_HEADERS", "false") == "true",
 		SubscriptionPrice:   int64(getInt("SUBSCRIPTION_PRICE_KES", 1500)) * 100,
 		SMSCreditPrice:      int64(getInt("SMS_CREDIT_PRICE_CENTS", 100)),
 		ATUsername:          get("AT_USERNAME", "sandbox"),
