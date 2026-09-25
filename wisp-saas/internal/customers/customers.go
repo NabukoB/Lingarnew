@@ -215,7 +215,8 @@ func (in *SubscriberInput) validate() error {
 	return nil
 }
 
-func passwordField(id uuid.UUID) secrets.Field {
+// PasswordField is the encryption context of a subscriber's PPPoE password.
+func PasswordField(id uuid.UUID) secrets.Field {
 	return secrets.Field{Table: "subscribers", Column: "pppoe_password_enc", RowID: id}
 }
 
@@ -250,7 +251,7 @@ func (s *Service) CreateSubscriber(ctx context.Context, tenantID uuid.UUID, in S
 		if err != nil {
 			return err
 		}
-		sealed, err := s.Sealer.Seal(ctx, tenantID, t.DekWrapped, passwordField(id), []byte(password))
+		sealed, err := s.Sealer.Seal(ctx, tenantID, t.DekWrapped, PasswordField(id), []byte(password))
 		if err != nil {
 			return err
 		}
@@ -331,7 +332,7 @@ func (s *Service) Password(ctx context.Context, tenantID, id uuid.UUID) (string,
 		if err != nil {
 			return err
 		}
-		pw, err = s.Sealer.Open(ctx, tenantID, t.DekWrapped, passwordField(id), sub.PppoePasswordEnc)
+		pw, err = s.Sealer.Open(ctx, tenantID, t.DekWrapped, PasswordField(id), sub.PppoePasswordEnc)
 		return err
 	})
 	return string(pw), err

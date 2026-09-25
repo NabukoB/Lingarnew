@@ -33,3 +33,10 @@ WHERE status = 'active' AND updated_at < @before::timestamptz;
 
 -- name: GetActiveSession :one
 SELECT * FROM sessions WHERE router_id = $1 AND acct_session_id = $2;
+
+-- name: CloseRouterSessions :exec
+UPDATE sessions SET status = 'terminated', terminated_at = NOW(), termination_cause = @cause::text, updated_at = NOW()
+WHERE router_id = $1 AND status = 'active';
+
+-- name: OnlineRouters :many
+SELECT * FROM routers WHERE status IN ('online', 'degraded');

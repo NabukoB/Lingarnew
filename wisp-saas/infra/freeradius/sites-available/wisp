@@ -1,0 +1,62 @@
+# The only virtual server. Routers reach it at 10.200.0.1 over the tunnel.
+server wisp {
+	# Every router is a dynamic client: its secret comes from cmd/radius
+	# (derived per router from RADIUS_SECRET_SEED) and is cached 5 minutes.
+	client wisp_tunnels {
+		ipaddr = $ENV{WG_TUNNEL_CIDR}
+		dynamic_clients = wisp_dynamic_clients
+		lifetime = 300
+	}
+
+	listen {
+		type = auth
+		ipaddr = *
+		port = 1812
+	}
+	listen {
+		type = acct
+		ipaddr = *
+		port = 1813
+	}
+
+	authorize {
+		wisp_rest
+		if (!ok && !updated) {
+			reject
+		}
+		if (&control:Auth-Type == Reject) {
+			reject
+		}
+		# cmd/radius returned control:Cleartext-Password; these modules pick the
+		# method the router used (PAP for Hotspot, PAP/CHAP/MS-CHAPv2 for PPPoE).
+		mschap
+		chap
+		pap
+	}
+
+	authenticate {
+		Auth-Type PAP {
+			pap
+		}
+		Auth-Type CHAP {
+			chap
+		}
+		Auth-Type MS-CHAP {
+			mschap
+		}
+	}
+
+	preacct {
+		preprocess
+	}
+
+	accounting {
+		wisp_rest
+	}
+
+	post-auth {
+		Post-Auth-Type REJECT {
+			attr_filter.access_reject
+		}
+	}
+}

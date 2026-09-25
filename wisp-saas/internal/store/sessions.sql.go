@@ -94,6 +94,21 @@ func (q *Queries) BytesUsedSince(ctx context.Context, arg BytesUsedSinceParams) 
 	return column_1, err
 }
 
+const closeRouterSessions = `-- name: CloseRouterSessions :exec
+UPDATE sessions SET status = 'terminated', terminated_at = NOW(), termination_cause = $2::text, updated_at = NOW()
+WHERE router_id = $1 AND status = 'active'
+`
+
+type CloseRouterSessionsParams struct {
+	RouterID uuid.UUID `json:"router_id"`
+	Cause    string    `json:"cause"`
+}
+
+func (q *Queries) CloseRouterSessions(ctx context.Context, arg CloseRouterSessionsParams) error {
+	_, err := q.db.Exec(ctx, closeRouterSessions, arg.RouterID, arg.Cause)
+	return err
+}
+
 const closeStaleSessions = `-- name: CloseStaleSessions :exec
 UPDATE sessions SET status = 'terminated', terminated_at = NOW(), termination_cause = 'Stale'
 WHERE status = 'active' AND updated_at < $1::timestamptz
@@ -176,6 +191,53 @@ func (q *Queries) GetActiveSession(ctx context.Context, arg GetActiveSessionPara
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const onlineRouters = `-- name: OnlineRouters :many
+SELECT id, tenant_id, location_id, name, serial_number, board_name, architecture, firmware_version, tunnel_ip, wg_public_key, api_user, api_password_enc, hotspot_ports, pppoe_ports, status, missed_polls, last_seen_at, status_changed_at, last_config_push, config_hash, created_at, updated_at FROM routers WHERE status IN ('online', 'degraded')
+`
+
+func (q *Queries) OnlineRouters(ctx context.Context) ([]Router, error) {
+	rows, err := q.db.Query(ctx, onlineRouters)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Router{}
+	for rows.Next() {
+		var i Router
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.LocationID,
+			&i.Name,
+			&i.SerialNumber,
+			&i.BoardName,
+			&i.Architecture,
+			&i.FirmwareVersion,
+			&i.TunnelIp,
+			&i.WgPublicKey,
+			&i.ApiUser,
+			&i.ApiPasswordEnc,
+			&i.HotspotPorts,
+			&i.PppoePorts,
+			&i.Status,
+			&i.MissedPolls,
+			&i.LastSeenAt,
+			&i.StatusChangedAt,
+			&i.LastConfigPush,
+			&i.ConfigHash,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const startSession = `-- name: StartSession :one

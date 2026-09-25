@@ -1,0 +1,11 @@
+# Looks up a router the first time it sends a packet. cmd/radius answers with
+# the router's secret, or 404 for an unknown source (the packet is dropped).
+server wisp_dynamic_clients {
+	authorize {
+		wisp_client
+		if (!ok && !updated) {
+			reject
+		}
+		ok
+	}
+}

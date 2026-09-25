@@ -1,0 +1,69 @@
+# rlm_rest instances that forward everything to cmd/radius.
+# FreeRADIUS holds no business logic (CLAUDE.md 2.1 / 8).
+# The router is identified by the packet source address (its tunnel IP),
+# passed in the URL; WireGuard guarantees it can't be spoofed.
+
+rest wisp_rest {
+	connect_uri = "$ENV{RADIUS_BACKEND_URL}"
+	connect_timeout = 2.0
+
+	authorize {
+		uri = "${..connect_uri}/radius/authorize?nas=%{Packet-Src-IP-Address}"
+		method = 'post'
+		body = 'json'
+		auth = 'basic'
+		username = 'freeradius'
+		password = "$ENV{RADIUS_API_TOKEN}"
+		require_auth = yes
+		timeout = 4.0
+	}
+
+	accounting {
+		uri = "${..connect_uri}/radius/accounting?nas=%{Packet-Src-IP-Address}"
+		method = 'post'
+		body = 'json'
+		auth = 'basic'
+		username = 'freeradius'
+		password = "$ENV{RADIUS_API_TOKEN}"
+		require_auth = yes
+		timeout = 4.0
+	}
+
+	pool {
+		start = 0
+		min = 0
+		max = 64
+		spare = 8
+		uses = 0
+		retry_delay = 1
+		lifetime = 0
+		idle_timeout = 60
+	}
+}
+
+rest wisp_client {
+	connect_uri = "$ENV{RADIUS_BACKEND_URL}"
+	connect_timeout = 2.0
+
+	authorize {
+		uri = "${..connect_uri}/radius/client?nas=%{Packet-Src-IP-Address}"
+		method = 'post'
+		body = 'json'
+		auth = 'basic'
+		username = 'freeradius'
+		password = "$ENV{RADIUS_API_TOKEN}"
+		require_auth = yes
+		timeout = 3.0
+	}
+
+	pool {
+		start = 0
+		min = 0
+		max = 8
+		spare = 2
+		uses = 0
+		retry_delay = 1
+		lifetime = 0
+		idle_timeout = 60
+	}
+}
