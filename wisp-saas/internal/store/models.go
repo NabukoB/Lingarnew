@@ -122,7 +122,8 @@ type Router struct {
 	WgPublicKey     *string    `json:"wg_public_key"`
 	ApiUser         string     `json:"api_user"`
 	ApiPasswordEnc  []byte     `json:"api_password_enc"`
-	RadiusSecretEnc []byte     `json:"radius_secret_enc"`
+	HotspotPorts    []string   `json:"hotspot_ports"`
+	PppoePorts      []string   `json:"pppoe_ports"`
 	Status          string     `json:"status"`
 	MissedPolls     int32      `json:"missed_polls"`
 	LastSeenAt      *time.Time `json:"last_seen_at"`

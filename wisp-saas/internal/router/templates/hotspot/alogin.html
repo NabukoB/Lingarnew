@@ -1,0 +1,12 @@
+{{define "alogin.html"}}<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{html .TenantName}} Wi-Fi</title>
+<style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:90vh;color:#0f172a}a{color:#2563eb}</style>
+</head><body>
+<p>You're online. <a id="go" href="{{html .PortalURL}}&amp;page=online&amp;mac=$(mac-esc)&amp;router={{.RouterID}}">See time left</a></p>
+<script>
+var u = "{{js .PortalURL}}" + "&page=online&mac=" + encodeURIComponent("$(mac)") + "&link=" + encodeURIComponent("$(link-login-only)") + "&router={{js .RouterID}}";
+document.getElementById("go").href = u;
+if ("alogin" === "alogin") location.replace(u);
+</script>
+</body></html>{{end}}

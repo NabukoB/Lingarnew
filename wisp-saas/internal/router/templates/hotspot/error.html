@@ -1,0 +1,14 @@
+{{define "error.html"}}<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{html .TenantName}} Wi-Fi</title>
+<meta http-equiv="refresh" content="3;url={{html .PortalURL}}&amp;mac=$(mac-esc)&amp;router={{.RouterID}}">
+<style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:90vh;color:#0f172a}a{color:#2563eb}</style>
+</head><body>
+<p>Opening {{html .TenantName}} Wi-Fi… <a id="go" href="{{html .PortalURL}}&amp;mac=$(mac-esc)&amp;router={{.RouterID}}">Continue</a></p>
+<script>
+var u = "{{js .PortalURL}}" + "&mac=" + encodeURIComponent("$(mac)") + "&ip=" + encodeURIComponent("$(ip)") +
+  "&link=" + encodeURIComponent("$(link-login-only)") + "&router={{js .RouterID}}";
+if ("$(error)" !== "") u += "&error=" + encodeURIComponent("$(error)".slice(0, 120));
+document.getElementById("go").href = u; location.replace(u);
+</script>
+</body></html>{{end}}

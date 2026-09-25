@@ -100,7 +100,9 @@ CREATE TABLE routers (
     wg_public_key       TEXT UNIQUE,
     api_user            TEXT NOT NULL DEFAULT 'wisp-api',
     api_password_enc    BYTEA NOT NULL,
-    radius_secret_enc   BYTEA NOT NULL,
+    -- RADIUS secret is derived from RADIUS_SECRET_SEED + router id (HKDF), never stored.
+    hotspot_ports       TEXT[] NOT NULL DEFAULT '{}',
+    pppoe_ports         TEXT[] NOT NULL DEFAULT '{}',
 
     status              TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'online', 'degraded', 'offline', 'misconfigured')),
     missed_polls        INTEGER NOT NULL DEFAULT 0,

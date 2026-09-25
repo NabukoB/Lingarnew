@@ -46,15 +46,14 @@ type Config struct {
 	ATSandbox  bool
 
 	// Network.
-	WGTunnelCIDR      netip.Prefix
-	WGServerPublicKey string
-	WGServerEndpoint  string // host:port the routers dial
-	WGGatewayURL      string // internal API of cmd/wg-gateway
-	WGGatewayToken    string
-	RadiusServer      string // hostname routers send RADIUS to (over the tunnel)
-	RadiusSecretSeed  string
-	RouterAPIPort     int
-	RouterAPIInsecure bool // mikrotik-mock and self-signed router certs
+	WGTunnelCIDR       netip.Prefix
+	WGServerPublicKey  string
+	WGServerEndpoint   string // host:port the routers dial
+	WGServerPrivateKey string // wg-gateway only
+	RadiusServer       string // hostname routers send RADIUS to (over the tunnel)
+	RadiusSecretSeed   string
+	RouterAPIPort      int
+	RouterAPIInsecure  bool // mikrotik-mock and self-signed router certs
 
 	// Internal shared secret for rlm_rest -> cmd/radius.
 	RadiusAPIToken string
@@ -88,8 +87,7 @@ func Load() (Config, error) {
 		ATSandbox:           get("AT_USERNAME", "sandbox") == "sandbox",
 		WGServerPublicKey:   os.Getenv("WG_SERVER_PUBLIC_KEY"),
 		WGServerEndpoint:    get("WG_SERVER_ENDPOINT", "vpn.yourwifisaas.com:51820"),
-		WGGatewayURL:        strings.TrimRight(get("WG_GATEWAY_URL", "http://localhost:8082"), "/"),
-		WGGatewayToken:      os.Getenv("WG_GATEWAY_TOKEN"),
+		WGServerPrivateKey:  os.Getenv("WG_SERVER_PRIVATE_KEY"),
 		RadiusServer:        get("RADIUS_SERVER", "10.200.0.1"),
 		RadiusSecretSeed:    os.Getenv("RADIUS_SECRET_SEED"),
 		RouterAPIPort:       getInt("ROUTER_API_PORT", 443),
@@ -123,7 +121,7 @@ func (c Config) RequireFor(component string) error {
 		}
 	}
 	need("DATABASE_URL", c.DatabaseURL)
-	if c.KMSKeyID == "" && c.LocalKEK == "" {
+	if component != "wg-gateway" && c.KMSKeyID == "" && c.LocalKEK == "" {
 		missing = append(missing, "KMS_KEY_ID or LOCAL_KEK")
 	}
 	switch component {
@@ -134,13 +132,17 @@ func (c Config) RequireFor(component string) error {
 		need("RADIUS_SECRET_SEED", c.RadiusSecretSeed)
 		if c.IsProduction() {
 			need("WG_SERVER_PUBLIC_KEY", c.WGServerPublicKey)
-			need("WG_GATEWAY_TOKEN", c.WGGatewayToken)
+			need("PUBLIC_API_URL", os.Getenv("PUBLIC_API_URL"))
+			need("WG_SERVER_ENDPOINT", os.Getenv("WG_SERVER_ENDPOINT"))
+			need("MPESA_PLATFORM_CONSUMER_KEY", c.MpesaConsumerKey)
+			need("MPESA_PLATFORM_CONSUMER_SECRET", c.MpesaConsumerSecret)
+			need("MPESA_PLATFORM_PASSKEY", c.MpesaPasskey)
 			if len(c.MpesaAllowedIPs) == 0 {
 				missing = append(missing, "MPESA_ALLOWED_IPS")
 			}
 		}
 	case "wg-gateway":
-		need("WG_GATEWAY_TOKEN", c.WGGatewayToken)
+		need("WG_SERVER_PRIVATE_KEY", c.WGServerPrivateKey)
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("%s cannot start: set %s", component, strings.Join(missing, ", "))

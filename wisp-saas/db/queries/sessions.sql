@@ -30,3 +30,6 @@ SELECT COALESCE(sum(bytes_in + bytes_out), 0)::bigint FROM sessions WHERE userna
 -- name: CloseStaleSessions :exec
 UPDATE sessions SET status = 'terminated', terminated_at = NOW(), termination_cause = 'Stale'
 WHERE status = 'active' AND updated_at < @before::timestamptz;
+
+-- name: GetActiveSession :one
+SELECT * FROM sessions WHERE router_id = $1 AND acct_session_id = $2;

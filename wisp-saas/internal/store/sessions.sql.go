@@ -144,6 +144,40 @@ func (q *Queries) CountActiveSessionsBetween(ctx context.Context, at time.Time) 
 	return column_1, err
 }
 
+const getActiveSession = `-- name: GetActiveSession :one
+SELECT id, tenant_id, router_id, plan_id, access_type, username, acct_session_id, mac_address, ip_address, status, started_at, terminated_at, termination_cause, bytes_in, bytes_out, session_time_sec, updated_at FROM sessions WHERE router_id = $1 AND acct_session_id = $2
+`
+
+type GetActiveSessionParams struct {
+	RouterID      uuid.UUID `json:"router_id"`
+	AcctSessionID string    `json:"acct_session_id"`
+}
+
+func (q *Queries) GetActiveSession(ctx context.Context, arg GetActiveSessionParams) (Session, error) {
+	row := q.db.QueryRow(ctx, getActiveSession, arg.RouterID, arg.AcctSessionID)
+	var i Session
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.RouterID,
+		&i.PlanID,
+		&i.AccessType,
+		&i.Username,
+		&i.AcctSessionID,
+		&i.MacAddress,
+		&i.IpAddress,
+		&i.Status,
+		&i.StartedAt,
+		&i.TerminatedAt,
+		&i.TerminationCause,
+		&i.BytesIn,
+		&i.BytesOut,
+		&i.SessionTimeSec,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const startSession = `-- name: StartSession :one
 INSERT INTO sessions (tenant_id, router_id, plan_id, access_type, username, acct_session_id, mac_address, ip_address)
 VALUES (app_tenant(), $1, $2, $3, $4, $5, $6, $7)

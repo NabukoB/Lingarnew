@@ -13,6 +13,48 @@ import (
 	"github.com/google/uuid"
 )
 
+const activeSessionsOnRouter = `-- name: ActiveSessionsOnRouter :many
+SELECT id, tenant_id, router_id, plan_id, access_type, username, acct_session_id, mac_address, ip_address, status, started_at, terminated_at, termination_cause, bytes_in, bytes_out, session_time_sec, updated_at FROM sessions WHERE router_id = $1 AND status = 'active' ORDER BY started_at DESC LIMIT 200
+`
+
+func (q *Queries) ActiveSessionsOnRouter(ctx context.Context, routerID uuid.UUID) ([]Session, error) {
+	rows, err := q.db.Query(ctx, activeSessionsOnRouter, routerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Session{}
+	for rows.Next() {
+		var i Session
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.RouterID,
+			&i.PlanID,
+			&i.AccessType,
+			&i.Username,
+			&i.AcctSessionID,
+			&i.MacAddress,
+			&i.IpAddress,
+			&i.Status,
+			&i.StartedAt,
+			&i.TerminatedAt,
+			&i.TerminationCause,
+			&i.BytesIn,
+			&i.BytesOut,
+			&i.SessionTimeSec,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const allocateTunnelIP = `-- name: AllocateTunnelIP :one
 SELECT allocate_tunnel_ip($1::cidr)::inet AS ip
 `
@@ -22,6 +64,46 @@ func (q *Queries) AllocateTunnelIP(ctx context.Context, cidr netip.Prefix) (neti
 	var ip netip.Addr
 	err := row.Scan(&ip)
 	return ip, err
+}
+
+const countActivePlans = `-- name: CountActivePlans :one
+SELECT count(*)::int FROM plans WHERE is_active AND access_type = $1
+`
+
+func (q *Queries) CountActivePlans(ctx context.Context, accessType string) (int32, error) {
+	row := q.db.QueryRow(ctx, countActivePlans, accessType)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countRoutersByStatus = `-- name: CountRoutersByStatus :many
+SELECT status, count(*)::int AS n FROM routers GROUP BY status
+`
+
+type CountRoutersByStatusRow struct {
+	Status string `json:"status"`
+	N      int32  `json:"n"`
+}
+
+func (q *Queries) CountRoutersByStatus(ctx context.Context) ([]CountRoutersByStatusRow, error) {
+	rows, err := q.db.Query(ctx, countRoutersByStatus)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountRoutersByStatusRow{}
+	for rows.Next() {
+		var i CountRoutersByStatusRow
+		if err := rows.Scan(&i.Status, &i.N); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const createLocation = `-- name: CreateLocation :one
@@ -73,18 +155,19 @@ func (q *Queries) CreateOnboardingToken(ctx context.Context, arg CreateOnboardin
 }
 
 const createRouter = `-- name: CreateRouter :one
-INSERT INTO routers (id, tenant_id, location_id, name, tunnel_ip, api_password_enc, radius_secret_enc)
-VALUES ($1, app_tenant(), $2, $3, $4, $5, $6)
-RETURNING id, tenant_id, location_id, name, serial_number, board_name, architecture, firmware_version, tunnel_ip, wg_public_key, api_user, api_password_enc, radius_secret_enc, status, missed_polls, last_seen_at, status_changed_at, last_config_push, config_hash, created_at, updated_at
+INSERT INTO routers (id, tenant_id, location_id, name, tunnel_ip, api_password_enc, hotspot_ports, pppoe_ports)
+VALUES ($1, app_tenant(), $2, $3, $4, $5, $6, $7)
+RETURNING id, tenant_id, location_id, name, serial_number, board_name, architecture, firmware_version, tunnel_ip, wg_public_key, api_user, api_password_enc, hotspot_ports, pppoe_ports, status, missed_polls, last_seen_at, status_changed_at, last_config_push, config_hash, created_at, updated_at
 `
 
 type CreateRouterParams struct {
-	ID              uuid.UUID  `json:"id"`
-	LocationID      uuid.UUID  `json:"location_id"`
-	Name            string     `json:"name"`
-	TunnelIp        netip.Addr `json:"tunnel_ip"`
-	ApiPasswordEnc  []byte     `json:"api_password_enc"`
-	RadiusSecretEnc []byte     `json:"radius_secret_enc"`
+	ID             uuid.UUID  `json:"id"`
+	LocationID     uuid.UUID  `json:"location_id"`
+	Name           string     `json:"name"`
+	TunnelIp       netip.Addr `json:"tunnel_ip"`
+	ApiPasswordEnc []byte     `json:"api_password_enc"`
+	HotspotPorts   []string   `json:"hotspot_ports"`
+	PppoePorts     []string   `json:"pppoe_ports"`
 }
 
 func (q *Queries) CreateRouter(ctx context.Context, arg CreateRouterParams) (Router, error) {
@@ -94,7 +177,8 @@ func (q *Queries) CreateRouter(ctx context.Context, arg CreateRouterParams) (Rou
 		arg.Name,
 		arg.TunnelIp,
 		arg.ApiPasswordEnc,
-		arg.RadiusSecretEnc,
+		arg.HotspotPorts,
+		arg.PppoePorts,
 	)
 	var i Router
 	err := row.Scan(
@@ -110,7 +194,8 @@ func (q *Queries) CreateRouter(ctx context.Context, arg CreateRouterParams) (Rou
 		&i.WgPublicKey,
 		&i.ApiUser,
 		&i.ApiPasswordEnc,
-		&i.RadiusSecretEnc,
+		&i.HotspotPorts,
+		&i.PppoePorts,
 		&i.Status,
 		&i.MissedPolls,
 		&i.LastSeenAt,
@@ -129,6 +214,15 @@ DELETE FROM routers WHERE id = $1
 
 func (q *Queries) DeleteRouter(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteRouter, id)
+	return err
+}
+
+const deleteUnusedOnboardingTokens = `-- name: DeleteUnusedOnboardingTokens :exec
+DELETE FROM onboarding_tokens WHERE router_id = $1 AND used_at IS NULL
+`
+
+func (q *Queries) DeleteUnusedOnboardingTokens(ctx context.Context, routerID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUnusedOnboardingTokens, routerID)
 	return err
 }
 
@@ -152,7 +246,7 @@ func (q *Queries) GetLocation(ctx context.Context, id uuid.UUID) (Location, erro
 }
 
 const getRouter = `-- name: GetRouter :one
-SELECT id, tenant_id, location_id, name, serial_number, board_name, architecture, firmware_version, tunnel_ip, wg_public_key, api_user, api_password_enc, radius_secret_enc, status, missed_polls, last_seen_at, status_changed_at, last_config_push, config_hash, created_at, updated_at FROM routers WHERE id = $1
+SELECT id, tenant_id, location_id, name, serial_number, board_name, architecture, firmware_version, tunnel_ip, wg_public_key, api_user, api_password_enc, hotspot_ports, pppoe_ports, status, missed_polls, last_seen_at, status_changed_at, last_config_push, config_hash, created_at, updated_at FROM routers WHERE id = $1
 `
 
 func (q *Queries) GetRouter(ctx context.Context, id uuid.UUID) (Router, error) {
@@ -171,7 +265,8 @@ func (q *Queries) GetRouter(ctx context.Context, id uuid.UUID) (Router, error) {
 		&i.WgPublicKey,
 		&i.ApiUser,
 		&i.ApiPasswordEnc,
-		&i.RadiusSecretEnc,
+		&i.HotspotPorts,
+		&i.PppoePorts,
 		&i.Status,
 		&i.MissedPolls,
 		&i.LastSeenAt,
@@ -282,7 +377,7 @@ func (q *Queries) ListLocations(ctx context.Context) ([]Location, error) {
 }
 
 const listRouters = `-- name: ListRouters :many
-SELECT r.id, r.tenant_id, r.location_id, r.name, r.serial_number, r.board_name, r.architecture, r.firmware_version, r.tunnel_ip, r.wg_public_key, r.api_user, r.api_password_enc, r.radius_secret_enc, r.status, r.missed_polls, r.last_seen_at, r.status_changed_at, r.last_config_push, r.config_hash, r.created_at, r.updated_at, l.name AS location_name,
+SELECT r.id, r.tenant_id, r.location_id, r.name, r.serial_number, r.board_name, r.architecture, r.firmware_version, r.tunnel_ip, r.wg_public_key, r.api_user, r.api_password_enc, r.hotspot_ports, r.pppoe_ports, r.status, r.missed_polls, r.last_seen_at, r.status_changed_at, r.last_config_push, r.config_hash, r.created_at, r.updated_at, l.name AS location_name,
        (SELECT count(*) FROM sessions s WHERE s.router_id = r.id AND s.status = 'active')::int AS active_sessions
 FROM routers r JOIN locations l ON l.id = r.location_id
 ORDER BY CASE r.status WHEN 'offline' THEN 0 WHEN 'degraded' THEN 1 WHEN 'misconfigured' THEN 2 WHEN 'pending' THEN 3 ELSE 4 END, r.name
@@ -301,7 +396,8 @@ type ListRoutersRow struct {
 	WgPublicKey     *string    `json:"wg_public_key"`
 	ApiUser         string     `json:"api_user"`
 	ApiPasswordEnc  []byte     `json:"api_password_enc"`
-	RadiusSecretEnc []byte     `json:"radius_secret_enc"`
+	HotspotPorts    []string   `json:"hotspot_ports"`
+	PppoePorts      []string   `json:"pppoe_ports"`
 	Status          string     `json:"status"`
 	MissedPolls     int32      `json:"missed_polls"`
 	LastSeenAt      *time.Time `json:"last_seen_at"`
@@ -336,7 +432,8 @@ func (q *Queries) ListRouters(ctx context.Context) ([]ListRoutersRow, error) {
 			&i.WgPublicKey,
 			&i.ApiUser,
 			&i.ApiPasswordEnc,
-			&i.RadiusSecretEnc,
+			&i.HotspotPorts,
+			&i.PppoePorts,
 			&i.Status,
 			&i.MissedPolls,
 			&i.LastSeenAt,
@@ -409,7 +506,7 @@ UPDATE routers SET
         ELSE status_changed_at END,
     updated_at = NOW()
 WHERE id = $3
-RETURNING id, tenant_id, location_id, name, serial_number, board_name, architecture, firmware_version, tunnel_ip, wg_public_key, api_user, api_password_enc, radius_secret_enc, status, missed_polls, last_seen_at, status_changed_at, last_config_push, config_hash, created_at, updated_at
+RETURNING id, tenant_id, location_id, name, serial_number, board_name, architecture, firmware_version, tunnel_ip, wg_public_key, api_user, api_password_enc, hotspot_ports, pppoe_ports, status, missed_polls, last_seen_at, status_changed_at, last_config_push, config_hash, created_at, updated_at
 `
 
 type RecordPollFailureParams struct {
@@ -434,7 +531,8 @@ func (q *Queries) RecordPollFailure(ctx context.Context, arg RecordPollFailurePa
 		&i.WgPublicKey,
 		&i.ApiUser,
 		&i.ApiPasswordEnc,
-		&i.RadiusSecretEnc,
+		&i.HotspotPorts,
+		&i.PppoePorts,
 		&i.Status,
 		&i.MissedPolls,
 		&i.LastSeenAt,
@@ -455,7 +553,7 @@ UPDATE routers SET
     status = 'online',
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, tenant_id, location_id, name, serial_number, board_name, architecture, firmware_version, tunnel_ip, wg_public_key, api_user, api_password_enc, radius_secret_enc, status, missed_polls, last_seen_at, status_changed_at, last_config_push, config_hash, created_at, updated_at
+RETURNING id, tenant_id, location_id, name, serial_number, board_name, architecture, firmware_version, tunnel_ip, wg_public_key, api_user, api_password_enc, hotspot_ports, pppoe_ports, status, missed_polls, last_seen_at, status_changed_at, last_config_push, config_hash, created_at, updated_at
 `
 
 func (q *Queries) RecordPollSuccess(ctx context.Context, id uuid.UUID) (Router, error) {
@@ -474,7 +572,8 @@ func (q *Queries) RecordPollSuccess(ctx context.Context, id uuid.UUID) (Router, 
 		&i.WgPublicKey,
 		&i.ApiUser,
 		&i.ApiPasswordEnc,
-		&i.RadiusSecretEnc,
+		&i.HotspotPorts,
+		&i.PppoePorts,
 		&i.Status,
 		&i.MissedPolls,
 		&i.LastSeenAt,
@@ -509,6 +608,45 @@ func (q *Queries) RecordRouterIdentity(ctx context.Context, arg RecordRouterIden
 		arg.FirmwareVersion,
 	)
 	return err
+}
+
+const renameRouter = `-- name: RenameRouter :one
+UPDATE routers SET name = $2, updated_at = NOW() WHERE id = $1 RETURNING id, tenant_id, location_id, name, serial_number, board_name, architecture, firmware_version, tunnel_ip, wg_public_key, api_user, api_password_enc, hotspot_ports, pppoe_ports, status, missed_polls, last_seen_at, status_changed_at, last_config_push, config_hash, created_at, updated_at
+`
+
+type RenameRouterParams struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
+func (q *Queries) RenameRouter(ctx context.Context, arg RenameRouterParams) (Router, error) {
+	row := q.db.QueryRow(ctx, renameRouter, arg.ID, arg.Name)
+	var i Router
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.LocationID,
+		&i.Name,
+		&i.SerialNumber,
+		&i.BoardName,
+		&i.Architecture,
+		&i.FirmwareVersion,
+		&i.TunnelIp,
+		&i.WgPublicKey,
+		&i.ApiUser,
+		&i.ApiPasswordEnc,
+		&i.HotspotPorts,
+		&i.PppoePorts,
+		&i.Status,
+		&i.MissedPolls,
+		&i.LastSeenAt,
+		&i.StatusChangedAt,
+		&i.LastConfigPush,
+		&i.ConfigHash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const routerByTunnelIP = `-- name: RouterByTunnelIP :one
@@ -582,6 +720,53 @@ type SetRouterStatusParams struct {
 func (q *Queries) SetRouterStatus(ctx context.Context, arg SetRouterStatusParams) error {
 	_, err := q.db.Exec(ctx, setRouterStatus, arg.ID, arg.Status)
 	return err
+}
+
+const updateRouterPorts = `-- name: UpdateRouterPorts :one
+UPDATE routers SET name = COALESCE(NULLIF($1::text, ''), name), hotspot_ports = $2::text[], pppoe_ports = $3::text[], updated_at = NOW()
+WHERE id = $4 RETURNING id, tenant_id, location_id, name, serial_number, board_name, architecture, firmware_version, tunnel_ip, wg_public_key, api_user, api_password_enc, hotspot_ports, pppoe_ports, status, missed_polls, last_seen_at, status_changed_at, last_config_push, config_hash, created_at, updated_at
+`
+
+type UpdateRouterPortsParams struct {
+	Name         string    `json:"name"`
+	HotspotPorts []string  `json:"hotspot_ports"`
+	PppoePorts   []string  `json:"pppoe_ports"`
+	ID           uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateRouterPorts(ctx context.Context, arg UpdateRouterPortsParams) (Router, error) {
+	row := q.db.QueryRow(ctx, updateRouterPorts,
+		arg.Name,
+		arg.HotspotPorts,
+		arg.PppoePorts,
+		arg.ID,
+	)
+	var i Router
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.LocationID,
+		&i.Name,
+		&i.SerialNumber,
+		&i.BoardName,
+		&i.Architecture,
+		&i.FirmwareVersion,
+		&i.TunnelIp,
+		&i.WgPublicKey,
+		&i.ApiUser,
+		&i.ApiPasswordEnc,
+		&i.HotspotPorts,
+		&i.PppoePorts,
+		&i.Status,
+		&i.MissedPolls,
+		&i.LastSeenAt,
+		&i.StatusChangedAt,
+		&i.LastConfigPush,
+		&i.ConfigHash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const useOnboardingToken = `-- name: UseOnboardingToken :execrows

@@ -13,8 +13,8 @@ SELECT * FROM locations WHERE id = $1;
 SELECT allocate_tunnel_ip(@cidr::cidr)::inet AS ip;
 
 -- name: CreateRouter :one
-INSERT INTO routers (id, tenant_id, location_id, name, tunnel_ip, api_password_enc, radius_secret_enc)
-VALUES ($1, app_tenant(), $2, $3, $4, $5, $6)
+INSERT INTO routers (id, tenant_id, location_id, name, tunnel_ip, api_password_enc, hotspot_ports, pppoe_ports)
+VALUES ($1, app_tenant(), $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: GetRouter :one
@@ -31,6 +31,12 @@ DELETE FROM routers WHERE id = $1;
 
 -- name: SetRouterPublicKey :exec
 UPDATE routers SET wg_public_key = $2, updated_at = NOW() WHERE id = $1;
+
+-- name: RenameRouter :one
+UPDATE routers SET name = $2, updated_at = NOW() WHERE id = $1 RETURNING *;
+
+-- name: CountRoutersByStatus :many
+SELECT status, count(*)::int AS n FROM routers GROUP BY status;
 
 -- name: RecordRouterIdentity :exec
 UPDATE routers SET serial_number = $2, board_name = $3, architecture = $4, firmware_version = $5, updated_at = NOW()
@@ -92,3 +98,16 @@ VALUES (app_tenant(), $1, $2, $3, $4, $5, $6);
 
 -- name: ListConfigAudit :many
 SELECT * FROM config_audit WHERE router_id = $1 ORDER BY created_at DESC LIMIT $2;
+
+-- name: ActiveSessionsOnRouter :many
+SELECT * FROM sessions WHERE router_id = $1 AND status = 'active' ORDER BY started_at DESC LIMIT 200;
+
+-- name: DeleteUnusedOnboardingTokens :exec
+DELETE FROM onboarding_tokens WHERE router_id = $1 AND used_at IS NULL;
+
+-- name: CountActivePlans :one
+SELECT count(*)::int FROM plans WHERE is_active AND access_type = $1;
+
+-- name: UpdateRouterPorts :one
+UPDATE routers SET name = COALESCE(NULLIF(@name::text, ''), name), hotspot_ports = @hotspot_ports::text[], pppoe_ports = @pppoe_ports::text[], updated_at = NOW()
+WHERE id = @id RETURNING *;
