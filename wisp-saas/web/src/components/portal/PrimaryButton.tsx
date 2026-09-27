@@ -1,16 +1,9 @@
-import clsx from "clsx";
+import * as React from "react";
+import { Button, buttonVariants, type ButtonProps } from "@/components/ui/button";
 
-export const primaryButtonClass =
-  "flex h-[60px] w-full items-center justify-center gap-2.5 rounded-[18px] text-[17px] font-extrabold text-white shadow-brand disabled:opacity-50";
+/** Big full-width portal button in the WISP's brand colour. */
+export const primaryButtonClass = buttonVariants({ variant: "brand", size: "xl" });
 
-export function PrimaryButton({
-  children,
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button {...props} className={clsx(primaryButtonClass, className)} style={{ background: "var(--accent)" }}>
-      {children}
-    </button>
-  );
+export function PrimaryButton(props: ButtonProps) {
+  return <Button variant="brand" size="xl" {...props} />;
 }

@@ -1,20 +1,13 @@
 "use client";
 
-import clsx from "clsx";
+import { AnimatePresence } from "framer-motion";
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
+import { m } from "@/components/motion";
+import { toast } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
 
-export function CopyButton({
-  text,
-  label,
-  showLabel = false,
-  className,
-}: {
-  text: string;
-  label: string;
-  showLabel?: boolean;
-  className?: string;
-}) {
+export function CopyButton({ text, label, showLabel = false, className }: { text: string; label: string; showLabel?: boolean; className?: string }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
     try {
@@ -22,13 +15,16 @@ export function CopyButton({
       setCopied(true);
       setTimeout(() => setCopied(false), 1600);
     } catch {
-      setCopied(false);
+      toast.error("Copy failed. Select the text and copy it.");
     }
   }
-  const Icon = copied ? Check : Copy;
   return (
-    <button type="button" onClick={copy} aria-label={showLabel ? undefined : label} className={clsx("flex items-center justify-center gap-2", className)}>
-      <Icon aria-hidden size={16} strokeWidth={2.2} />
+    <button type="button" onClick={copy} aria-label={showLabel ? undefined : label} className={cn("flex items-center justify-center gap-2 transition active:scale-95", className)}>
+      <AnimatePresence mode="wait" initial={false}>
+        <m.span key={copied ? "y" : "n"} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} transition={{ duration: 0.12 }}>
+          {copied ? <Check aria-hidden size={16} strokeWidth={2.6} /> : <Copy aria-hidden size={16} strokeWidth={2.2} />}
+        </m.span>
+      </AnimatePresence>
       {showLabel && <span>{copied ? "Copied" : label}</span>}
       <span role="status" className="sr-only">
         {copied ? "Copied" : ""}

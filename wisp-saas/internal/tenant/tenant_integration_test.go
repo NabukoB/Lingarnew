@@ -77,6 +77,26 @@ func TestSignupPicksUniquePrefixAndRejectsDuplicateEmail(t *testing.T) {
 	}
 }
 
+func TestFreePrefixesSkipTaken(t *testing.T) {
+	s := newService(t)
+	ctx := context.Background()
+	name := "Zebu Wave " + strings.ToUpper(uuid.NewString()[:4])
+	before, err := s.FreePrefixes(ctx, name, 5)
+	if err != nil || len(before) == 0 {
+		t.Fatalf("suggestions = %v %v", before, err)
+	}
+	taken, _ := signup(t, s, name)
+	after, err := s.FreePrefixes(ctx, name, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range after {
+		if p == taken.AccountPrefix {
+			t.Fatalf("suggested taken prefix %s", p)
+		}
+	}
+}
+
 func TestRowLevelSecurityIsolatesTenants(t *testing.T) {
 	s := newService(t)
 	ctx := context.Background()

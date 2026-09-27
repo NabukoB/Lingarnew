@@ -12,7 +12,7 @@ export default async function PortalBuyPage() {
       <PortalSheet>
         <PortalTabs />
         {packages.length === 0 ? (
-          <p className="py-16 text-center text-sm font-semibold text-slate-500">No packages yet</p>
+          <p className="py-16 text-center text-sm font-semibold text-muted-foreground">No packages yet</p>
         ) : (
           <BuyForm packages={packages} shortcodeLabel={shortcodeLabel} notice={routerError || null} />
         )}

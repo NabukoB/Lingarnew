@@ -11,12 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type NavItem = {
-  label: string;
-  href: string | null; // null = not built yet
-  icon: LucideIcon;
-  badge?: { text: string; tone: "amber" | "red" };
-};
+export type NavItem = { label: string; href: string; icon: LucideIcon };
 
 export const sidebarNav: NavItem[] = [
   { label: "Home", href: "/", icon: Home },
@@ -39,9 +34,13 @@ export const bottomNav: NavItem[] = [
 
 export type Badges = Partial<Record<string, { text: string; tone: "amber" | "red" }>>;
 
-export function isActive(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
-  if (href === "/packages" && pathname.startsWith("/packages/hotspot")) return false;
-  if (href === "/settings" && pathname.startsWith("/settings/sms")) return false;
-  return pathname === href || pathname.startsWith(href + "/");
+/** Which nav item a path belongs to (most specific wins). */
+export function activeHref(pathname: string, items: NavItem[]): string | null {
+  let best: string | null = null;
+  for (const { href } of items) {
+    const hit = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
+    if (hit && (!best || href.length > best.length)) best = href;
+  }
+  if (!best && pathname.startsWith("/routers")) best = items.find((i) => i.href === "/network")?.href ?? null;
+  return best;
 }

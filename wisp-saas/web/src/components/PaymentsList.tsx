@@ -1,8 +1,11 @@
+"use client";
+
 import { AlertCircle, Home, Wifi } from "lucide-react";
-import clsx from "clsx";
+import { IconBox } from "@/components/bits";
+import { MatchPayment } from "@/components/MatchPayment";
+import { Stagger, StaggerItem } from "@/components/motion";
 import type { Payment } from "@/lib/types";
-import { MatchPayment } from "./MatchPayment";
-import { IconBox } from "./ui";
+import { cn } from "@/lib/utils";
 
 const kinds = {
   hotspot: { icon: Wifi, tone: "green" as const },
@@ -12,41 +15,30 @@ const kinds = {
 
 export function PaymentsList({ payments, columns = 2 }: { payments: Payment[]; columns?: 1 | 2 }) {
   return (
-    <section
-      aria-label="Latest payments"
-      className={clsx(
-        "rounded-card bg-white px-5 py-2 shadow-card lg:px-6",
-        columns === 2 && "lg:grid lg:grid-cols-2 lg:gap-x-8",
-      )}
-    >
-      {payments.length === 0 && <p className="py-8 text-center text-sm font-semibold text-slate-500">No payments yet</p>}
-      {payments.map((p, i) => {
-        const k = kinds[p.kind];
-        return (
-          <div
-            key={p.id}
-            className={clsx(
-              "flex items-center gap-3 py-3",
-              i > 0 && "border-t border-line",
-              columns === 2 && i === 1 && "lg:border-t-0",
-            )}
-          >
-            <IconBox icon={k.icon} tone={k.tone} />
-            <div className="flex min-w-0 flex-grow flex-col">
-              <span className="truncate text-sm font-bold">{p.who}</span>
-              <span className="text-xs font-semibold text-slate-500">
-                {p.time}
-                {p.kind === "unmatched" ? "" : ` · ${p.detail}`}
+    <section aria-label="Latest payments" className="rounded-card bg-card px-5 py-2 shadow-card lg:px-6">
+      {payments.length === 0 && <p className="py-8 text-center text-sm font-semibold text-muted-foreground">No payments yet</p>}
+      <Stagger className={cn(columns === 2 && "lg:grid lg:grid-cols-2 lg:gap-x-8")}>
+        {payments.map((p, i) => {
+          const k = kinds[p.kind];
+          return (
+            <StaggerItem key={p.id} className={cn("flex items-center gap-3 py-3", i > 0 && "border-t border-line", columns === 2 && i === 1 && "lg:border-t-0")}>
+              <IconBox icon={k.icon} tone={k.tone} />
+              <div className="flex min-w-0 flex-grow flex-col">
+                <span className="truncate text-sm font-bold">{p.who}</span>
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {p.time}
+                  {p.kind === "unmatched" ? "" : ` · ${p.detail}`}
+                </span>
+              </div>
+              {p.kind === "unmatched" && p.reference !== undefined && <MatchPayment id={p.id} />}
+              <span className={cn("tabular text-sm font-extrabold", p.kind === "unmatched" ? "text-amber-700" : "text-green-700")}>
+                {p.kind === "unmatched" ? "" : "+"}
+                {p.amount.toLocaleString("en-KE")}
               </span>
-            </div>
-            {p.kind === "unmatched" && p.reference !== undefined && <MatchPayment id={p.id} />}
-            <span className={clsx("tabular text-sm font-extrabold", p.kind === "unmatched" ? "text-amber-700" : "text-green-700")}>
-              {p.kind === "unmatched" ? "" : "+"}
-              {p.amount.toLocaleString("en-KE")}
-            </span>
-          </div>
-        );
-      })}
+            </StaggerItem>
+          );
+        })}
+      </Stagger>
     </section>
   );
 }

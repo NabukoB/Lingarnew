@@ -10,7 +10,7 @@ export default async function Page() {
   return (
     <>
       <SettingsTabs />
-      {tenant ? <SmsSettings tenant={tenant} /> : <p className="py-12 text-center text-sm font-semibold text-slate-500">Connect the API to edit settings</p>}
+      {tenant ? <SmsSettings tenant={tenant} /> : <p className="py-12 text-center text-sm font-semibold text-muted-foreground">Connect the API to edit settings</p>}
     </>
   );
 }

@@ -272,6 +272,7 @@ export function portalTenant(info: ApiPortalInfo): Tenant {
     accent: info.primary_color || "#2563eb",
     trialDaysLeft: null,
     slug: info.slug,
+    logoUrl: info.logo_url,
   };
 }
 

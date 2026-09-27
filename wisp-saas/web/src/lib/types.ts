@@ -11,6 +11,7 @@ export type Tenant = {
   accent: string;
   trialDaysLeft: number | null;
   slug?: string;
+  logoUrl?: string | null;
   subscriptionStatus?: "trial" | "active" | "lapsed";
   smsCredits?: number;
 };

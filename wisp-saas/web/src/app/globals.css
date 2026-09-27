@@ -2,41 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --accent: #2563eb;
-}
-
-html,
-body {
-  background: #f4f5f7;
-  color: #0f172a;
-}
-
-body {
-  font-feature-settings: "tnum" 0;
-}
-
-.tabular {
-  font-variant-numeric: tabular-nums;
-}
-
-@keyframes wisp-ring {
-  0% {
-    transform: scale(0.85);
-    opacity: 0.6;
+@layer base {
+  :root {
+    --background: 220 14% 96%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 214 32% 95%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 214 32% 95%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 214 95% 97%;
+    --accent-foreground: 221 83% 45%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 72% 29%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+    --radius: 1rem;
+    /* Captive portal: the tenant's colour (tenants.primary_color). */
+    --brand: #2563eb;
   }
-  100% {
-    transform: scale(1.35);
-    opacity: 0;
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "tnum" 0;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
 
-.pulse-ring {
-  animation: wisp-ring 1.8s ease-out infinite;
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pulse-ring {
+  .animate-pulse-ring {
     animation: none;
     opacity: 0.25;
   }

@@ -1,11 +1,14 @@
 "use client";
 
-import clsx from "clsx";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { PageHeader } from "@/components/bits";
+import { Card } from "@/components/ui/card";
+import { Segmented } from "@/components/ui/segmented";
+import { toast } from "@/components/ui/sonner";
 import { transactionStatus } from "@/lib/actions";
 import { prettyPhone, type ApiTenant } from "@/lib/mappers";
+import { cn } from "@/lib/utils";
 
 export type SettingsInput = {
   name: string;
@@ -48,72 +51,43 @@ export function toInput(t: ApiTenant): SettingsInput {
 }
 
 const tabs = [
-  { label: "General", href: "/settings" },
-  { label: "SMS", href: "/settings/sms" },
-  { label: "Billing", href: "/settings/billing" },
+  { value: "/settings", label: "General", href: "/settings" },
+  { value: "/settings/sms", label: "SMS", href: "/settings/sms" },
+  { value: "/settings/billing", label: "Billing", href: "/settings/billing" },
 ];
 
 export function SettingsTabs() {
   const pathname = usePathname();
   return (
-    <header className="flex flex-wrap items-center gap-3">
-      <h1 className="text-2xl font-extrabold tracking-tight">Settings</h1>
-      <nav aria-label="Settings" className="flex rounded-xl bg-white p-[3px] shadow-soft">
-        {tabs.map((t) => (
-          <Link
-            key={t.href}
-            href={t.href}
-            aria-current={pathname === t.href ? "page" : undefined}
-            className={clsx("h-9 rounded-[10px] px-3.5 text-[13px] font-bold leading-9", pathname === t.href ? "bg-blue-600 text-white" : "text-slate-500")}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </nav>
-    </header>
+    <PageHeader title="Settings">
+      <Segmented id="settings-tabs" label="Settings" items={tabs} value={pathname} />
+    </PageHeader>
   );
 }
 
 export function Section({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <section aria-label={title} className={clsx("flex flex-col gap-3.5 rounded-card bg-white p-5 shadow-card", className)}>
+    <Card aria-label={title} className={cn("flex flex-col gap-3.5 p-5", className)}>
       <h2 className="text-base font-extrabold">{title}</h2>
       {children}
-    </section>
+    </Card>
   );
 }
 
-export function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="flex cursor-pointer items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-      <span className="flex-grow text-sm font-bold">{label}</span>
-      <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} className="peer sr-only" />
-      <span aria-hidden className="relative h-6 w-11 rounded-full bg-slate-300 transition peer-checked:bg-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-300">
-        <span className={clsx("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all", checked ? "left-[22px]" : "left-0.5")} />
-      </span>
-    </label>
-  );
-}
-
-export function Saved({ state }: { state: { ok: boolean; text: string } | null }) {
-  if (!state) return null;
-  return <span className={clsx("text-[13px] font-bold", state.ok ? "text-green-700" : "text-red-700")}>{state.text}</span>;
-}
-
-/** Follows an STK push we started until M-Pesa answers. */
+/** Follows an STK push we started until M-Pesa answers, then toasts the result. */
 export function useTransaction(onDone: () => void) {
   const [tx, setTx] = useState<string | null>(null);
-  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   useEffect(() => {
     if (!tx) return;
     const t = setInterval(async () => {
       const r = await transactionStatus(tx);
       if (!r.ok || r.data.status === "pending") return;
       setTx(null);
-      setResult({ ok: r.data.status === "success", text: r.data.message });
+      if (r.data.status === "success") toast.success(r.data.message);
+      else toast.error(r.data.message);
       onDone();
     }, 3000);
     return () => clearInterval(t);
   }, [tx, onDone]);
-  return { waiting: tx !== null, start: (id: string) => (setResult(null), setTx(id)), result, setResult };
+  return { waiting: tx !== null, start: (id: string) => setTx(id) };
 }

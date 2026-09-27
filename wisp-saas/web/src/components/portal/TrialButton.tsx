@@ -24,11 +24,11 @@ export function TrialButton({ label }: { label: string | null }) {
   return (
     <>
       <div className="mt-3 flex flex-col items-center gap-2">
-        <span className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-blue-50" style={{ color: "var(--accent)" }}>
+        <span className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-accent" style={{ color: "var(--brand)" }}>
           <Gift aria-hidden size={30} strokeWidth={2} />
         </span>
         <h1 className="text-2xl font-extrabold tracking-tight">{label ? `${label} free` : "No free trial"}</h1>
-        {label && <span className="text-[13px] font-semibold text-slate-500">Once a day per device</span>}
+        {label && <span className="text-[13px] font-semibold text-muted-foreground">Once a day per device</span>}
       </div>
       {error && (
         <div role="alert" className="flex items-center gap-2 self-center rounded-full bg-red-100 px-3 py-2 text-[13px] font-bold text-red-700">

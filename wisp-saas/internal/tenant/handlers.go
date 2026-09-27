@@ -41,9 +41,10 @@ func (s *Service) PublicRoutes(r chi.Router) {
 		httpx.JSON(w, http.StatusOK, map[string]any{"token": token, "expires_at": expires})
 	})
 	r.Get("/v1/auth/prefix-suggestions", func(w http.ResponseWriter, r *http.Request) {
-		c := PrefixCandidates(r.URL.Query().Get("name"))
-		if len(c) > 5 {
-			c = c[:5]
+		c, err := s.FreePrefixes(r.Context(), r.URL.Query().Get("name"), 5)
+		if err != nil {
+			httpx.Fail(w, r, err)
+			return
 		}
 		httpx.JSON(w, http.StatusOK, map[string]any{"suggestions": c})
 	})

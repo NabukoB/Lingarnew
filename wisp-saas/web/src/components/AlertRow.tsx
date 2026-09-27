@@ -1,19 +1,24 @@
+"use client";
+
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { RouterStatusDot } from "@/components/bits";
+import { m } from "@/components/motion";
 import type { RouterRow } from "@/lib/types";
 
 export function AlertRow({ routers }: { routers: RouterRow[] }) {
   const down = routers.find((r) => r.status === "offline");
   if (!down) return null;
   return (
-    <Link
-      href={`/routers/${down.id}`}
-      className="flex h-[60px] items-center gap-3 rounded-tile bg-white px-[18px] shadow-card transition hover:shadow-soft"
-    >
-      <span aria-hidden className="ml-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-[5px] ring-red-100" />
-      <span className="flex-grow text-sm font-bold">{down.name} offline</span>
-      <span className="text-xs font-extrabold text-red-700">{down.offlineMinutes ? `${down.offlineMinutes}m` : ""}</span>
-      <ChevronRight aria-hidden size={16} strokeWidth={2.4} className="text-slate-400" />
-    </Link>
+    <m.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
+      <Link href={`/routers/${down.id}`} className="group flex h-[60px] items-center gap-3 rounded-tile bg-card px-[18px] shadow-card transition-shadow hover:shadow-float">
+        <span className="ml-1">
+          <RouterStatusDot status="offline" />
+        </span>
+        <span className="flex-grow text-sm font-bold">{down.name} offline</span>
+        {down.offlineMinutes ? <span className="text-xs font-extrabold text-red-700">{down.offlineMinutes}m</span> : null}
+        <ChevronRight aria-hidden size={16} strokeWidth={2.4} className="text-slate-400 transition-transform group-hover:translate-x-0.5" />
+      </Link>
+    </m.div>
   );
 }

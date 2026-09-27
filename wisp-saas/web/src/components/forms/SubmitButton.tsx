@@ -1,13 +1,14 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { primaryClass } from "./fields";
+import { Button, type ButtonProps } from "@/components/ui/button";
 
-export function SubmitButton({ children, className }: { children: React.ReactNode; className?: string }) {
+/** Submit button that shows a spinner while its form's server action runs. */
+export function SubmitButton({ children, ...props }: ButtonProps) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className={className ?? primaryClass}>
-      {pending ? "…" : children}
-    </button>
+    <Button type="submit" size="lg" loading={pending} {...props}>
+      {children}
+    </Button>
   );
 }

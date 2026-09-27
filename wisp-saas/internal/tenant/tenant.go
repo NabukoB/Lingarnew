@@ -139,6 +139,28 @@ func emailTaken() error {
 	return httpx.Conflict("EMAIL_TAKEN", "An account with that email already exists.", "Sign in instead, or use another email.")
 }
 
+// FreePrefixes suggests up to n account prefixes for a business name that no
+// other ISP uses yet.
+func (s *Service) FreePrefixes(ctx context.Context, name string, n int) ([]string, error) {
+	out := []string{}
+	err := s.DB.WithoutTenant(ctx, func(q *store.Queries) error {
+		for _, p := range PrefixCandidates(name) {
+			r, err := q.TenantIdentityTaken(ctx, store.TenantIdentityTakenParams{Email: "", Slug: "", Prefix: p})
+			if err != nil {
+				return err
+			}
+			if !r.PrefixTaken {
+				out = append(out, p)
+				if len(out) == n {
+					return nil
+				}
+			}
+		}
+		return nil
+	})
+	return out, err
+}
+
 func (s *Service) pickIdentity(ctx context.Context, in SignupInput, prefixes []string, base string) (string, string, error) {
 	var prefix, slug string
 	err := s.DB.WithoutTenant(ctx, func(q *store.Queries) error {

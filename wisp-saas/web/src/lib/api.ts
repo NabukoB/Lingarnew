@@ -3,6 +3,7 @@
 // example data in ./mock so the UI can be developed on its own.
 import "server-only";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { ApiError, apiFetch, isLive } from "./backend";
 import {
   toLocation,
@@ -36,21 +37,21 @@ export async function authed<T>(path: string): Promise<T> {
   }
 }
 
-export async function getSettings(): Promise<ApiTenant | null> {
+export const getSettings = cache(async (): Promise<ApiTenant | null> => {
   if (!isLive()) return null;
   return authed<ApiTenant>("/v1/me");
-}
+});
 
-export async function getTenant() {
+export const getTenant = cache(async () => {
   if (!isLive()) return mock.tenant;
   const [me, locs] = await Promise.all([authed<ApiTenant>("/v1/me"), authed<{ locations: { id: string; name: string }[] }>("/v1/locations")]);
   return toTenant(me, locs.locations[0]?.name ?? "");
-}
+});
 
-export async function getOverview(): Promise<Overview> {
+export const getOverview = cache(async (): Promise<Overview> => {
   if (!isLive()) return mock.overview;
   return toOverview(await authed<Overview>("/v1/dashboard/overview"));
-}
+});
 
 type ApiRevenue = {
   series: { labels: [string, string, string]; current: number[]; previous: number[] };
@@ -58,19 +59,19 @@ type ApiRevenue = {
   top: { name: string; sold: number; revenue: number }[];
 };
 
-export async function getRevenue() {
+export const getRevenue = cache(async () => {
   if (!isLive()) return { series: mock.revenue, split: mock.revenueSplit, top: mock.topPackages };
   const get = (p: Period) => authed<ApiRevenue>(`/v1/dashboard/revenue?period=${p}`);
   const [day, week, month] = await Promise.all([get("day"), get("week"), get("month")]);
   const series: Record<Period, RevenueSeries> = { day: toSeries(day), week: toSeries(week), month: toSeries(month) };
   return { series, split: toSplit(month.split), top: month.top };
-}
+});
 
-export async function getRouters() {
+export const getRouters = cache(async () => {
   if (!isLive()) return mock.routers;
   const r = await authed<{ routers: ApiRouter[] }>("/v1/routers");
   return r.routers.map((x) => toRouter(x));
-}
+});
 
 export async function getRouter(id: string): Promise<ApiRouter | null> {
   if (!isLive()) return null;
@@ -108,11 +109,11 @@ export async function getPlans(accessType?: "pppoe" | "hotspot"): Promise<Plan[]
   return r.plans.map(toPlan);
 }
 
-export async function getLocations(): Promise<Location[]> {
+export const getLocations = cache(async (): Promise<Location[]> => {
   if (!isLive()) return [{ id: "loc1", name: mock.onboarding.location }];
   const r = await authed<{ locations: { id: string; name: string }[] }>("/v1/locations");
   return r.locations.map(toLocation);
-}
+});
 
 export type Voucher = { id: string; code: string; batch: string | null; plan: string; redeemed: boolean; createdAt: string };
 

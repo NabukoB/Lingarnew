@@ -3,6 +3,7 @@
 import { Check, Clock, Smartphone, Zap } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { m, Stagger, StaggerItem } from "@/components/motion";
 import { formatCountdown } from "@/lib/format";
 import { CopyButton } from "../CopyButton";
 import { primaryButtonClass } from "./PrimaryButton";
@@ -45,56 +46,73 @@ export function OnlineStatus({
   return (
     <>
       <header className="flex h-16 items-center justify-center gap-2">
-        <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] text-[15px] font-extrabold text-white" style={{ background: "var(--accent)" }}>
+        <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] text-[15px] font-extrabold text-white" style={{ background: "var(--brand)" }}>
           {tenantName[0]}
         </span>
         <span className="text-base font-extrabold">{tenantName}</span>
       </header>
 
       <main className="flex flex-grow flex-col items-center gap-5 px-5 pb-6 pt-3">
-        <span className="flex items-center gap-2 rounded-full bg-green-100 px-3.5 py-2 text-sm font-extrabold text-green-700">
+        <m.span
+          initial={{ scale: 0.6, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 420, damping: 18 }}
+          className="flex items-center gap-2 rounded-full bg-green-100 px-3.5 py-2 text-sm font-extrabold text-green-700"
+        >
           <Check aria-hidden size={16} strokeWidth={3} />
           You&apos;re online
-        </span>
+        </m.span>
 
         <div className="relative h-[250px] w-[250px]">
           <svg viewBox="0 0 250 250" role="img" aria-label={`${formatCountdown(left)} left`} className="h-full w-full -rotate-90">
             <circle cx="125" cy="125" r={R} fill="none" stroke="#e2e8f0" strokeWidth={16} />
-            <circle cx="125" cy="125" r={R} fill="none" stroke="var(--accent)" strokeWidth={16} strokeLinecap="round" strokeDasharray={C} strokeDashoffset={offset} />
+            <m.circle
+              cx="125"
+              cy="125"
+              r={R}
+              fill="none"
+              stroke="var(--brand)"
+              strokeWidth={16}
+              strokeLinecap="round"
+              strokeDasharray={C}
+              initial={{ strokeDashoffset: C }}
+              animate={{ strokeDashoffset: offset }}
+              transition={{ duration: 1, ease: "easeOut" }}
+            />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
             <span className="tabular text-[46px] font-extrabold tracking-tighter">{formatCountdown(left)}</span>
-            <span className="text-[13px] font-bold uppercase tracking-widest text-slate-500">left</span>
+            <span className="text-[13px] font-bold uppercase tracking-widest text-muted-foreground">left</span>
           </div>
         </div>
 
-        <div className="grid w-full grid-cols-3 gap-2.5">
+        <Stagger className="grid w-full grid-cols-3 gap-2.5">
           {[
             { icon: Clock, value: endsAt || "—", label: "Ends" },
             { icon: Smartphone, value: `${devicesUsed} / ${maxDevices}`, label: "Devices" },
             { icon: Zap, value: `${mbps} Mbps`, label: "Speed" },
           ].map(({ icon: Icon, value, label }) => (
-            <div key={label} className="flex flex-col items-center gap-1.5 rounded-2xl bg-white p-3 shadow-card">
-              <Icon aria-hidden size={18} strokeWidth={2.2} style={{ color: "var(--accent)" }} />
+            <StaggerItem key={label} className="flex flex-col items-center gap-1.5 rounded-2xl bg-card p-3 shadow-card">
+              <Icon aria-hidden size={18} strokeWidth={2.2} style={{ color: "var(--brand)" }} />
               <span className="text-[15px] font-extrabold">{value}</span>
-              <span className="text-[11px] font-semibold text-slate-500">{label}</span>
-            </div>
+              <span className="text-[11px] font-semibold text-muted-foreground">{label}</span>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
 
         {receipt && (
           <div className="flex w-full items-center gap-2.5 rounded-2xl bg-white py-2 pl-4 pr-2 shadow-card">
-            <span className="text-xs font-bold text-slate-500">M-Pesa code</span>
+            <span className="text-xs font-bold text-muted-foreground">M-Pesa code</span>
             <span className="tabular ml-auto text-base font-extrabold tracking-wider">{receipt}</span>
-            <CopyButton text={receipt} label="Copy M-Pesa code" className="h-10 w-10 rounded-xl bg-blue-50 text-[var(--accent)]" />
+            <CopyButton text={receipt} label="Copy M-Pesa code" className="h-10 w-10 rounded-xl bg-accent text-[var(--brand)]" />
           </div>
         )}
 
         <div className="mt-auto flex w-full flex-col items-center gap-3">
-          <a href="http://neverssl.com" className={primaryButtonClass} style={{ background: "var(--accent)" }}>
+          <a href="http://neverssl.com" className={primaryButtonClass} style={{ background: "var(--brand)" }}>
             Start browsing
           </a>
-          <Link href="/portal/reconnect" className="text-sm font-bold" style={{ color: "var(--accent)" }}>
+          <Link href="/portal/reconnect" className="text-sm font-bold" style={{ color: "var(--brand)" }}>
             + Add a device
           </Link>
         </div>

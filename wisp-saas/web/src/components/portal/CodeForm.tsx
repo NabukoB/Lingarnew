@@ -2,6 +2,7 @@
 
 import { AlertCircle, type LucideIcon } from "lucide-react";
 import { useRef, useState } from "react";
+import { m } from "@/components/motion";
 import { PrimaryButton } from "./PrimaryButton";
 
 /**
@@ -54,11 +55,11 @@ export function CodeForm({
   return (
     <form onSubmit={submit} className="flex flex-grow flex-col gap-5">
       <div className="mt-3 flex flex-col items-center gap-2">
-        <span className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-blue-50" style={{ color: "var(--accent)" }}>
+        <span className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-accent text-brand">
           <Icon aria-hidden size={30} strokeWidth={2} />
         </span>
         <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
-        <span className="text-[13px] font-semibold text-slate-500">{hint}</span>
+        <span className="text-[13px] font-semibold text-muted-foreground">{hint}</span>
       </div>
 
       <label className="relative block" onClick={() => inputRef.current?.focus()}>
@@ -77,29 +78,39 @@ export function CodeForm({
           aria-invalid={error ? true : undefined}
           className="peer absolute inset-0 h-full w-full opacity-0"
         />
-        <span aria-hidden className="grid gap-[5px]" style={{ gridTemplateColumns: `repeat(${length}, minmax(0, 1fr))` }}>
+        <m.span
+          aria-hidden
+          className="grid gap-[5px]"
+          style={{ gridTemplateColumns: `repeat(${length}, minmax(0, 1fr))` }}
+          animate={error ? { x: [0, 8, -6, 4, 0] } : { x: 0 }}
+          transition={{ duration: 0.35 }}
+        >
           {chars.map((ch, i) => (
             <span
               key={i}
-              className={`flex h-[50px] items-center justify-center rounded-xl bg-white text-[19px] font-extrabold shadow-soft ${
-                i === Math.min(code.length, length - 1) ? "peer-focus:ring-2" : ""
-              }`}
+              className={`flex h-[50px] items-center justify-center rounded-xl bg-card text-[19px] font-extrabold shadow-soft transition-shadow ${
+                i === Math.min(code.length, length - 1) ? "peer-focus:ring-2 peer-focus:ring-[var(--brand)]" : ""
+              } ${error ? "ring-1 ring-red-300" : ""}`}
             >
-              {ch}
+              {ch && (
+                <m.span key={ch + i} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 600, damping: 25 }}>
+                  {ch}
+                </m.span>
+              )}
             </span>
           ))}
-        </span>
+        </m.span>
       </label>
 
       {error && (
-        <div role="alert" className="flex items-center gap-2 self-center rounded-full bg-red-100 px-3 py-2 text-[13px] font-bold text-red-700">
+        <m.div role="alert" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 self-center rounded-full bg-red-100 px-3 py-2 text-[13px] font-bold text-red-700">
           <AlertCircle aria-hidden size={15} strokeWidth={2.4} />
           {error}
-        </div>
+        </m.div>
       )}
 
       <div className="mt-auto pb-6 pt-3">
-        <PrimaryButton type="submit" disabled={code.length !== length || busy}>
+        <PrimaryButton type="submit" disabled={code.length !== length} loading={busy}>
           <ButtonIcon aria-hidden size={18} strokeWidth={2.4} />
           {button}
         </PrimaryButton>

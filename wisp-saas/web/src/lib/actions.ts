@@ -247,3 +247,42 @@ export async function buySMSCredits(phone: string, credits: number): Promise<Act
   const r = await call<{ transaction_id: string; amount_kes: number }>("POST", "/v1/billing/sms-credits", { phone, credits });
   return r.ok ? { ok: true, data: { transactionId: r.data.transaction_id, amount: r.data.amount_kes } } : r;
 }
+
+// ── Search (⌘K) ──────────────────────────────────────
+
+export type SearchHit = { kind: "customer" | "router"; id: string; title: string; subtitle: string; href: string };
+
+export async function searchAll(q: string): Promise<SearchHit[]> {
+  const query = q.trim();
+  if (query.length < 2) return [];
+  if (!isLive()) {
+    const { subscribers, routers } = await import("./mock");
+    const t = query.toLowerCase();
+    return [
+      ...subscribers
+        .filter((s) => s.name.toLowerCase().includes(t) || s.id.toLowerCase().includes(t))
+        .slice(0, 6)
+        .map((s) => ({ kind: "customer" as const, id: s.id, title: s.name, subtitle: s.id, href: `/customers?c=${s.id}` })),
+      ...routers
+        .filter((r) => r.name.toLowerCase().includes(t))
+        .map((r) => ({ kind: "router" as const, id: r.id, title: r.name, subtitle: r.location, href: `/routers/${r.id}` })),
+    ];
+  }
+  const [subs, routers] = await Promise.all([
+    call<{ subscribers: { id: string; account_id: string; full_name: string; phone_pretty: string }[] }>("GET", `/v1/subscribers?q=${encodeURIComponent(query)}&limit=6`),
+    call<{ routers: { id: string; name: string; location_name?: string }[] }>("GET", "/v1/routers"),
+  ]);
+  const hits: SearchHit[] = [];
+  if (subs.ok) {
+    for (const s of subs.data.subscribers) {
+      hits.push({ kind: "customer", id: s.id, title: s.full_name, subtitle: `${s.account_id} · ${s.phone_pretty}`, href: `/customers?c=${s.account_id}` });
+    }
+  }
+  if (routers.ok) {
+    const t = query.toLowerCase();
+    for (const r of routers.data.routers.filter((r) => r.name.toLowerCase().includes(t)).slice(0, 5)) {
+      hits.push({ kind: "router", id: r.id, title: r.name, subtitle: r.location_name ?? "", href: `/routers/${r.id}` });
+    }
+  }
+  return hits;
+}
