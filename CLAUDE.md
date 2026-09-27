@@ -130,7 +130,7 @@ wisp-saas/
 │
 ├── db/
 │   ├── migrations/                  # golang-migrate, one sequence for the whole schema
-│   └── queries/                     # sqlc input; generated code in internal/*/sqlc
+│   └── queries/                     # sqlc input; generated code in internal/store
 │
 ├── web/                             # ONE Next.js app
 │   └── app/(dashboard)/ , app/(portal)/   # dashboard + captive portal by hostname

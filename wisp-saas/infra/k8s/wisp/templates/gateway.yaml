@@ -1,0 +1,62 @@
+# wg-gateway owns wg0 on the gateway node. api and radius run with
+# hostNetwork on the same node so they reach routers at 10.200.x.x and
+# routers reach RADIUS at 10.200.0.1.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wg-gateway
+  labels: {{- include "wisp.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: wg-gateway } }
+  template:
+    metadata: { labels: { app: wg-gateway } }
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector: {{- toYaml .Values.gatewayNodeSelector | nindent 8 }}
+      containers:
+        - name: wg-gateway
+          image: {{ include "wisp.image" (dict "root" . "name" "wisp-wg-gateway") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom: [{ secretRef: { name: {{ .Values.envSecret }} } }]
+          env: [{ name: HEALTH_ADDR, value: "127.0.0.1:8082" }]
+          securityContext:
+            capabilities: { add: ["NET_ADMIN"] }
+          volumeMounts: [{ name: tun, mountPath: /dev/net/tun }]
+          livenessProbe:
+            httpGet: { host: 127.0.0.1, path: /healthz, port: 8082 }
+            periodSeconds: 30
+      volumes:
+        - name: tun
+          hostPath: { path: /dev/net/tun, type: CharDevice }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: radius
+  labels: {{- include "wisp.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: radius } }
+  template:
+    metadata: { labels: { app: radius } }
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector: {{- toYaml .Values.gatewayNodeSelector | nindent 8 }}
+      containers:
+        - name: radius
+          image: {{ include "wisp.image" (dict "root" . "name" "wisp-radius") }}
+          envFrom: [{ secretRef: { name: {{ .Values.envSecret }} } }]
+          env:
+            - { name: APP_ENV, value: production }
+            - { name: RADIUS_HTTP_ADDR, value: {{ .Values.radius.httpAddr | quote }} }
+          readinessProbe:
+            httpGet: { host: 127.0.0.1, path: /healthz, port: 8081 }
+        - name: freeradius
+          image: {{ include "wisp.image" (dict "root" . "name" "wisp-freeradius") }}
+          envFrom: [{ secretRef: { name: {{ .Values.envSecret }} } }]
+          env: [{ name: RADIUS_BACKEND_URL, value: "http://{{ .Values.radius.httpAddr }}" }]

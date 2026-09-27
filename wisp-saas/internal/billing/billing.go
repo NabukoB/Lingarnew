@@ -217,13 +217,22 @@ func (s *Service) payPlatform(ctx context.Context, tenantID uuid.UUID, phoneNumb
 // ─── Callbacks ─────────────────────────────────────────
 
 // ClientIP returns the caller's IP, honouring proxy headers only when configured.
+// ClientIP is the address of the caller. Behind our reverse proxy it is the
+// last X-Forwarded-For entry (the one the proxy appended; earlier entries are
+// whatever the client sent and can't be trusted). CF-Connecting-IP is used
+// only when the origin accepts traffic from Cloudflare alone.
 func (s *Service) ClientIP(r *http.Request) string {
-	if s.Cfg.TrustProxyHeaders {
-		if v := r.Header.Get("CF-Connecting-IP"); v != "" {
-			return strings.TrimSpace(v)
+	if s.Cfg.TrustCloudflare {
+		if v := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); v != "" {
+			return v
 		}
-		if v := r.Header.Get("X-Forwarded-For"); v != "" {
-			return strings.TrimSpace(strings.Split(v, ",")[0])
+	}
+	if s.Cfg.TrustProxyHeaders {
+		if v := r.Header.Values("X-Forwarded-For"); len(v) > 0 {
+			parts := strings.Split(strings.Join(v, ","), ",")
+			if ip := strings.TrimSpace(parts[len(parts)-1]); ip != "" {
+				return ip
+			}
 		}
 	}
 	host := r.RemoteAddr

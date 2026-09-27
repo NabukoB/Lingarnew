@@ -1,0 +1,110 @@
+name: wisp-saas
+
+on:
+  push:
+    paths: ["wisp-saas/**", ".github/workflows/wisp-saas.yml"]
+  pull_request:
+    paths: ["wisp-saas/**", ".github/workflows/wisp-saas.yml"]
+
+defaults:
+  run:
+    working-directory: wisp-saas
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wisp-saas/go.mod
+          cache-dependency-path: wisp-saas/go.sum
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+      - run: go vet ./...
+      - name: sqlc generated code is committed
+        run: |
+          go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.27.0
+          sqlc generate
+          git diff --exit-code -- internal/store
+      - name: unit + integration tests (testcontainers)
+        run: go test -count=1 ./...
+      - name: RADIUS end to end (FreeRADIUS + radclient)
+        run: |
+          docker build -f infra/docker/freeradius.Dockerfile -t wisp-freeradius .
+          go test -count=1 -tags e2e ./tests/e2e/
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wisp-saas/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: wisp-saas/web/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx next lint
+      - run: npx vitest run
+      - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [go, web]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wisp-saas/go.mod
+          cache-dependency-path: wisp-saas/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: wisp-saas/web/package-lock.json
+      - name: Postgres
+        run: |
+          docker run -d --name pg -e POSTGRES_USER=owner -e POSTGRES_PASSWORD=owner -e POSTGRES_DB=wisp \
+            -e APP_DB_PASSWORD=wisp_api -v "$PWD/infra/postgres/01-app-role.sh:/docker-entrypoint-initdb.d/01-app-role.sh:ro" \
+            -p 55432:5432 postgres:16-alpine
+          for i in $(seq 1 30); do docker exec pg pg_isready -U owner -d wisp && break; sleep 1; done
+          sleep 3
+      - name: API
+        run: |
+          go build -o /tmp/api ./cmd/api
+          export DATABASE_URL=postgres://wisp_api:wisp_api@localhost:55432/wisp?sslmode=disable
+          export MIGRATE_DATABASE_URL=postgres://owner:owner@localhost:55432/wisp?sslmode=disable
+          export LOCAL_KEK=$(openssl rand -base64 32) RADIUS_SECRET_SEED=ci
+          export WG_SERVER_PUBLIC_KEY=c2VydmVyLXB1YmxpYy1rZXktMzItYnl0ZXMtbG9uZyE=
+          nohup /tmp/api > /tmp/api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf localhost:8080/healthz && break; sleep 1; done
+      - name: Web
+        working-directory: wisp-saas/web
+        run: |
+          npm ci
+          npm run build
+          API_URL=http://localhost:8080 nohup npm start > /tmp/web.log 2>&1 &
+          npx playwright install --with-deps chromium
+          for i in $(seq 1 30); do curl -s -o /dev/null localhost:3010/login && break; sleep 1; done
+          npx playwright test
+      - if: failure()
+        run: tail -100 /tmp/api.log /tmp/web.log
+
+  images:
+    runs-on: ubuntu-latest
+    needs: [go, web]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build every image
+        run: |
+          for c in api radius; do docker build -f infra/docker/go.Dockerfile --build-arg CMD=$c -t wisp-$c .; done
+          docker build -f infra/docker/wg-gateway.Dockerfile -t wisp-wg-gateway .
+          docker build -f infra/docker/freeradius.Dockerfile -t wisp-freeradius .
+          docker build -f infra/docker/mock.Dockerfile -t wisp-mikrotik-mock .
+          docker build -f infra/docker/web.Dockerfile -t wisp-web .
+      - name: FreeRADIUS config parses
+        run: docker run --rm -e RADIUS_API_TOKEN=x wisp-freeradius freeradius -XC

@@ -1,0 +1,76 @@
+# Local development: Postgres, the Go API + worker, the web app and a fake
+# MikroTik. No real router, WireGuard or RADIUS needed.
+#   cp .env.example .env   (fill LOCAL_KEK: openssl rand -base64 32)
+#   docker compose up --build
+# Dashboard: http://localhost:3010   API: http://localhost:8080
+# Add the RADIUS pair with:  docker compose --profile radius up --build
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: owner
+      POSTGRES_PASSWORD: owner
+      POSTGRES_DB: wisp
+      APP_DB_PASSWORD: wisp_api
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/01-app-role.sh:/docker-entrypoint-initdb.d/01-app-role.sh:ro
+    ports: ["55432:5432"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "owner", "-d", "wisp"]
+      interval: 3s
+      retries: 20
+
+  api:
+    build: { context: ., dockerfile: infra/docker/go.Dockerfile, args: { CMD: api } }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://wisp_api:wisp_api@postgres:5432/wisp?sslmode=disable
+      MIGRATE_DATABASE_URL: postgres://owner:owner@postgres:5432/wisp?sslmode=disable
+      HTTP_ADDR: ":8080"
+    ports: ["8080:8080"]
+    depends_on: { postgres: { condition: service_healthy } }
+
+  worker:
+    build: { context: ., dockerfile: infra/docker/go.Dockerfile, args: { CMD: api } }
+    command: ["--role=worker"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://wisp_api:wisp_api@postgres:5432/wisp?sslmode=disable
+    depends_on: [api]
+
+  web:
+    build: { context: ., dockerfile: infra/docker/web.Dockerfile }
+    environment:
+      API_URL: http://api:8080
+    ports: ["3010:3010"]
+    depends_on: [api]
+
+  mikrotik-mock:
+    build: { context: ., dockerfile: infra/docker/mock.Dockerfile }
+    environment:
+      MOCK_USER: wisp-api
+      MOCK_PASSWORD: wisp-api
+    ports: ["8443:8443"]
+
+  radius:
+    profiles: ["radius"]
+    build: { context: ., dockerfile: infra/docker/go.Dockerfile, args: { CMD: radius } }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://wisp_api:wisp_api@postgres:5432/wisp?sslmode=disable
+      RADIUS_HTTP_ADDR: 127.0.0.1:8081
+    ports: ["1812:1812/udp", "1813:1813/udp"]
+    depends_on: [api]
+
+  freeradius:
+    profiles: ["radius"]
+    build: { context: ., dockerfile: infra/docker/freeradius.Dockerfile }
+    network_mode: service:radius
+    env_file: .env
+    environment:
+      RADIUS_BACKEND_URL: http://127.0.0.1:8081
+    depends_on: [radius]
+
+volumes:
+  pgdata:

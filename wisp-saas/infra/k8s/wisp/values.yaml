@@ -1,0 +1,34 @@
+# Images are built from infra/docker/*.Dockerfile and pushed to your registry.
+image:
+  registry: ghcr.io/nabukob
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# One k3s node to start. The gateway node runs wg-gateway, radius and the api
+# with hostNetwork so they share the node's wg0 route to 10.200.0.0/16
+# (CLAUDE.md 3.1). Label it: kubectl label node <node> wisp/gateway=true
+gatewayNodeSelector:
+  wisp/gateway: "true"
+
+# Secret with every variable in .env.example (never commit it):
+#   kubectl create secret generic wisp-env --from-env-file=.env
+envSecret: wisp-env
+
+api:
+  replicas: 1          # hostNetwork: one per gateway node
+  port: 8080
+worker:
+  replicas: 1
+web:
+  replicas: 2
+  port: 3010
+radius:
+  httpAddr: 127.0.0.1:8081
+
+ingress:
+  enabled: true
+  className: traefik   # k3s default
+  apiHost: api.example.com
+  appHost: app.example.com
+  portalHost: portal.example.com
+  tlsSecret: wisp-tls

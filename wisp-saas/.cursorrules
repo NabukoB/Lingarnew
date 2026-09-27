@@ -1,0 +1,14 @@
+# Mirror of CLAUDE.md §2 — non-negotiable constraints.
+- MikroTik RouterOS v7 REST API only (/rest/...). Never the binary API (8728). CLI only in the copy-paste onboarding script.
+- All router <-> cloud traffic over the WireGuard reverse tunnel. Never open inbound ports on routers.
+- FreeRADIUS is a dumb proxy to the Go backend via rlm_rest. No custom RADIUS modules.
+- Access methods: PPPoE (homes) and Hotspot (public zones).
+- Payments: M-Pesa Daraja only (no Stripe). WISPs use their own Till/Paybill; money settles to them.
+  mpesa_mode platform (default, needs Safaricom approval before production) or own.
+  PPPoE AccountReference = the system-generated account ID (e.g. JZM1042). Hotspot links by CheckoutRequestID + receipt.
+- Postgres RLS on every tenant table; queries run inside db.WithTenant; never leak cross-tenant data.
+- Go 1.22+, chi, sqlc (no ORM). Next.js 14 App Router + TypeScript + Tailwind.
+- Unit test every public function; testcontainers integration tests for DB writes; MikroTik calls tested against mocks/mikrotik-mock.
+- Errors are actionable (code, message, hint). No "something went wrong".
+- No custom crypto (stdlib + golang.org/x/crypto). Webhooks: IP allowlist + per-tenant URL token.
+- Secrets: AWS Secrets Manager / .env (gitignored). Per-tenant M-Pesa creds and PPPoE passwords envelope-encrypted (KMS).

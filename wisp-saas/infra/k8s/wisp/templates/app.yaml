@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  labels: {{- include "wisp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.api.replicas }}
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: api } }
+  template:
+    metadata: { labels: { app: api } }
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector: {{- toYaml .Values.gatewayNodeSelector | nindent 8 }}
+      containers:
+        - name: api
+          image: {{ include "wisp.image" (dict "root" . "name" "wisp-api") }}
+          args: ["--role=api"]
+          envFrom: [{ secretRef: { name: {{ .Values.envSecret }} } }]
+          env:
+            - { name: APP_ENV, value: production }
+            - { name: HTTP_ADDR, value: ":{{ .Values.api.port }}" }
+            - { name: TRUST_PROXY_HEADERS, value: "true" }
+          ports: [{ containerPort: {{ .Values.api.port }} }]
+          readinessProbe:
+            httpGet: { path: /healthz, port: {{ .Values.api.port }} }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: api }
+spec:
+  selector: { app: api }
+  ports: [{ port: 80, targetPort: {{ .Values.api.port }} }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  labels: {{- include "wisp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: worker } }
+  template:
+    metadata: { labels: { app: worker } }
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector: {{- toYaml .Values.gatewayNodeSelector | nindent 8 }}
+      containers:
+        - name: worker
+          image: {{ include "wisp.image" (dict "root" . "name" "wisp-api") }}
+          args: ["--role=worker"]
+          envFrom: [{ secretRef: { name: {{ .Values.envSecret }} } }]
+          env: [{ name: APP_ENV, value: production }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels: {{- include "wisp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector: { matchLabels: { app: web } }
+  template:
+    metadata: { labels: { app: web } }
+    spec:
+      containers:
+        - name: web
+          image: {{ include "wisp.image" (dict "root" . "name" "wisp-web") }}
+          env:
+            - { name: API_URL, value: "http://api" }
+            - { name: DASHBOARD_HOSTS, value: {{ .Values.ingress.appHost | quote }} }
+          ports: [{ containerPort: {{ .Values.web.port }} }]
+          readinessProbe:
+            httpGet: { path: /login, port: {{ .Values.web.port }} }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: web }
+spec:
+  selector: { app: web }
+  ports: [{ port: 80, targetPort: {{ .Values.web.port }} }]
+{{- if .Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wisp
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts: [{{ .Values.ingress.apiHost }}, {{ .Values.ingress.appHost }}, {{ .Values.ingress.portalHost }}]
+      secretName: {{ .Values.ingress.tlsSecret }}
+  rules:
+    - host: {{ .Values.ingress.apiHost }}
+      http:
+        paths:
+          - { path: /, pathType: Prefix, backend: { service: { name: api, port: { number: 80 } } } }
+    - host: {{ .Values.ingress.appHost }}
+      http:
+        paths:
+          - { path: /, pathType: Prefix, backend: { service: { name: web, port: { number: 80 } } } }
+    - host: {{ .Values.ingress.portalHost }}
+      http:
+        paths:
+          - { path: /, pathType: Prefix, backend: { service: { name: web, port: { number: 80 } } } }
+{{- end }}

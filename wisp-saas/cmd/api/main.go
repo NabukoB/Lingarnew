@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 
 	"github.com/nabukob/lingarnew/wisp-saas/internal/auth"
 	"github.com/nabukob/lingarnew/wisp-saas/internal/billing"
@@ -38,6 +39,7 @@ import (
 	"github.com/nabukob/lingarnew/wisp-saas/internal/secrets"
 	"github.com/nabukob/lingarnew/wisp-saas/internal/session"
 	"github.com/nabukob/lingarnew/wisp-saas/internal/sms"
+	"github.com/nabukob/lingarnew/wisp-saas/internal/store"
 	"github.com/nabukob/lingarnew/wisp-saas/internal/tenant"
 	"github.com/nabukob/lingarnew/wisp-saas/internal/worker"
 )
@@ -185,6 +187,27 @@ func Handler(app *App) http.Handler {
 			return
 		}
 		httpx.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	})
+
+	// Caddy asks before issuing a certificate for a WISP's own portal domain.
+	// Only reachable from localhost (Caddy shares the network namespace).
+	r.Get("/internal/tls-ask", func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.RemoteAddr, "127.0.0.1:") && !strings.HasPrefix(r.RemoteAddr, "[::1]:") {
+			http.NotFound(w, r)
+			return
+		}
+		domain := strings.ToLower(r.URL.Query().Get("domain"))
+		var id uuid.UUID
+		err := app.DB.WithoutTenant(r.Context(), func(q *store.Queries) error {
+			var err error
+			id, err = q.TenantByPortalDomain(r.Context(), domain)
+			return err
+		})
+		if err != nil || id == uuid.Nil {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	})
 
 	authLimit := ratelimit.New(20, 10)

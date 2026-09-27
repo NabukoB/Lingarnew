@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wisp
+description: WISP billing SaaS — api, worker, radius (FreeRADIUS + rlm_rest backend), wg-gateway, web
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

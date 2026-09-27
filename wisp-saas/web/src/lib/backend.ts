@@ -1,6 +1,7 @@
 // Server-side client for the Go API (cmd/api). Only imported by server
 // components, server actions and route handlers.
 import "server-only";
+import { headers as requestHeaders } from "next/headers";
 
 export const API_URL = (process.env.API_URL ?? "").replace(/\/$/, "");
 
@@ -29,6 +30,13 @@ export async function apiFetch<T>(path: string, opts: Options = {}): Promise<T> 
   const headers: Record<string, string> = { Accept: "application/json", ...opts.headers };
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
   if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
+  // Pass the visitor's address on, so the API rate-limits people, not this server.
+  try {
+    const xff = requestHeaders().get("x-forwarded-for");
+    if (xff) headers["X-Forwarded-For"] = xff;
+  } catch {
+    /* outside a request (build time) */
+  }
   let res: Response;
   try {
     res = await fetch(API_URL + path, {
