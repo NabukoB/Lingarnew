@@ -19,9 +19,12 @@ any static host.
 
 ## What's in it
 
-- Mascot rendered as pure white SVG line-art on the true-black canvas,
-  with four swappable expressions (neutral, freeze, blank, speaking) and
-  optional sweat drops for the freeze beat
+- Character is the locked mascot reference from the production package
+  (`mascot.png`, cream background removed so it composites cleanly on the
+  true-black stage). Expression states are handled as overlays on top of
+  the same drawing — sweat drops, subtle tremble, shock lines, a floating
+  question mark — instead of redrawing the face mid-cut (Line System
+  forbids that).
 - The three named moves (Reset · Detail · Echo) each get: a title-stamp
   beat, a wrong-move beat (buzzer + red X), a right-move beat (pop + chime
   + green ✓), and a quote card (bed ducks · 300 ms hush both sides)
