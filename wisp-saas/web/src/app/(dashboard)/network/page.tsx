@@ -6,6 +6,7 @@ import { RouterStatusDot, RouterStatusPill } from "@/components/ui";
 import { getRouters } from "@/lib/api";
 
 export const metadata = { title: "Network · Mtandao" };
+export const dynamic = "force-dynamic";
 
 export default async function NetworkPage() {
   const routers = await getRouters();
@@ -36,18 +37,26 @@ export default async function NetworkPage() {
         </div>
 
         <section aria-label="Routers" className="rounded-card bg-white px-5 py-1 shadow-card">
+          {routers.length === 0 && (
+            <Link href="/routers/new" className="flex flex-col items-center gap-1 py-12 text-center">
+              <span className="text-sm font-bold">No routers yet</span>
+              <span className="text-[13px] font-bold text-blue-600">Add router</span>
+            </Link>
+          )}
           <ul>
             {routers.map((r, i) => (
-              <li key={r.id} className={`flex items-center gap-3 py-3.5 ${i ? "border-t border-line" : ""}`}>
+              <li key={r.id} className={i ? "border-t border-line" : ""}>
+                <Link href={`/routers/${r.id}`} className="flex items-center gap-3 py-3.5">
                 <RouterStatusDot status={r.status} />
                 <div className="flex min-w-0 flex-grow flex-col">
                   <span className="truncate text-sm font-bold">{r.name}</span>
                   <span className="text-xs font-semibold text-slate-500">
-                    {r.status === "offline" ? `Offline ${r.offlineMinutes}m` : r.location}
+                    {r.status === "offline" && r.offlineMinutes ? `Offline ${r.offlineMinutes}m` : r.location}
                   </span>
                 </div>
                 <span className="tabular text-xs font-semibold text-slate-500">{r.users ?? "—"}</span>
                 <RouterStatusPill status={r.status} />
+                </Link>
               </li>
             ))}
           </ul>

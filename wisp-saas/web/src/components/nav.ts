@@ -20,14 +20,14 @@ export type NavItem = {
 
 export const sidebarNav: NavItem[] = [
   { label: "Home", href: "/", icon: Home },
-  { label: "Customers", href: "/customers", icon: Users, badge: { text: "9", tone: "amber" } },
-  { label: "Hotspot", href: null, icon: Wifi },
-  { label: "Routers", href: "/network", icon: Router, badge: { text: "1", tone: "red" } },
-  { label: "Packages", href: null, icon: Package },
-  { label: "Money", href: "/money", icon: CreditCard, badge: { text: "1", tone: "amber" } },
-  { label: "Vouchers", href: null, icon: Ticket },
-  { label: "SMS", href: null, icon: MessageSquare },
-  { label: "Settings", href: null, icon: Settings },
+  { label: "Customers", href: "/customers", icon: Users },
+  { label: "Routers", href: "/network", icon: Router },
+  { label: "Packages", href: "/packages", icon: Package },
+  { label: "Hotspot", href: "/packages/hotspot", icon: Wifi },
+  { label: "Money", href: "/money", icon: CreditCard },
+  { label: "Vouchers", href: "/vouchers", icon: Ticket },
+  { label: "SMS", href: "/settings/sms", icon: MessageSquare },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 export const bottomNav: NavItem[] = [
@@ -37,7 +37,11 @@ export const bottomNav: NavItem[] = [
   { label: "Customers", href: "/customers", icon: Users },
 ];
 
+export type Badges = Partial<Record<string, { text: string; tone: "amber" | "red" }>>;
+
 export function isActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
+  if (href === "/packages" && pathname.startsWith("/packages/hotspot")) return false;
+  if (href === "/settings" && pathname.startsWith("/settings/sms")) return false;
   return pathname === href || pathname.startsWith(href + "/");
 }

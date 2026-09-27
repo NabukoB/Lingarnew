@@ -10,7 +10,7 @@ export function BottomTabs() {
   return (
     <nav
       aria-label="App sections"
-      className="fixed inset-x-4 bottom-4 z-20 grid h-[66px] grid-cols-4 rounded-3xl bg-white shadow-float lg:hidden"
+      className="print:hidden fixed inset-x-4 bottom-4 z-20 grid h-[66px] grid-cols-4 rounded-3xl bg-white shadow-float lg:hidden"
       style={{ marginBottom: "env(safe-area-inset-bottom, 0px)" }}
     >
       {bottomNav.map(({ label, href, icon: Icon }) => {

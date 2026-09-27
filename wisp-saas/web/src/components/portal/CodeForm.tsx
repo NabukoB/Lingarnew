@@ -1,7 +1,6 @@
 "use client";
 
 import { AlertCircle, type LucideIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { PrimaryButton } from "./PrimaryButton";
 
@@ -17,7 +16,7 @@ export function CodeForm({
   button,
   buttonIcon: ButtonIcon,
   validate,
-  successHref,
+  submitCode,
 }: {
   length: number;
   title: string;
@@ -26,22 +25,30 @@ export function CodeForm({
   button: string;
   buttonIcon: LucideIcon;
   validate: (code: string) => string | null;
-  successHref: string;
+  /** Sends the code; returns an error line or the URL to go to next. */
+  submitCode: (code: string) => Promise<{ ok: true; data: { next: string } } | { ok: false; error: string }>;
 }) {
-  const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const chars = Array.from({ length }, (_, i) => code[i] ?? "");
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     const problem = validate(code);
     if (problem) {
       setError(problem);
       return;
     }
-    router.push(successHref);
+    setBusy(true);
+    const r = await submitCode(code);
+    if (r.ok) {
+      window.location.href = r.data.next;
+      return;
+    }
+    setError(r.error);
+    setBusy(false);
   }
 
   return (
@@ -92,7 +99,7 @@ export function CodeForm({
       )}
 
       <div className="mt-auto pb-6 pt-3">
-        <PrimaryButton type="submit" disabled={code.length !== length}>
+        <PrimaryButton type="submit" disabled={code.length !== length || busy}>
           <ButtonIcon aria-hidden size={18} strokeWidth={2.4} />
           {button}
         </PrimaryButton>

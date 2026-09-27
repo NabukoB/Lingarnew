@@ -1,17 +1,21 @@
 import { BuyForm } from "@/components/portal/BuyForm";
 import { PortalHero, PortalSheet } from "@/components/portal/PortalHero";
 import { PortalTabs } from "@/components/portal/PortalTabs";
-import { getHotspotPackages, getTenant } from "@/lib/api";
+import { getPortalContext, getPortalPackages, getPortalShortcodeLabel, getPortalTenant } from "@/lib/portal";
 
 export default async function PortalBuyPage() {
-  const [tenant, packages] = await Promise.all([getTenant(), getHotspotPackages()]);
-  const shortcodeLabel = `M-Pesa · ${tenant.shortcodeType === "till" ? "Till" : "Paybill"} ${tenant.shortcode}`;
+  const [tenant, packages, shortcodeLabel] = await Promise.all([getPortalTenant(), getPortalPackages(), getPortalShortcodeLabel()]);
+  const routerError = getPortalContext().error;
   return (
     <>
       <PortalHero tenant={tenant} />
       <PortalSheet>
         <PortalTabs />
-        <BuyForm packages={packages} shortcodeLabel={shortcodeLabel} />
+        {packages.length === 0 ? (
+          <p className="py-16 text-center text-sm font-semibold text-slate-500">No packages yet</p>
+        ) : (
+          <BuyForm packages={packages} shortcodeLabel={shortcodeLabel} notice={routerError || null} />
+        )}
       </PortalSheet>
     </>
   );

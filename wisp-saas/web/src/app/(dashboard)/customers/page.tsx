@@ -1,9 +1,10 @@
 import { CustomersView } from "@/components/customers/CustomersView";
-import { getSubscribers, getTenant } from "@/lib/api";
+import { getPlans, getSubscribers, getTenant } from "@/lib/api";
 
 export const metadata = { title: "Customers · Mtandao" };
+export const dynamic = "force-dynamic";
 
 export default async function CustomersPage() {
-  const [subscribers, tenant] = await Promise.all([getSubscribers(), getTenant()]);
-  return <CustomersView subscribers={subscribers} paybill={tenant.shortcode} />;
+  const [subscribers, tenant, plans] = await Promise.all([getSubscribers(), getTenant(), getPlans("pppoe")]);
+  return <CustomersView subscribers={subscribers} paybill={tenant.shortcode} shortcodeType={tenant.shortcodeType} plans={plans} />;
 }

@@ -1,6 +1,7 @@
 import { AlertCircle, Home, Wifi } from "lucide-react";
 import clsx from "clsx";
 import type { Payment } from "@/lib/types";
+import { MatchPayment } from "./MatchPayment";
 import { IconBox } from "./ui";
 
 const kinds = {
@@ -18,6 +19,7 @@ export function PaymentsList({ payments, columns = 2 }: { payments: Payment[]; c
         columns === 2 && "lg:grid lg:grid-cols-2 lg:gap-x-8",
       )}
     >
+      {payments.length === 0 && <p className="py-8 text-center text-sm font-semibold text-slate-500">No payments yet</p>}
       {payments.map((p, i) => {
         const k = kinds[p.kind];
         return (
@@ -33,9 +35,11 @@ export function PaymentsList({ payments, columns = 2 }: { payments: Payment[]; c
             <div className="flex min-w-0 flex-grow flex-col">
               <span className="truncate text-sm font-bold">{p.who}</span>
               <span className="text-xs font-semibold text-slate-500">
-                {p.time} · {p.detail}
+                {p.time}
+                {p.kind === "unmatched" ? "" : ` · ${p.detail}`}
               </span>
             </div>
+            {p.kind === "unmatched" && p.reference !== undefined && <MatchPayment id={p.id} />}
             <span className={clsx("tabular text-sm font-extrabold", p.kind === "unmatched" ? "text-amber-700" : "text-green-700")}>
               {p.kind === "unmatched" ? "" : "+"}
               {p.amount.toLocaleString("en-KE")}

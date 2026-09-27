@@ -2,6 +2,7 @@
 
 import { MessageSquareText, RefreshCw } from "lucide-react";
 import { isMpesaReceipt } from "@/lib/format";
+import { reconnect } from "@/lib/portal-actions";
 import { CodeForm } from "./CodeForm";
 
 export function ReconnectForm() {
@@ -14,7 +15,7 @@ export function ReconnectForm() {
       button="Reconnect"
       buttonIcon={RefreshCw}
       validate={(c) => (isMpesaReceipt(c) ? null : "Check the code and try again")}
-      successHref="/portal/online"
+      submitCode={reconnect}
     />
   );
 }

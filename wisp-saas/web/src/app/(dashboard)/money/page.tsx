@@ -5,6 +5,7 @@ import { getPayments, getRevenue } from "@/lib/api";
 import { formatKshShort } from "@/lib/format";
 
 export const metadata = { title: "Money · Mtandao" };
+export const dynamic = "force-dynamic";
 
 export default async function MoneyPage() {
   const [revenue, payments] = await Promise.all([getRevenue(), getPayments()]);

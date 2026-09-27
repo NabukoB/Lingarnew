@@ -17,16 +17,19 @@ export function OnlineStatus({
   receipt,
   devicesUsed,
   maxDevices,
+  secondsLeft,
 }: {
   tenantName: string;
   totalMinutes: number;
   mbps: number;
-  receipt: string;
+  receipt: string | null;
   devicesUsed: number;
   maxDevices: number;
+  /** Time left from the server; the example view starts 90s in. */
+  secondsLeft?: number;
 }) {
-  const total = totalMinutes * 60;
-  const [left, setLeft] = useState(total - 90);
+  const total = Math.max(totalMinutes * 60, secondsLeft ?? 0, 1);
+  const [left, setLeft] = useState(secondsLeft ?? total - 90);
   const [endsAt, setEndsAt] = useState<string>("");
 
   useEffect(() => {
@@ -79,14 +82,16 @@ export function OnlineStatus({
           ))}
         </div>
 
-        <div className="flex w-full items-center gap-2.5 rounded-2xl bg-white py-2 pl-4 pr-2 shadow-card">
-          <span className="text-xs font-bold text-slate-500">M-Pesa code</span>
-          <span className="tabular ml-auto text-base font-extrabold tracking-wider">{receipt}</span>
-          <CopyButton text={receipt} label="Copy M-Pesa code" className="h-10 w-10 rounded-xl bg-blue-50 text-[var(--accent)]" />
-        </div>
+        {receipt && (
+          <div className="flex w-full items-center gap-2.5 rounded-2xl bg-white py-2 pl-4 pr-2 shadow-card">
+            <span className="text-xs font-bold text-slate-500">M-Pesa code</span>
+            <span className="tabular ml-auto text-base font-extrabold tracking-wider">{receipt}</span>
+            <CopyButton text={receipt} label="Copy M-Pesa code" className="h-10 w-10 rounded-xl bg-blue-50 text-[var(--accent)]" />
+          </div>
+        )}
 
         <div className="mt-auto flex w-full flex-col items-center gap-3">
-          <a href="https://www.google.com" className={primaryButtonClass} style={{ background: "var(--accent)" }}>
+          <a href="http://neverssl.com" className={primaryButtonClass} style={{ background: "var(--accent)" }}>
             Start browsing
           </a>
           <Link href="/portal/reconnect" className="text-sm font-bold" style={{ color: "var(--accent)" }}>

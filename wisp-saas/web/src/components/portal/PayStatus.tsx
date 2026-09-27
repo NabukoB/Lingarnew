@@ -1,10 +1,12 @@
 "use client";
 
 import clsx from "clsx";
-import { ArrowLeft, Check, Smartphone, Wifi } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, Smartphone, Wifi } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatCountdown, formatKsh } from "@/lib/format";
+import { buyPackage, purchaseStatus } from "@/lib/portal-actions";
 
 const RESEND_AFTER = 30;
 
@@ -15,28 +17,71 @@ function prettyPhone(msisdn: string) {
 
 export function PayStatus({
   tenantName,
+  purchaseId,
   packageId,
   packageLabel,
   price,
   msisdn,
 }: {
   tenantName: string;
+  purchaseId: string;
   packageId: string;
   packageLabel: string;
   price: number;
   msisdn: string;
 }) {
+  const router = useRouter();
   const [wait, setWait] = useState(RESEND_AFTER);
+  const [id, setId] = useState(purchaseId);
+  const [error, setError] = useState<string | null>(null);
+  const [paid, setPaid] = useState(false);
+
   useEffect(() => {
     if (wait <= 0) return;
     const t = setTimeout(() => setWait((w) => w - 1), 1000);
     return () => clearTimeout(t);
   }, [wait]);
 
+  // Poll the purchase until Safaricom's callback (or the STK query) settles it.
+  useEffect(() => {
+    if (error || paid) return;
+    let stop = false;
+    const tick = async () => {
+      const r = await purchaseStatus(id);
+      if (stop) return;
+      if (!r.ok) return;
+      if (r.data.state === "active") {
+        setPaid(true);
+        window.location.href = r.data.next ?? `/portal/online?p=${encodeURIComponent(id)}`;
+      } else if (r.data.state === "failed" || r.data.state === "expired") {
+        setError(r.data.message || "Payment didn't go through. Try again.");
+        setWait(0);
+      }
+    };
+    const t = setInterval(tick, 3000);
+    void tick();
+    return () => {
+      stop = true;
+      clearInterval(t);
+    };
+  }, [id, error, paid]);
+
+  async function resend() {
+    setError(null);
+    setWait(RESEND_AFTER);
+    const r = await buyPackage(packageId, msisdn);
+    if (r.ok) {
+      setId(r.data.purchaseId);
+      router.replace(`/portal/pay?p=${encodeURIComponent(r.data.purchaseId)}&pkg=${packageId}&phone=${msisdn}`);
+    } else {
+      setError(r.error);
+    }
+  }
+
   const steps = [
     { label: "Sent", state: "done" as const },
-    { label: "PIN", state: "current" as const },
-    { label: "Online", state: "todo" as const },
+    { label: "PIN", state: paid ? ("done" as const) : ("current" as const) },
+    { label: "Online", state: paid ? ("current" as const) : ("todo" as const) },
   ];
 
   return (
@@ -59,7 +104,7 @@ export function PayStatus({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-[28px] font-extrabold tracking-tight">Enter M-Pesa PIN</h1>
+          <h1 className="text-[28px] font-extrabold tracking-tight">{paid ? "Connecting…" : "Enter M-Pesa PIN"}</h1>
           <span className="text-[15px] font-semibold text-slate-500">{prettyPhone(msisdn)}</span>
         </div>
 
@@ -105,11 +150,18 @@ export function PayStatus({
           ))}
         </ol>
 
+        {error && (
+          <div role="alert" className="flex items-center gap-2 rounded-full bg-red-100 px-3 py-2 text-[13px] font-bold text-red-700">
+            <AlertCircle aria-hidden size={15} strokeWidth={2.4} />
+            {error}
+          </div>
+        )}
+
         <div className="mt-auto flex w-full flex-col items-center gap-3">
           <button
             type="button"
-            disabled={wait > 0}
-            onClick={() => setWait(RESEND_AFTER)}
+            disabled={wait > 0 || paid}
+            onClick={resend}
             className="h-14 w-full rounded-[18px] bg-white text-[15px] font-bold shadow-card disabled:text-slate-400"
             style={wait > 0 ? undefined : { color: "var(--accent)" }}
           >
@@ -118,7 +170,7 @@ export function PayStatus({
           <Link href="/portal/reconnect" className="text-sm font-bold" style={{ color: "var(--accent)" }}>
             Have an M-Pesa code?
           </Link>
-          {process.env.NODE_ENV !== "production" && (
+          {id.startsWith("demo-") && (
             <Link href={`/portal/online?pkg=${packageId}`} className="text-[11px] text-slate-400 underline">
               Dev: simulate payment
             </Link>

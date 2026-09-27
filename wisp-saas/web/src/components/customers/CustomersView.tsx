@@ -3,7 +3,9 @@
 import clsx from "clsx";
 import { Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { Subscriber, SubscriberStatus } from "@/lib/types";
+import type { Plan, Subscriber, SubscriberStatus } from "@/lib/types";
+import { AddCustomer } from "./AddCustomer";
+import { CustomerActions } from "./CustomerActions";
 import { formatKsh } from "@/lib/format";
 import { Avatar, SubscriberStatusPill } from "../ui";
 
@@ -12,7 +14,7 @@ type Filter = "all" | SubscriberStatus;
 const filters: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "active", label: "Active" },
-  { id: "grace", label: "In grace" },
+  { id: "expired", label: "Expired" },
   { id: "suspended", label: "Suspended" },
   { id: "cancelled", label: "Cancelled" },
 ];
@@ -24,13 +26,24 @@ const initials = (name: string) =>
     .join("")
     .slice(0, 2);
 
-export function CustomersView({ subscribers, paybill }: { subscribers: Subscriber[]; paybill: string }) {
+export function CustomersView({
+  subscribers,
+  paybill,
+  shortcodeType = "paybill",
+  plans = [],
+}: {
+  subscribers: Subscriber[];
+  paybill: string;
+  shortcodeType?: "till" | "paybill";
+  plans?: Plan[];
+}) {
+  const [adding, setAdding] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(subscribers[0]?.id ?? null);
 
   const counts = useMemo(() => {
-    const c: Record<Filter, number> = { all: subscribers.length, active: 0, grace: 0, suspended: 0, cancelled: 0 };
+    const c: Record<Filter, number> = { all: subscribers.length, active: 0, grace: 0, expired: 0, suspended: 0, cancelled: 0 };
     subscribers.forEach((s) => (c[s.status] += 1));
     return c;
   }, [subscribers]);
@@ -63,7 +76,11 @@ export function CustomersView({ subscribers, paybill }: { subscribers: Subscribe
               className="min-w-0 flex-grow bg-transparent text-sm outline-none placeholder:text-slate-400"
             />
           </label>
-          <button type="button" className="flex h-[46px] items-center gap-2 rounded-full bg-blue-600 px-5 text-[13px] font-bold text-white shadow-brand hover:bg-blue-700">
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="flex h-[46px] items-center gap-2 rounded-full bg-blue-600 px-5 text-[13px] font-bold text-white shadow-brand hover:bg-blue-700"
+          >
             <Plus aria-hidden size={15} strokeWidth={2.6} />
             Add
           </button>
@@ -144,29 +161,17 @@ export function CustomersView({ subscribers, paybill }: { subscribers: Subscribe
                 </div>
               ))}
             </dl>
-            <div className="flex items-center justify-between rounded-2xl bg-blue-50 px-3.5 py-3 text-sm">
-              <span className="font-bold text-blue-700">Paybill {paybill}</span>
-              <b>{selected.id}</b>
-            </div>
-            <div className="flex flex-col gap-2">
-              <button type="button" className="h-12 rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-brand hover:bg-blue-700">
-                Send STK push
-              </button>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" className="h-11 rounded-[14px] border border-slate-200 text-[13px] font-semibold text-slate-700">Change plan</button>
-                <button type="button" className="h-11 rounded-[14px] border border-slate-200 text-[13px] font-semibold text-slate-700">Show password</button>
+            {shortcodeType === "paybill" && paybill && (
+              <div className="flex items-center justify-between rounded-2xl bg-blue-50 px-3.5 py-3 text-sm">
+                <span className="font-bold text-blue-700">Paybill {paybill}</span>
+                <b>{selected.id}</b>
               </div>
-              <button
-                type="button"
-                disabled={selected.status === "suspended" || selected.status === "cancelled"}
-                className="h-11 rounded-[14px] border border-red-200 text-[13px] font-bold text-red-700 disabled:opacity-40"
-              >
-                Suspend
-              </button>
-            </div>
+            )}
+            <CustomerActions key={selected.id} subscriber={selected} plans={plans.filter((p) => p.accessType === "pppoe" && p.isActive)} />
           </aside>
         )}
       </div>
+      {adding && <AddCustomer plans={plans.filter((p) => p.accessType === "pppoe" && p.isActive)} onClose={() => setAdding(false)} />}
     </>
   );
 }

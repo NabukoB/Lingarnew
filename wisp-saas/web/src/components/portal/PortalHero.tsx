@@ -11,11 +11,14 @@ export function PortalHero({ tenant }: { tenant: Tenant }) {
         </span>
         <div className="flex flex-col gap-0.5">
           <span className="text-[21px] font-extrabold tracking-tight">{tenant.name}</span>
-          <span className="flex items-center gap-1.5 text-xs opacity-90">
-            <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-green-400" />
-            {tenant.location}
-          </span>
+          {tenant.location && (
+            <span className="flex items-center gap-1.5 text-xs opacity-90">
+              <span aria-hidden className="h-[7px] w-[7px] rounded-full bg-green-400" />
+              {tenant.location}
+            </span>
+          )}
         </div>
+        {tenant.supportPhone && (
         <a
           href={`tel:${tenant.supportPhone.replace(/\s/g, "")}`}
           aria-label={`Call support ${tenant.supportPhone}`}
@@ -23,6 +26,7 @@ export function PortalHero({ tenant }: { tenant: Tenant }) {
         >
           <Phone aria-hidden size={19} strokeWidth={2} />
         </a>
+        )}
       </div>
     </header>
   );

@@ -6,30 +6,41 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { HotspotPackage } from "@/lib/types";
 import { formatKsh, normalizeKenyanPhone } from "@/lib/format";
+import { buyPackage } from "@/lib/portal-actions";
 import { PrimaryButton } from "./PrimaryButton";
 
 export function BuyForm({
   packages,
   shortcodeLabel,
+  notice = null,
 }: {
   packages: HotspotPackage[];
   shortcodeLabel: string;
+  notice?: string | null;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState(packages[2]?.id ?? packages[0]?.id ?? "");
   const [phone, setPhone] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(notice);
+  const [busy, setBusy] = useState(false);
   const pkg = packages.find((p) => p.id === selected);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     const msisdn = normalizeKenyanPhone(phone);
     if (!msisdn) {
       setError("Enter a Safaricom number, e.g. 0712 345 678");
       return;
     }
-    if (!pkg) return;
-    router.push(`/portal/pay?pkg=${pkg.id}&phone=${msisdn}`);
+    if (!pkg || busy) return;
+    setBusy(true);
+    const r = await buyPackage(pkg.id, msisdn);
+    if (!r.ok) {
+      setError(r.error);
+      setBusy(false);
+      return;
+    }
+    router.push(`/portal/pay?p=${encodeURIComponent(r.data.purchaseId)}&pkg=${pkg.id}&phone=${msisdn}`);
   }
 
   return (
@@ -87,7 +98,7 @@ export function BuyForm({
       </div>
 
       <div className="mt-auto flex flex-col items-center gap-2 pb-6 pt-3">
-        <PrimaryButton type="submit" disabled={!pkg}>
+        <PrimaryButton type="submit" disabled={!pkg || busy}>
           Pay {pkg ? formatKsh(pkg.price) : ""}
           <ArrowRight aria-hidden size={18} strokeWidth={2.6} />
         </PrimaryButton>

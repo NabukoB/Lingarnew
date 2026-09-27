@@ -64,6 +64,7 @@ const routerStatus: Record<RouterStatus, { label: string; pill: string; dot: str
   online: { label: "Online", pill: "bg-green-100 text-green-700", dot: "bg-green-600" },
   slow: { label: "Slow", pill: "bg-amber-100 text-amber-800", dot: "bg-amber-500" },
   offline: { label: "Offline", pill: "bg-red-100 text-red-700", dot: "bg-red-500" },
+  pending: { label: "Setup", pill: "bg-slate-100 text-slate-600", dot: "bg-slate-400" },
 };
 
 export function RouterStatusDot({ status }: { status: RouterStatus }) {
@@ -78,6 +79,7 @@ export function RouterStatusPill({ status }: { status: RouterStatus }) {
 const subStatus: Record<SubscriberStatus, { label: string; pill: string }> = {
   active: { label: "Active", pill: "bg-green-100 text-green-700" },
   grace: { label: "In grace", pill: "bg-amber-100 text-amber-800" },
+  expired: { label: "Expired", pill: "bg-amber-100 text-amber-800" },
   suspended: { label: "Suspended", pill: "bg-red-100 text-red-700" },
   cancelled: { label: "Cancelled", pill: "bg-slate-100 text-slate-600" },
 };
