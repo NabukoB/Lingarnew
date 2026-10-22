@@ -167,3 +167,37 @@ func TestReminderTextTill(t *testing.T) {
 		t.Fatalf("got  %q\nwant %q", got, want)
 	}
 }
+
+func TestRouterAlertsSMS(t *testing.T) {
+	d := testutil.DB(t)
+	tn := fixtures.Tenant(t, d, testutil.Sealer(t), "Alerts WiFi")
+	ctx := context.Background()
+	_ = d.WithTenant(ctx, tn.ID, func(q *store.Queries) error {
+		_, err := q.AddSMSCredits(ctx, 10)
+		return err
+	})
+	box := &outbox{}
+	a := &worker.Alerts{DB: d, SMS: &sms.Service{DB: d, Provider: box}}
+	a.RouterOffline(ctx, tn.ID, "Ruiru Mast", time.Date(2026, 9, 1, 11, 5, 0, 0, time.UTC))
+	a.RouterBack(ctx, tn.ID, "Ruiru Mast", 95*time.Minute)
+	a.RouterHighCPU(ctx, tn.ID, "Tower Alpha", 97)
+	want := []string{
+		"254712345678|Alerts WiFi: router Ruiru Mast went offline at 14:05. Check its power and internet.",
+		"254712345678|Alerts WiFi: router Ruiru Mast is back online after 1 h 35 min.",
+		"254712345678|Alerts WiFi: router Tower Alpha CPU has been at 97% for 15 minutes. Customers may see slow speeds.",
+	}
+	if strings.Join(box.msgs, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("messages:\n%s", strings.Join(box.msgs, "\n"))
+	}
+}
+
+func TestDowntime(t *testing.T) {
+	for d, want := range map[time.Duration]string{
+		20 * time.Second: "under a minute", 45 * time.Minute: "45 min", 2 * time.Hour: "2 h",
+		3*time.Hour + 10*time.Minute: "3 h 10 min", 72 * time.Hour: "3 days",
+	} {
+		if got := worker.Downtime(d); got != want {
+			t.Errorf("Downtime(%s) = %q, want %q", d, got, want)
+		}
+	}
+}

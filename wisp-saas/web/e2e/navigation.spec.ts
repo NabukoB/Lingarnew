@@ -101,6 +101,25 @@ test.describe("desktop", () => {
     await expect(page.getByRole("switch", { name: "Hotspot expiry SMS" })).toHaveAttribute("aria-checked", "true");
     expect(errors).toEqual([]);
   });
+
+  test("network map shows routers by site", async ({ page }) => {
+    const errors = watchErrors(page);
+    await signUp(page, "Map");
+    await page.goto("/routers/new");
+    await page.getByLabel("Name", { exact: true }).fill("Map Mast");
+    await page.getByRole("button", { name: "Get command" }).click();
+    await expect(page.locator("pre").first()).toContainText("/tool fetch url=");
+
+    await page.goto("/network");
+    await page.getByRole("tab", { name: "Map" }).click();
+    await expect(page).toHaveURL(/view=map/);
+    const card = page.getByRole("link", { name: /Map Mast, Not connected/ });
+    await expect(card).toBeVisible();
+    await expect(page.getByRole("list", { name: "Map legend" })).toBeVisible();
+    await card.click();
+    await expect(page).toHaveURL(/\/routers\//);
+    expect(errors).toEqual([]);
+  });
 });
 
 test.describe("phone", () => {

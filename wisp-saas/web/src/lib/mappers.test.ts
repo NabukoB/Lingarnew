@@ -6,6 +6,8 @@ import {
   prettyPhone,
   routerStatus,
   speedLabel,
+  toMap,
+  toMetricSeries,
   toPayment,
   toRouter,
   toSubscriber,
@@ -51,6 +53,34 @@ describe("mappers", () => {
       now,
     );
     expect(r).toMatchObject({ status: "offline", offlineMinutes: 18, users: 0 });
+    const live = { cpu_load: 95, mem_used_pct: 40, pppoe_users: 30, hotspot_users: 7, rx_bps: 1e6, tx_bps: 1e5, high_cpu: true };
+    expect(toRouter({ id: "r", name: "M", status: "online", connected: true, active_sessions: 3, status_changed_at: "2026-09-25T10:12:00Z", live } as never)).toMatchObject({
+      users: 37,
+      cpu: 95,
+      highCpu: true,
+    });
+  });
+
+  it("maps metric series and the network map", () => {
+    const s = toMetricSeries({ range: "7d", step_sec: 3600, points: [{ at: "t", cpu_load: 5, mem_used_pct: 40, pppoe_users: 3, hotspot_users: 1, rx_bps: 10, tx_bps: 2 }] });
+    expect(s).toEqual({ range: "7d", stepSec: 3600, points: [{ at: "t", cpu: 5, mem: 40, pppoe: 3, hotspot: 1, rxBps: 10, txBps: 2 }] });
+    const m = toMap([
+      {
+        id: "s",
+        name: "Kasarani",
+        routers: [
+          {
+            id: "r",
+            name: "POP",
+            status: "degraded",
+            board: "hAP",
+            live: null,
+            neighbors: [{ interface: "ether2", mac: "AA", identity: "Beta", address: "10.0.0.2", platform: "MikroTik", board: "RB", router_id: "r2" }],
+          },
+        ],
+      },
+    ]);
+    expect(m[0]!.routers[0]).toMatchObject({ status: "slow", users: null, cpu: null, neighbors: [{ identity: "Beta", routerId: "r2" }] });
   });
 
   it("maps payments", () => {

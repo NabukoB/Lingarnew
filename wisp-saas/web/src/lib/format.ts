@@ -50,3 +50,23 @@ export function formatCountdown(totalSeconds: number): string {
   if (h > 0) return `${h}:${String(m).padStart(2, "0")}`;
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
+
+/** Network rate: 850 kbps, 12.4 Mbps, 1.2 Gbps. */
+export function formatBps(bps: number): string {
+  if (bps >= 1e9) return `${trim(bps / 1e9)} Gbps`;
+  if (bps >= 1e6) return `${trim(bps / 1e6)} Mbps`;
+  if (bps >= 1e3) return `${Math.round(bps / 1e3)} kbps`;
+  return `${Math.round(bps)} bps`;
+}
+
+function trim(n: number): string {
+  return n >= 100 ? String(Math.round(n)) : n.toFixed(1).replace(/\.0$/, "");
+}
+
+/** Axis/tooltip time in Nairobi: "14:05" for a day view, "12 Oct" beyond. */
+export function chartTime(iso: string, withDate: boolean, withTime = !withDate): string {
+  const opts: Intl.DateTimeFormatOptions = { timeZone: "Africa/Nairobi", hour12: false };
+  if (withDate) Object.assign(opts, { day: "numeric", month: "short" });
+  if (withTime) Object.assign(opts, { hour: "2-digit", minute: "2-digit" });
+  return new Intl.DateTimeFormat("en-GB", opts).format(new Date(iso));
+}

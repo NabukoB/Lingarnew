@@ -1,18 +1,26 @@
-import { Plus, Router } from "lucide-react";
+import { Cpu, Plus, Router } from "lucide-react";
 import Link from "next/link";
 import { EmptyState, PageHeader, RouterStatusDot, RouterStatusPill } from "@/components/bits";
 import { FindBar } from "@/components/FindBar";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { RoutersRing } from "@/components/NetworkCard";
 import { Button } from "@/components/ui/button";
+import { NetworkMap } from "@/components/network/NetworkMap";
 import { Card } from "@/components/ui/card";
-import { getRouters } from "@/lib/api";
+import { Segmented } from "@/components/ui/segmented";
+import { getNetworkMap, getRouters } from "@/lib/api";
 
 export const metadata = { title: "Network · Mtandao" };
 export const dynamic = "force-dynamic";
 
-export default async function NetworkPage() {
-  const routers = await getRouters();
+const views = [
+  { value: "list", label: "List", href: "/network" },
+  { value: "map", label: "Map", href: "/network?view=map" },
+];
+
+export default async function NetworkPage({ searchParams }: { searchParams: { view?: string } }) {
+  const view = searchParams.view === "map" ? "map" : "list";
+  const [routers, sites] = await Promise.all([getRouters(), view === "map" ? getNetworkMap() : Promise.resolve([])]);
   const online = routers.filter((r) => r.status === "online" || r.status === "slow").length;
   const offline = routers.filter((r) => r.status === "offline").length;
   const users = routers.reduce((n, r) => n + (r.users ?? 0), 0);
@@ -30,6 +38,10 @@ export default async function NetworkPage() {
           </Button>
         }
       />
+      <Segmented id="network-view" label="View" tone="white" items={views} value={view} className="self-start" />
+      {view === "map" ? (
+        <NetworkMap sites={sites} />
+      ) : (
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-5">
         <div className="flex flex-col gap-4">
           <Card aria-label="Routers online" className="flex items-center gap-5 px-5 py-4">
@@ -72,6 +84,12 @@ export default async function NetworkPage() {
                         {r.status === "offline" && r.offlineMinutes ? `Offline ${r.offlineMinutes}m` : r.location}
                       </span>
                     </div>
+                    {r.highCpu && (
+                      <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                        <Cpu aria-hidden size={12} strokeWidth={2.4} />
+                        {r.cpu}%
+                      </span>
+                    )}
                     <span className="tabular text-xs font-semibold text-muted-foreground">{r.users ?? "—"}</span>
                     <RouterStatusPill status={r.status} />
                   </Link>
@@ -81,6 +99,7 @@ export default async function NetworkPage() {
           )}
         </Card>
       </div>
+      )}
     </>
   );
 }

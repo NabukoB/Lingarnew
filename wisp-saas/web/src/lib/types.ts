@@ -33,7 +33,49 @@ export type RouterRow = {
   users: number | null;
   status: RouterStatus;
   offlineMinutes?: number;
+  /** Latest CPU load (%), when the router answered in the last 5 minutes. */
+  cpu?: number;
+  highCpu?: boolean;
 };
+
+export type MetricRange = "24h" | "7d" | "30d";
+
+export type MetricPoint = {
+  at: string;
+  cpu: number;
+  mem: number;
+  pppoe: number;
+  hotspot: number;
+  /** Uplink download, bits per second. */
+  rxBps: number;
+  /** Uplink upload, bits per second. */
+  txBps: number;
+};
+
+export type MetricSeries = { range: MetricRange; stepSec: number; points: MetricPoint[] };
+
+export type MapNeighbor = {
+  mac: string;
+  identity: string;
+  address: string;
+  platform: string;
+  board: string;
+  interface: string;
+  /** Set when the neighbour is one of this ISP's own routers. */
+  routerId: string | null;
+};
+
+export type MapRouter = {
+  id: string;
+  name: string;
+  status: RouterStatus;
+  board: string;
+  users: number | null;
+  cpu: number | null;
+  neighbors: MapNeighbor[];
+};
+
+export type MapSite = { id: string; name: string; routers: MapRouter[] };
 
 export type SubscriberStatus = "active" | "grace" | "expired" | "suspended" | "cancelled";
 
@@ -83,7 +125,7 @@ export type Overview = {
   hotspotSales: { value: number; prev: number };
   onTimeRate: { value: number; prev: number };
   unmatched?: number;
-  routers?: { online: number; total: number; offline: number };
+  routers?: { online: number; total: number; offline: number; busy?: number };
   renewalsDue?: number;
   smsCredits?: number;
 };

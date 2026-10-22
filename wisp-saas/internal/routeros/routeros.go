@@ -278,3 +278,106 @@ func Speed(kbps int32) string {
 	}
 	return strconv.Itoa(int(kbps)) + "k"
 }
+
+// Count returns how many rows a menu has (e.g. "ppp/active"), fetching only ids.
+func (c *Client) Count(ctx context.Context, menu string) (int, error) {
+	rows, err := c.List(ctx, menu, map[string]string{".proplist": ".id"})
+	return len(rows), err
+}
+
+// Uplink is the interface carrying the default route and its byte counters.
+type Uplink struct {
+	Interface string
+	RxBytes   int64
+	TxBytes   int64
+}
+
+// Uplink finds the interface behind the active default route and reads its
+// counters. ok is false when the router has no active default route.
+func (c *Client) Uplink(ctx context.Context) (u Uplink, ok bool, err error) {
+	routes, err := c.List(ctx, "ip/route", map[string]string{"dst-address": "0.0.0.0/0", "active": "true"})
+	if err != nil || len(routes) == 0 {
+		return Uplink{}, false, err
+	}
+	name := gatewayInterface(routes[0])
+	if name == "" {
+		return Uplink{}, false, nil
+	}
+	ifs, err := c.List(ctx, "interface", map[string]string{"name": name})
+	if err != nil || len(ifs) == 0 {
+		return Uplink{}, false, err
+	}
+	return Uplink{Interface: name, RxBytes: atoi64(ifs[0]["rx-byte"]), TxBytes: atoi64(ifs[0]["tx-byte"])}, true, nil
+}
+
+// gatewayInterface reads the outgoing interface from a route: "10.0.0.1%ether1"
+// gives "ether1"; a PPPoE/LTE uplink lists the interface itself as gateway.
+func gatewayInterface(r Record) string {
+	for _, k := range []string{"immediate-gw", "gateway"} {
+		v := strings.TrimSpace(r[k])
+		if i := strings.LastIndex(v, "%"); i >= 0 {
+			return v[i+1:]
+		}
+		if v != "" && net.ParseIP(v) == nil {
+			return v
+		}
+	}
+	return ""
+}
+
+// Neighbor is one row of /ip/neighbor (MNDP/CDP/LLDP discovery).
+type Neighbor struct {
+	Interface string
+	MAC       string
+	Identity  string
+	Address   string
+	Platform  string
+	Board     string
+	Version   string
+}
+
+// Neighbors lists the devices the router discovers on its interfaces.
+func (c *Client) Neighbors(ctx context.Context) ([]Neighbor, error) {
+	rows, err := c.List(ctx, "ip/neighbor", nil)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Neighbor, 0, len(rows))
+	for _, r := range rows {
+		addr := r["address4"]
+		if addr == "" {
+			addr = r["address"]
+		}
+		iface := r["interface"]
+		if i := strings.Index(iface, ","); i >= 0 { // "ether2,bridge" on bridged ports
+			iface = iface[:i]
+		}
+		if r["mac-address"] == "" || iface == "" {
+			continue
+		}
+		out = append(out, Neighbor{
+			Interface: iface, MAC: strings.ToUpper(r["mac-address"]), Identity: r["identity"], Address: addr,
+			Platform: r["platform"], Board: r["board"], Version: r["version"],
+		})
+	}
+	return out, nil
+}
+
+// UptimeSeconds parses a RouterOS duration such as "2w1d3h4m5s".
+func UptimeSeconds(s string) int64 {
+	units := map[byte]int64{'w': 604800, 'd': 86400, 'h': 3600, 'm': 60, 's': 1}
+	var total, n int64
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		switch {
+		case ch >= '0' && ch <= '9':
+			n = n*10 + int64(ch-'0')
+		case units[ch] > 0:
+			total += n * units[ch]
+			n = 0
+		default:
+			return 0
+		}
+	}
+	return total
+}

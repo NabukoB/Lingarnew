@@ -39,9 +39,11 @@ const (
 	TokenTTL      = 24 * time.Hour
 )
 
-// Alerter tells the WISP a router went offline (SMS).
+// Alerter tells the WISP about router health changes (SMS).
 type Alerter interface {
 	RouterOffline(ctx context.Context, tenantID uuid.UUID, routerName string, since time.Time)
+	RouterBack(ctx context.Context, tenantID uuid.UUID, routerName string, down time.Duration)
+	RouterHighCPU(ctx context.Context, tenantID uuid.UUID, routerName string, load int)
 }
 
 type Service struct {
@@ -486,8 +488,14 @@ func (s *Service) Poll(ctx context.Context, tenantID, routerID uuid.UUID) error 
 		serial = c.Serial(pctx)
 	}
 	cancel()
+	var smp pollSample
+	if perr == nil {
+		smp = s.collect(ctx, c, rt, s.neighborsDue(ctx, tenantID, routerID))
+	}
 
 	var updated store.Router
+	highCPU := false
+	now := s.now()
 	err = s.DB.WithTenant(ctx, tenantID, func(q *store.Queries) error {
 		var err error
 		if perr != nil {
@@ -496,6 +504,9 @@ func (s *Service) Poll(ctx context.Context, tenantID, routerID uuid.UUID) error 
 		}
 		updated, err = q.RecordPollSuccess(ctx, routerID)
 		if err != nil {
+			return err
+		}
+		if highCPU, err = record(ctx, q, rt, res, smp, now); err != nil {
 			return err
 		}
 		if serial != "" || rt.FirmwareVersion == nil || *rt.FirmwareVersion != res.Version {
@@ -518,8 +529,16 @@ func (s *Service) Poll(ctx context.Context, tenantID, routerID uuid.UUID) error 
 			slog.WarnContext(ctx, "first sync failed", "router_id", routerID, "err", err)
 		}
 	}
-	if updated.Status == "offline" && rt.Status != "offline" && s.Alerter != nil {
-		s.Alerter.RouterOffline(ctx, tenantID, rt.Name, s.now())
+	if s.Alerter != nil {
+		switch {
+		case updated.Status == "offline" && rt.Status != "offline":
+			s.Alerter.RouterOffline(ctx, tenantID, rt.Name, now)
+		case updated.Status == "online" && rt.Status == "offline":
+			s.Alerter.RouterBack(ctx, tenantID, rt.Name, now.Sub(rt.StatusChangedAt))
+		}
+		if highCPU {
+			s.Alerter.RouterHighCPU(ctx, tenantID, rt.Name, res.CPULoad)
+		}
 	}
 	return nil
 }

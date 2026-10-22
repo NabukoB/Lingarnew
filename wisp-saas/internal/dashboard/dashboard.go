@@ -51,6 +51,7 @@ type Overview struct {
 		Online  int32 `json:"online"`
 		Total   int32 `json:"total"`
 		Offline int32 `json:"offline"`
+		Busy    int32 `json:"busy"` // CPU at 90% or more right now
 	} `json:"routers"`
 }
 
@@ -162,7 +163,8 @@ func (s *Service) Overview(ctx context.Context, tenantID uuid.UUID) (Overview, e
 				o.Routers.Offline += r.N
 			}
 		}
-		return nil
+		o.Routers.Busy, err = q.CountBusyRouters(ctx, store.CountBusyRoutersParams{Since: now.Add(-5 * time.Minute), Cpu: 90})
+		return err
 	})
 	return o, err
 }

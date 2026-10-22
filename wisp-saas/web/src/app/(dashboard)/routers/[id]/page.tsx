@@ -6,8 +6,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConnectRouter } from "@/components/routers/ConnectRouter";
 import { RouterActions } from "@/components/routers/RouterActions";
+import { RouterMetrics } from "@/components/routers/RouterMetrics";
 import { RouterStatusPill } from "@/components/bits";
-import { getChecklist, getLocations, getRouter } from "@/lib/api";
+import { getChecklist, getLocations, getRouter, getRouterMetrics } from "@/lib/api";
 import { ApiError } from "@/lib/backend";
 import { longDate, routerStatus } from "@/lib/mappers";
 import { newSetupCommand } from "@/lib/actions";
@@ -30,7 +31,10 @@ export default async function RouterPage({ params, searchParams }: { params: { i
   }
 
   const status = routerStatus(r.status);
-  const items = status === "offline" ? [] : await getChecklist(r.id).catch(() => []);
+  const [items, metrics] = await Promise.all([
+    status === "offline" ? [] : getChecklist(r.id).catch(() => []),
+    getRouterMetrics(r.id, "24h"),
+  ]);
   const facts: [string, string][] = [
     ["Board", r.board_name ?? "—"],
     ["RouterOS", r.firmware_version ?? "—"],
@@ -78,6 +82,7 @@ export default async function RouterPage({ params, searchParams }: { params: { i
           </Card>
         )}
       </div>
+      <RouterMetrics routerId={r.id} initial={metrics} />
     </>
   );
 }

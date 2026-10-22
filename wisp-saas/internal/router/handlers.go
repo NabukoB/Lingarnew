@@ -32,6 +32,7 @@ type View struct {
 	StatusChangedAt time.Time  `json:"status_changed_at"`
 	LastConfigPush  *time.Time `json:"last_config_push"`
 	ActiveSessions  int32      `json:"active_sessions"`
+	Live            *Live      `json:"live"` // latest health sample, nil when stale
 	CreatedAt       time.Time  `json:"created_at"`
 }
 
@@ -59,6 +60,10 @@ func (s *Service) Routes(r chi.Router) {
 			if err != nil {
 				return err
 			}
+			live, err := s.LiveMetrics(r.Context(), q)
+			if err != nil {
+				return err
+			}
 			out = make([]View, 0, len(rows))
 			for _, row := range rows {
 				v := ToView(store.Router{ID: row.ID, TenantID: row.TenantID, LocationID: row.LocationID, Name: row.Name,
@@ -66,6 +71,10 @@ func (s *Service) Routes(r chi.Router) {
 					TunnelIp: row.TunnelIp, WgPublicKey: row.WgPublicKey, HotspotPorts: row.HotspotPorts, PppoePorts: row.PppoePorts,
 					Status: row.Status, LastSeenAt: row.LastSeenAt, StatusChangedAt: row.StatusChangedAt, LastConfigPush: row.LastConfigPush, CreatedAt: row.CreatedAt})
 				v.LocationName, v.ActiveSessions = row.LocationName, row.ActiveSessions
+				if l, ok := live[row.ID]; ok {
+					l := l
+					v.Live = &l
+				}
 				out = append(out, v)
 			}
 			return nil
@@ -75,6 +84,31 @@ func (s *Service) Routes(r chi.Router) {
 			return
 		}
 		httpx.JSON(w, http.StatusOK, map[string]any{"routers": out})
+	})
+	r.Get("/v1/network/map", func(w http.ResponseWriter, r *http.Request) {
+		sites, err := s.Map(r.Context(), auth.TenantID(r.Context()))
+		if err != nil {
+			httpx.Fail(w, r, err)
+			return
+		}
+		httpx.JSON(w, http.StatusOK, map[string]any{"sites": sites})
+	})
+	r.Get("/v1/routers/{id}/metrics", func(w http.ResponseWriter, r *http.Request) {
+		id, err := routerID(r)
+		if err != nil {
+			httpx.Fail(w, r, err)
+			return
+		}
+		rng := r.URL.Query().Get("range")
+		if rng == "" {
+			rng = "24h"
+		}
+		series, err := s.Metrics(r.Context(), auth.TenantID(r.Context()), id, rng)
+		if err != nil {
+			httpx.Fail(w, r, err)
+			return
+		}
+		httpx.JSON(w, http.StatusOK, series)
 	})
 	r.Post("/v1/routers", func(w http.ResponseWriter, r *http.Request) {
 		var in CreateInput

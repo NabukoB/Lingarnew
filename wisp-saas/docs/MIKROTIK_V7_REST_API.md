@@ -11,6 +11,9 @@ command (`/rest/<menu>/<command>`). CLAUDE.md §6 writes "POST" for creates; Rou
 | When | Call | Code |
 |---|---|---|
 | Health poll (60s) | `GET /rest/system/resource` → board-name, version, cpu-load, free-memory, architecture-name | `Service.Poll` |
+| Health poll (60s) | `GET /rest/ppp/active?.proplist=.id` and `/rest/ip/hotspot/active?.proplist=.id` → user counts | `Client.Count` |
+| Health poll (60s) | `GET /rest/ip/route?dst-address=0.0.0.0/0&active=true` → `immediate-gw` (`192.168.1.1%ether1`, or the interface itself for PPPoE/LTE uplinks), then `GET /rest/interface?name=<uplink>` → `rx-byte`, `tx-byte`; the rate is the delta between polls | `Client.Uplink` |
+| Every 10 min | `GET /rest/ip/neighbor` → interface, mac-address, identity, address4/address, platform, board, version (MNDP/CDP/LLDP; feeds the network map, matched to our routers by identity) | `Client.Neighbors` |
 | First contact | `GET /rest/system/routerboard` → serial-number (absent on CHR) | `Client.Serial` |
 | Config sync | `GET /rest/radius?comment=wisp-saas`, `PUT`/`PATCH /rest/radius` `{address, secret, src-address, service: "ppp,hotspot"}` | `Service.Sync` |
 | Config sync | `GET /rest/radius/incoming`, `POST /rest/radius/incoming/set {accept: yes}` | `Service.Sync` |

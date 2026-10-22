@@ -23,12 +23,26 @@ import (
 
 type alerts struct {
 	mu    sync.Mutex
-	names []string
+	names []string // offline
+	back  []string
+	cpu   []string
 }
 
 func (a *alerts) RouterOffline(_ context.Context, _ uuid.UUID, name string, _ time.Time) {
 	a.mu.Lock()
 	a.names = append(a.names, name)
+	a.mu.Unlock()
+}
+
+func (a *alerts) RouterBack(_ context.Context, _ uuid.UUID, name string, _ time.Duration) {
+	a.mu.Lock()
+	a.back = append(a.back, name)
+	a.mu.Unlock()
+}
+
+func (a *alerts) RouterHighCPU(_ context.Context, _ uuid.UUID, name string, _ int) {
+	a.mu.Lock()
+	a.cpu = append(a.cpu, name)
 	a.mu.Unlock()
 }
 
@@ -211,6 +225,9 @@ func TestOnboardingPollAndSync(t *testing.T) {
 	})
 	if got.Status != "online" || got.MissedPolls != 0 {
 		t.Fatalf("recovered status = %s/%d", got.Status, got.MissedPolls)
+	}
+	if len(al.back) != 1 || al.back[0] != "Ruiru Mast" {
+		t.Fatalf("back-online alerts = %v", al.back)
 	}
 }
 

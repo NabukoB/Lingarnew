@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  chartTime,
+  formatBps,
   formatCountdown,
   formatDelta,
   formatKsh,
@@ -53,4 +55,21 @@ describe("formatCountdown", () => {
   it("shows h:mm above an hour", () => expect(formatCountdown(86280)).toBe("23:58"));
   it("shows m:ss below an hour", () => expect(formatCountdown(24)).toBe("0:24"));
   it("never goes negative", () => expect(formatCountdown(-5)).toBe("0:00"));
+});
+
+describe("formatBps", () => {
+  it("picks the unit", () => {
+    expect(formatBps(850_000)).toBe("850 kbps");
+    expect(formatBps(12_400_000)).toBe("12.4 Mbps");
+    expect(formatBps(20_000_000)).toBe("20 Mbps");
+    expect(formatBps(1_230_000_000)).toBe("1.2 Gbps");
+    expect(formatBps(300)).toBe("300 bps");
+  });
+});
+
+describe("chartTime", () => {
+  const iso = "2026-10-12T11:05:00Z"; // 14:05 in Nairobi
+  it("shows the time for day views", () => expect(chartTime(iso, false)).toBe("14:05"));
+  it("shows the date for longer views", () => expect(chartTime(iso, true)).toBe("12 Oct"));
+  it("can show both", () => expect(chartTime(iso, true, true)).toBe("12 Oct, 14:05"));
 });

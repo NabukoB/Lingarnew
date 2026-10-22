@@ -7,6 +7,8 @@ import { cache } from "react";
 import { ApiError, apiFetch, isLive } from "./backend";
 import {
   toLocation,
+  toMap,
+  toMetricSeries,
   toOverview,
   toPayment,
   toPlan,
@@ -15,14 +17,16 @@ import {
   toSplit,
   toSubscriber,
   toTenant,
+  type ApiMapSite,
   type ApiPayment,
   type ApiPlan,
+  type ApiSeries,
   type ApiRouter,
   type ApiSubscriber,
   type ApiTenant,
 } from "./mappers";
 import * as mock from "./mock";
-import type { CheckItem, Location, Overview, Period, Plan, RevenueSeries } from "./types";
+import type { CheckItem, Location, MapSite, MetricRange, MetricSeries, Overview, Period, Plan, RevenueSeries } from "./types";
 import { getToken } from "./session";
 
 /** GET with the session token; a missing or expired session goes to /login. */
@@ -74,7 +78,7 @@ export const getRouters = cache(async () => {
 });
 
 export async function getRouter(id: string): Promise<ApiRouter | null> {
-  if (!isLive()) return null;
+  if (!isLive()) return mockRouterDetail(id);
   return authed<ApiRouter>(`/v1/routers/${encodeURIComponent(id)}`);
 }
 
@@ -126,4 +130,29 @@ export async function getVouchers(): Promise<Voucher[]> {
 
 export async function getOnboarding() {
   return mock.onboarding;
+}
+
+export async function getRouterMetrics(id: string, range: MetricRange): Promise<MetricSeries> {
+  if (!isLive()) return mock.routerMetrics(id, range);
+  return toMetricSeries(await authed<ApiSeries>(`/v1/routers/${encodeURIComponent(id)}/metrics?range=${range}`));
+}
+
+export const getNetworkMap = cache(async (): Promise<MapSite[]> => {
+  if (!isLive()) return mock.networkMap;
+  const r = await authed<{ sites: ApiMapSite[] }>("/v1/network/map");
+  return toMap(r.sites);
+});
+
+/** Example router detail so the demo can open a router page. */
+function mockRouterDetail(id: string): ApiRouter | null {
+  const r = mock.routers.find((x) => x.id === id);
+  if (!r) return null;
+  const node = mock.networkMap.flatMap((s) => s.routers).find((x) => x.id === id);
+  const status = r.status === "slow" ? "degraded" : r.status;
+  return {
+    id: r.id, location_id: "loc1", location_name: r.location, name: r.name, status, tunnel_ip: `10.200.0.${Number(id.slice(1)) + 1}`,
+    board_name: node?.board ?? null, firmware_version: "7.15.2", hotspot_ports: ["ether3"], pppoe_ports: ["ether2"], connected: true,
+    last_seen_at: new Date(Date.now() - (r.offlineMinutes ?? 0) * 60000).toISOString(),
+    status_changed_at: new Date(Date.now() - (r.offlineMinutes ?? 60) * 60000).toISOString(), active_sessions: r.users ?? 0,
+  };
 }

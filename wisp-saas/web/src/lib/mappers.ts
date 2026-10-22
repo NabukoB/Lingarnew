@@ -3,6 +3,9 @@
 import type {
   CheckItem,
   HotspotPackage,
+  MapSite,
+  MetricRange,
+  MetricSeries,
   Location,
   Overview,
   Payment,
@@ -60,6 +63,36 @@ export type ApiRouter = {
   last_seen_at: string | null;
   status_changed_at: string;
   active_sessions: number;
+  live?: ApiLive | null;
+};
+
+export type ApiLive = {
+  cpu_load: number;
+  mem_used_pct: number;
+  pppoe_users: number;
+  hotspot_users: number;
+  rx_bps: number | null;
+  tx_bps: number | null;
+  high_cpu: boolean;
+};
+
+export type ApiSeries = {
+  range: MetricRange;
+  step_sec: number;
+  points: { at: string; cpu_load: number; mem_used_pct: number; pppoe_users: number; hotspot_users: number; rx_bps: number; tx_bps: number }[];
+};
+
+export type ApiMapSite = {
+  id: string;
+  name: string;
+  routers: {
+    id: string;
+    name: string;
+    status: ApiRouter["status"];
+    board: string;
+    live: ApiLive | null;
+    neighbors: { interface: string; mac: string; identity: string; address: string; platform: string; board: string; router_id: string | null }[];
+  }[];
 };
 
 export type ApiPayment = {
@@ -186,10 +219,36 @@ export function toRouter(r: ApiRouter, now = Date.now()): RouterRow {
     id: r.id,
     name: r.name,
     location: r.location_name ?? "",
-    users: r.connected ? r.active_sessions : null,
+    users: !r.connected ? null : r.live ? r.live.pppoe_users + r.live.hotspot_users : r.active_sessions,
     status,
     offlineMinutes: status === "offline" ? Math.max(1, Math.round((now - Date.parse(r.status_changed_at)) / 60000)) : undefined,
+    cpu: r.live?.cpu_load,
+    highCpu: r.live?.high_cpu ?? false,
   };
+}
+
+export function toMetricSeries(s: ApiSeries): MetricSeries {
+  return {
+    range: s.range,
+    stepSec: s.step_sec,
+    points: s.points.map((p) => ({ at: p.at, cpu: p.cpu_load, mem: p.mem_used_pct, pppoe: p.pppoe_users, hotspot: p.hotspot_users, rxBps: p.rx_bps, txBps: p.tx_bps })),
+  };
+}
+
+export function toMap(sites: ApiMapSite[]): MapSite[] {
+  return sites.map((s) => ({
+    id: s.id,
+    name: s.name,
+    routers: s.routers.map((r) => ({
+      id: r.id,
+      name: r.name,
+      status: routerStatus(r.status),
+      board: r.board,
+      users: r.live ? r.live.pppoe_users + r.live.hotspot_users : null,
+      cpu: r.live ? r.live.cpu_load : null,
+      neighbors: r.neighbors.map((n) => ({ mac: n.mac, identity: n.identity, address: n.address, platform: n.platform, board: n.board, interface: n.interface, routerId: n.router_id })),
+    })),
+  }));
 }
 
 export function clock(iso: string): string {

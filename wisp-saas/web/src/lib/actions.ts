@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ApiError, apiFetch, isLive } from "./backend";
 import { clearToken, getToken, setToken } from "./session";
-import type { ActionResult, CheckItem } from "./types";
+import { getRouterMetrics } from "./api";
+import type { ActionResult, CheckItem, MetricRange, MetricSeries } from "./types";
 
 function fail(e: unknown): { ok: false; error: string; hint?: string } {
   if (e instanceof ApiError) return { ok: false, error: e.message, hint: e.hint };
@@ -285,4 +286,13 @@ export async function searchAll(q: string): Promise<SearchHit[]> {
     }
   }
   return hits;
+}
+
+/** Chart history for the router page's range tabs. */
+export async function loadRouterMetrics(id: string, range: MetricRange): Promise<ActionResult<MetricSeries>> {
+  try {
+    return { ok: true, data: await getRouterMetrics(id, range) };
+  } catch (e) {
+    return { ok: false, error: e instanceof ApiError ? e.message : "Couldn't load the charts. Try again." };
+  }
 }

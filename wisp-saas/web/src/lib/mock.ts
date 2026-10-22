@@ -2,6 +2,9 @@
 // Everything here mirrors the shapes the API will return.
 import type {
   HotspotPackage,
+  MapSite,
+  MetricRange,
+  MetricSeries,
   Overview,
   Payment,
   Period,
@@ -32,6 +35,7 @@ export const overview: Overview = {
   pppoe: { value: 281, prev: 275 },
   hotspotSales: { value: 146, prev: 151 },
   onTimeRate: { value: 92, prev: 91 },
+  routers: { online: 5, total: 6, offline: 1, busy: 1 },
 };
 
 const k = (xs: number[]) => xs.map((x) => Math.round(x * 1000));
@@ -68,11 +72,11 @@ export const topPackages = [
 
 export const routers: RouterRow[] = [
   { id: "r6", name: "Ruiru Mast", location: "Ruiru", users: null, status: "offline", offlineMinutes: 18 },
-  { id: "r3", name: "Mwiki Estate B", location: "Mwiki", users: 37, status: "slow" },
-  { id: "r1", name: "Kasarani POP", location: "Kasarani", users: 70, status: "online" },
-  { id: "r4", name: "Thika Rd Mall", location: "Thika Rd", users: 48, status: "online" },
-  { id: "r2", name: "Tower Alpha", location: "Kasarani", users: 41, status: "online" },
-  { id: "r5", name: "Githurai Sec. 2", location: "Githurai", users: 18, status: "online" },
+  { id: "r3", name: "Mwiki Estate B", location: "Mwiki", users: 37, status: "slow", cpu: 94, highCpu: true },
+  { id: "r1", name: "Kasarani POP", location: "Kasarani", users: 70, status: "online", cpu: 31 },
+  { id: "r4", name: "Thika Rd Mall", location: "Thika Rd", users: 48, status: "online", cpu: 22 },
+  { id: "r2", name: "Tower Alpha", location: "Kasarani", users: 41, status: "online", cpu: 18 },
+  { id: "r5", name: "Githurai Sec. 2", location: "Githurai", users: 18, status: "online", cpu: 9 },
 ];
 
 export const payments: Payment[] = [
@@ -127,3 +131,83 @@ export const onboarding = {
     { label: "Packages loaded", detail: "4 hotspot · 3 PPPoE" },
   ],
 };
+
+const rangeSpec: Record<MetricRange, { points: number; stepSec: number }> = {
+  "24h": { points: 288, stepSec: 300 },
+  "7d": { points: 168, stepSec: 3600 },
+  "30d": { points: 180, stepSec: 14400 },
+};
+
+/** A believable daily rhythm: quiet at 4am, busiest around 9pm (Nairobi). */
+function load(t: Date): number {
+  const h = (t.getUTCHours() + 3 + t.getUTCMinutes() / 60) % 24;
+  return 0.25 + 0.75 * Math.pow(Math.max(0, Math.sin(((h - 4) / 24) * Math.PI * 1.15)), 1.6);
+}
+
+export function routerMetrics(id: string, range: MetricRange, now = Date.now()): MetricSeries {
+  const r = routers.find((x) => x.id === id) ?? routers[2]!;
+  const { points, stepSec } = rangeSpec[range];
+  const users = r.users ?? 40;
+  const seed = id.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+  const end = Math.floor(now / (stepSec * 1000)) * stepSec * 1000;
+  const out: MetricSeries["points"] = [];
+  for (let i = points - 1; i >= 0; i--) {
+    const t = new Date(end - i * stepSec * 1000);
+    if (r.status === "offline" && i < 3) continue;
+    const l = load(t);
+    const wobble = Math.sin((i + seed) * 1.7) * 0.02 + Math.sin((i + seed) * 0.37) * 0.04;
+    const f = Math.max(0.05, l + wobble);
+    const pppoe = Math.round(users * 0.7 * Math.min(1, 0.55 + f * 0.45));
+    const hotspot = Math.round(users * 0.3 * f * 1.4);
+    out.push({
+      at: t.toISOString(),
+      cpu: Math.min(100, Math.round(r.highCpu && i < 20 ? 88 + f * 8 : 6 + f * 30)),
+      mem: 41 + Math.round(f * 12),
+      pppoe,
+      hotspot,
+      rxBps: Math.round((pppoe + hotspot) * f * 650_000),
+      txBps: Math.round((pppoe + hotspot) * f * 95_000),
+    });
+  }
+  return { range, stepSec, points: out };
+}
+
+export const networkMap: MapSite[] = [
+  {
+    id: "loc-kas",
+    name: "Kasarani",
+    routers: [
+      {
+        id: "r1", name: "Kasarani POP", status: "online", board: "CCR2004-1G-12S+2XS", users: 70, cpu: 31,
+        neighbors: [
+          { mac: "48:A9:8A:10:00:02", identity: "Tower Alpha", address: "10.10.0.2", platform: "MikroTik", board: "RB5009UG+S+", interface: "sfp-sfpplus1", routerId: "r2" },
+          { mac: "48:A9:8A:10:00:03", identity: "Mwiki Estate B", address: "10.10.0.3", platform: "MikroTik", board: "hAP ax3", interface: "ether5", routerId: "r3" },
+          { mac: "24:5A:4C:00:00:09", identity: "LiteBeam-North", address: "10.10.0.9", platform: "Ubiquiti", board: "LBE-5AC-Gen2", interface: "ether4", routerId: null },
+        ],
+      },
+      {
+        id: "r2", name: "Tower Alpha", status: "online", board: "RB5009UG+S+", users: 41, cpu: 18,
+        neighbors: [
+          { mac: "48:A9:8A:10:00:01", identity: "Kasarani POP", address: "10.10.0.1", platform: "MikroTik", board: "CCR2004-1G-12S+2XS", interface: "sfp-sfpplus1", routerId: "r1" },
+          { mac: "78:8A:20:00:00:11", identity: "Sector-East", address: "10.10.1.11", platform: "Ubiquiti", board: "PrismStation 5AC", interface: "ether2", routerId: null },
+        ],
+      },
+    ],
+  },
+  {
+    id: "loc-mwi",
+    name: "Mwiki",
+    routers: [
+      {
+        id: "r3", name: "Mwiki Estate B", status: "slow", board: "hAP ax3", users: 37, cpu: 94,
+        neighbors: [
+          { mac: "48:A9:8A:10:00:01", identity: "Kasarani POP", address: "10.10.0.1", platform: "MikroTik", board: "CCR2004-1G-12S+2XS", interface: "ether1", routerId: "r1" },
+          { mac: "C4:AD:34:00:00:21", identity: "SXT-Block-C", address: "10.20.0.21", platform: "MikroTik", board: "SXTsq 5 ac", interface: "ether3", routerId: null },
+        ],
+      },
+    ],
+  },
+  { id: "loc-thk", name: "Thika Rd", routers: [{ id: "r4", name: "Thika Rd Mall", status: "online", board: "hEX S", users: 48, cpu: 22, neighbors: [] }] },
+  { id: "loc-git", name: "Githurai", routers: [{ id: "r5", name: "Githurai Sec. 2", status: "online", board: "hAP ax2", users: 18, cpu: 9, neighbors: [] }] },
+  { id: "loc-rui", name: "Ruiru", routers: [{ id: "r6", name: "Ruiru Mast", status: "offline", board: "RB4011", users: null, cpu: null, neighbors: [] }] },
+];

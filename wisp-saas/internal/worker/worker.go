@@ -27,9 +27,10 @@ type Sweeper interface {
 	SweepPending(ctx context.Context) error
 }
 
-// Poller checks router health (router.Service).
+// Poller checks router health and keeps its history tidy (router.Service).
 type Poller interface {
 	PollAll(ctx context.Context) error
+	FoldMetrics(ctx context.Context, tenantID uuid.UUID) error
 }
 
 type Worker struct {
@@ -306,10 +307,11 @@ func (w *Worker) HotspotExpirySMS(ctx context.Context) error {
 }
 
 // Housekeeping lapses unpaid WISP subscriptions, closes sessions whose
-// router stopped sending accounting, and deletes expired dashboard logins.
+// router stopped sending accounting, deletes expired dashboard logins and
+// folds old router samples into hourly averages.
 func (w *Worker) Housekeeping(ctx context.Context) error {
 	return w.forEachTenant(ctx, "housekeeping", func(ctx context.Context, tenantID uuid.UUID) error {
-		return w.DB.WithTenant(ctx, tenantID, func(q *store.Queries) error {
+		if err := w.DB.WithTenant(ctx, tenantID, func(q *store.Queries) error {
 			if _, err := q.LapseSubscription(ctx); err != nil && !db.IsNotFound(err) {
 				return err
 			}
@@ -318,7 +320,13 @@ func (w *Worker) Housekeeping(ctx context.Context) error {
 				return err
 			}
 			return q.DeleteExpiredAuthSessions(ctx)
-		})
+		}); err != nil {
+			return err
+		}
+		if w.Poller == nil {
+			return nil
+		}
+		return w.Poller.FoldMetrics(ctx, tenantID)
 	})
 }
 
@@ -329,6 +337,26 @@ type Alerts struct {
 }
 
 func (a *Alerts) RouterOffline(ctx context.Context, tenantID uuid.UUID, routerName string, since time.Time) {
+	a.notify(ctx, tenantID, "router_alert", func(t store.Tenant) string {
+		return fmt.Sprintf("%s: router %s went offline at %s. Check its power and internet.", t.Name, routerName, since.In(location(t.Timezone)).Format("15:04"))
+	})
+}
+
+// RouterBack says a router that was offline answers again.
+func (a *Alerts) RouterBack(ctx context.Context, tenantID uuid.UUID, routerName string, down time.Duration) {
+	a.notify(ctx, tenantID, "router_alert", func(t store.Tenant) string {
+		return fmt.Sprintf("%s: router %s is back online after %s.", t.Name, routerName, Downtime(down))
+	})
+}
+
+// RouterHighCPU warns that a router has been overloaded for 15 minutes.
+func (a *Alerts) RouterHighCPU(ctx context.Context, tenantID uuid.UUID, routerName string, load int) {
+	a.notify(ctx, tenantID, "router_alert", func(t store.Tenant) string {
+		return fmt.Sprintf("%s: router %s CPU has been at %d%% for 15 minutes. Customers may see slow speeds.", t.Name, routerName, load)
+	})
+}
+
+func (a *Alerts) notify(ctx context.Context, tenantID uuid.UUID, kind string, body func(store.Tenant) string) {
 	var t store.Tenant
 	if err := a.DB.WithTenant(ctx, tenantID, func(q *store.Queries) error {
 		var err error
@@ -337,8 +365,24 @@ func (a *Alerts) RouterOffline(ctx context.Context, tenantID uuid.UUID, routerNa
 	}); err != nil || t.SupportPhone == nil {
 		return
 	}
-	body := fmt.Sprintf("%s: router %s went offline at %s. Check its power and internet.", t.Name, routerName, since.In(location(t.Timezone)).Format("15:04"))
-	if _, err := a.SMS.Send(ctx, tenantID, *t.SupportPhone, body, "router_alert"); err != nil {
-		slog.Warn("router offline SMS", "tenant_id", tenantID, "err", err)
+	if _, err := a.SMS.Send(ctx, tenantID, *t.SupportPhone, body(t), kind); err != nil {
+		slog.Warn("router alert SMS", "tenant_id", tenantID, "err", err)
 	}
+}
+
+// Downtime renders how long something was down: "45 min", "3 h 10 min", "2 days".
+func Downtime(d time.Duration) string {
+	m := int(d.Round(time.Minute) / time.Minute)
+	switch {
+	case m < 1:
+		return "under a minute"
+	case m < 60:
+		return fmt.Sprintf("%d min", m)
+	case m < 48*60:
+		if m%60 == 0 {
+			return fmt.Sprintf("%d h", m/60)
+		}
+		return fmt.Sprintf("%d h %d min", m/60, m%60)
+	}
+	return fmt.Sprintf("%d days", m/(24*60))
 }

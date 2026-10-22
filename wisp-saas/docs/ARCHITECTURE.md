@@ -77,3 +77,11 @@ rendered in the tenant's timezone (default Africa/Nairobi).
   last entry (appended by our proxy), or `CF-Connecting-IP` when `TRUST_CLOUDFLARE=true`.
 - **No Redis yet.** Token cache, rate limits and IP allocation are in-process / Postgres
   (`allocate_tunnel_ip` with an advisory lock). Add Redis when the API runs more than one replica.
+- **Router history lives in Postgres.** Each 60s poll stores one `router_metrics` row (CPU, memory,
+  PPPoE/Hotspot users, uplink counters and the rate derived from the previous poll). Minute rows older
+  than two days are folded into hourly averages by the hourly housekeeping job and kept 31 days, so a
+  router costs at most ~3,500 rows. Move to Prometheus remote-write only if this table becomes a
+  measured bottleneck.
+- **Network map = what routers see.** `/ip/neighbor` is read every 10 minutes into `router_neighbors`.
+  A neighbour whose RouterOS identity matches one of the tenant's router names is drawn as a link
+  between those routers (the setup script sets the identity to the dashboard name).

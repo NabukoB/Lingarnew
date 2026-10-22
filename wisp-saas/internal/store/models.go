@@ -134,6 +134,36 @@ type Router struct {
 	UpdatedAt       time.Time  `json:"updated_at"`
 }
 
+type RouterMetric struct {
+	TenantID      uuid.UUID `json:"tenant_id"`
+	RouterID      uuid.UUID `json:"router_id"`
+	At            time.Time `json:"at"`
+	ResolutionSec int32     `json:"resolution_sec"`
+	CpuLoad       int16     `json:"cpu_load"`
+	MemUsedPct    int16     `json:"mem_used_pct"`
+	UptimeSec     *int64    `json:"uptime_sec"`
+	PppoeUsers    int32     `json:"pppoe_users"`
+	HotspotUsers  int32     `json:"hotspot_users"`
+	Uplink        *string   `json:"uplink"`
+	RxBytes       *int64    `json:"rx_bytes"`
+	TxBytes       *int64    `json:"tx_bytes"`
+	RxBps         *int64    `json:"rx_bps"`
+	TxBps         *int64    `json:"tx_bps"`
+}
+
+type RouterNeighbor struct {
+	TenantID   uuid.UUID `json:"tenant_id"`
+	RouterID   uuid.UUID `json:"router_id"`
+	Interface  string    `json:"interface"`
+	MacAddress string    `json:"mac_address"`
+	Identity   *string   `json:"identity"`
+	Address    *string   `json:"address"`
+	Platform   *string   `json:"platform"`
+	Board      *string   `json:"board"`
+	Version    *string   `json:"version"`
+	SeenAt     time.Time `json:"seen_at"`
+}
+
 type Session struct {
 	ID               uuid.UUID   `json:"id"`
 	TenantID         uuid.UUID   `json:"tenant_id"`
