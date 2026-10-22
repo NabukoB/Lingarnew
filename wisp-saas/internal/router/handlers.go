@@ -202,7 +202,11 @@ func (s *Service) Routes(r chi.Router) {
 			return
 		}
 		tid := auth.TenantID(r.Context())
-		changes, err := s.Sync(r.Context(), tid, id, "tenant:"+tid.String())
+		by := "tenant:" + tid.String()
+		if r.URL.Query().Get("via") == "assistant" { // confirmed from an assistant card
+			by = "ai"
+		}
+		changes, err := s.Sync(r.Context(), tid, id, by)
 		if err != nil {
 			httpx.Fail(w, r, err)
 			return
@@ -232,11 +236,7 @@ func (s *Service) Routes(r chi.Router) {
 		if limit <= 0 || limit > 200 {
 			limit = 50
 		}
-		var rows []store.ConfigAudit
-		err = s.DB.WithTenant(r.Context(), auth.TenantID(r.Context()), func(q *store.Queries) error {
-			rows, err = q.ListConfigAudit(r.Context(), store.ListConfigAuditParams{RouterID: &id, Limit: int32(limit)})
-			return err
-		})
+		rows, err := s.Audit(r.Context(), auth.TenantID(r.Context()), id, int32(limit))
 		if err != nil {
 			httpx.Fail(w, r, err)
 			return

@@ -58,6 +58,11 @@ type Config struct {
 
 	// Internal shared secret for rlm_rest -> cmd/radius.
 	RadiusAPIToken string
+
+	// AI assistant (Claude API). Empty key = assistant switched off.
+	AnthropicAPIKey     string
+	AssistantModel      string
+	AssistantDailyLimit int
 }
 
 func Load() (Config, error) {
@@ -95,6 +100,9 @@ func Load() (Config, error) {
 		RouterAPIPort:       getInt("ROUTER_API_PORT", 443),
 		RouterAPIInsecure:   get("ROUTER_API_INSECURE", "true") == "true",
 		RadiusAPIToken:      os.Getenv("RADIUS_API_TOKEN"),
+		AnthropicAPIKey:     os.Getenv("ANTHROPIC_API_KEY"),
+		AssistantModel:      get("ASSISTANT_MODEL", "claude-opus-5-5"),
+		AssistantDailyLimit: getInt("ASSISTANT_DAILY_LIMIT", 50),
 	}
 	cidr, err := netip.ParsePrefix(get("WG_TUNNEL_CIDR", "10.200.0.0/16"))
 	if err != nil {

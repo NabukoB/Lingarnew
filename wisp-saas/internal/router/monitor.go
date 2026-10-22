@@ -349,3 +349,14 @@ func deref(s *string) string {
 	}
 	return *s
 }
+
+// Audit returns a router's newest config_audit entries.
+func (s *Service) Audit(ctx context.Context, tenantID, routerID uuid.UUID, limit int32) ([]store.ConfigAudit, error) {
+	var rows []store.ConfigAudit
+	err := s.DB.WithTenant(ctx, tenantID, func(q *store.Queries) error {
+		var err error
+		rows, err = q.ListConfigAudit(ctx, store.ListConfigAuditParams{RouterID: &routerID, Limit: limit})
+		return err
+	})
+	return rows, err
+}

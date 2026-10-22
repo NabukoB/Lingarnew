@@ -9,7 +9,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type AssistantUsage struct {
+	TenantID     uuid.UUID   `json:"tenant_id"`
+	Day          pgtype.Date `json:"day"`
+	Questions    int32       `json:"questions"`
+	InputTokens  int64       `json:"input_tokens"`
+	OutputTokens int64       `json:"output_tokens"`
+}
 
 type AuthSession struct {
 	TokenHash []byte    `json:"token_hash"`

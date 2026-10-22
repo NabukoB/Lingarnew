@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AskButton } from "@/components/assistant/AssistantProvider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { Tenant } from "@/lib/types";
 import { SearchButton } from "./CommandPalette";
@@ -28,6 +29,7 @@ export function TopBar({ tenant, alerts }: { tenant: Tenant; alerts: Alert[] }) 
       </div>
       <div className="ml-auto flex items-center gap-2.5">
         <SearchButton />
+        <AskButton className="lg:hidden" />
         <Notifications alerts={alerts} />
       </div>
     </header>

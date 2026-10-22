@@ -24,6 +24,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 
+	"github.com/nabukob/lingarnew/wisp-saas/internal/assistant"
 	"github.com/nabukob/lingarnew/wisp-saas/internal/auth"
 	"github.com/nabukob/lingarnew/wisp-saas/internal/billing"
 	"github.com/nabukob/lingarnew/wisp-saas/internal/customers"
@@ -70,6 +71,7 @@ type App struct {
 	Sessions  *session.Service
 	Dashboard *dashboard.Service
 	SMS       *sms.Service
+	Assistant *assistant.Service
 }
 
 func build(ctx context.Context, cfg config.Config) (*App, error) {
@@ -98,6 +100,14 @@ func assemble(cfg config.Config, database *db.DB, sealer *secrets.Sealer) *App {
 	a.Customers = &customers.Service{DB: database, Sealer: sealer, Disconnector: a.Sessions}
 	a.Billing = &billing.Service{DB: database, Tenants: a.Tenants, Daraja: mpesa.NewClient(), Cfg: cfg, SMS: a.SMS}
 	a.Dashboard = &dashboard.Service{DB: database}
+	a.Assistant = &assistant.Service{
+		DB: database, Client: assistant.NewClient(cfg.AnthropicAPIKey), Model: cfg.AssistantModel, DailyLimit: cfg.AssistantDailyLimit,
+		Network: a.Routers, Customers: a.Customers, Payments: a.Billing, Overview: a.Dashboard,
+		TenantInfo: func(ctx context.Context, id uuid.UUID) (string, string, error) {
+			t, err := a.Tenants.Get(ctx, id)
+			return t.Name, t.Timezone, err
+		},
+	}
 	return a
 }
 
@@ -235,6 +245,7 @@ func Handler(app *App) http.Handler {
 		app.Billing.Routes(r)
 		app.Routers.Routes(r)
 		app.Dashboard.Routes(r)
+		app.Assistant.Routes(r)
 	})
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {

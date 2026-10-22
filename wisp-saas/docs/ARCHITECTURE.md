@@ -85,3 +85,11 @@ rendered in the tenant's timezone (default Africa/Nairobi).
 - **Network map = what routers see.** `/ip/neighbor` is read every 10 minutes into `router_neighbors`.
   A neighbour whose RouterOS identity matches one of the tenant's router names is drawn as a link
   between those routers (the setup script sets the identity to the dashboard name).
+- **Assistant = read tools + confirm cards.** `internal/assistant` streams Claude (`claude-opus-5-5`,
+  medium effort, server-side refusal fallback) with tools that only read the signed-in tenant's data
+  through the other packages' services. Anything that changes state comes back as a `proposal` event;
+  the dashboard shows a card and, on Confirm, calls the normal API endpoint (router syncs are audited
+  as `initiated_by='ai'`). Passwords, M-Pesa secrets and full phone numbers are never in tool
+  results. The conversation lives in the browser (text only, ≤ 20 turns); `assistant_usage` counts
+  questions and tokens per WISP per day for `ASSISTANT_DAILY_LIMIT`. The key (`ANTHROPIC_API_KEY`)
+  is a platform secret like the Daraja app's; without it the panel says it is off.

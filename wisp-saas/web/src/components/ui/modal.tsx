@@ -15,6 +15,7 @@ export function Modal({
   title,
   description,
   hideTitle = false,
+  className,
   children,
 }: {
   open: boolean;
@@ -23,13 +24,15 @@ export function Modal({
   description?: string;
   /** Keep the title for screen readers only (content has its own heading). */
   hideTitle?: boolean;
+  /** Extra classes for the dialog / sheet (e.g. a taller, wider chat). */
+  className?: string;
   children: React.ReactNode;
 }) {
   const desktop = useMediaQuery("(min-width: 640px)", true);
   if (desktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent aria-describedby={description ? undefined : undefined}>
+        <DialogContent className={className}>
           <DialogHeader className={hideTitle ? "sr-only" : undefined}>
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
@@ -41,7 +44,7 @@ export function Modal({
   }
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent>
+      <DrawerContent className={className}>
         <DrawerTitle className={hideTitle ? "sr-only" : undefined}>{title}</DrawerTitle>
         <DrawerDescription className={description ? "" : "sr-only"}>{description ?? title}</DrawerDescription>
         {children}

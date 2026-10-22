@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AssistantProvider } from "@/components/assistant/AssistantProvider";
 import type { Badges } from "@/components/shell/nav";
 import { BottomTabs } from "@/components/shell/BottomTabs";
 import { CommandProvider } from "@/components/shell/CommandPalette";
@@ -26,6 +27,7 @@ export default async function DashboardLayout({
     if (nav) badges[nav] = { text: n ?? "!", tone: a.tone };
   }
   return (
+    <AssistantProvider>
     <CommandProvider>
       <TooltipProvider delayDuration={300}>
         <div className="mx-auto flex min-h-screen max-w-[1440px]">
@@ -52,5 +54,6 @@ export default async function DashboardLayout({
         </div>
       </TooltipProvider>
     </CommandProvider>
+    </AssistantProvider>
   );
 }

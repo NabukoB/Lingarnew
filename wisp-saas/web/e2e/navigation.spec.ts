@@ -102,6 +102,25 @@ test.describe("desktop", () => {
     expect(errors).toEqual([]);
   });
 
+  test("assistant panel opens from the sidebar and the palette", async ({ page }) => {
+    const errors = watchErrors(page);
+    await signUp(page, "Ask");
+    await page.goto("/");
+    await page.getByRole("button", { name: "Ask the assistant" }).first().click();
+    const panel = page.getByRole("dialog", { name: "Ask" });
+    await expect(panel).toBeVisible();
+    // CI runs without ANTHROPIC_API_KEY: the panel says so instead of failing later.
+    await expect(panel.getByText("Assistant isn’t available on this server")).toBeVisible();
+    await expect(panel.getByRole("textbox", { name: "Question" })).toBeDisabled();
+    await page.keyboard.press("Escape");
+
+    await page.keyboard.press("Control+k");
+    await page.locator("[cmdk-input]").fill("which routers are offline");
+    await page.locator("[cmdk-item]", { hasText: "Ask “which routers are offline”" }).click();
+    await expect(page.getByRole("dialog", { name: "Ask" }).getByText("which routers are offline")).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
   test("network map shows routers by site", async ({ page }) => {
     const errors = watchErrors(page);
     await signUp(page, "Map");

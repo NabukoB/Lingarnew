@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { ApiError, apiFetch, isLive } from "./backend";
 import { clearToken, getToken, setToken } from "./session";
 import { getRouterMetrics } from "./api";
+import type { Proposal } from "./assistant";
 import type { ActionResult, CheckItem, MetricRange, MetricSeries } from "./types";
 
 function fail(e: unknown): { ok: false; error: string; hint?: string } {
@@ -204,8 +205,8 @@ export async function routerProgress(id: string): Promise<ActionResult<RouterPro
   return { ok: true, data: { status: r.data.status, connected: r.data.connected, board: r.data.board_name, version: r.data.firmware_version, items } };
 }
 
-export async function syncRouter(id: string): Promise<ActionResult<number>> {
-  const r = await call<{ changes: unknown[] }>("POST", `/v1/routers/${encodeURIComponent(id)}/sync`);
+export async function syncRouter(id: string, via?: "assistant"): Promise<ActionResult<number>> {
+  const r = await call<{ changes: unknown[] }>("POST", `/v1/routers/${encodeURIComponent(id)}/sync${via ? `?via=${via}` : ""}`);
   if (!r.ok) return r;
   revalidatePath("/network");
   return { ok: true, data: r.data.changes.length };
@@ -295,4 +296,43 @@ export async function loadRouterMetrics(id: string, range: MetricRange): Promise
   } catch (e) {
     return { ok: false, error: e instanceof ApiError ? e.message : "Couldn't load the charts. Try again." };
   }
+}
+
+// ── Assistant ───────────────────────────────────────
+
+/** Whether the assistant is on, and questions left today. */
+export async function assistantStatus(): Promise<{ enabled: boolean; remaining: number | null }> {
+  if (!isLive()) return { enabled: true, remaining: null };
+  const r = await call<{ enabled: boolean; remaining_today: number }>("GET", "/v1/assistant");
+  return r.ok ? { enabled: r.data.enabled, remaining: r.data.remaining_today } : { enabled: false, remaining: null };
+}
+
+/** Carries out a change the assistant proposed, after the owner tapped Confirm. */
+export async function runProposal(p: Proposal): Promise<ActionResult<string>> {
+  if (!isLive()) return { ok: true, data: "Done (demo)" };
+  const t = p.target as Record<string, string>;
+  switch (p.kind) {
+    case "router_sync": {
+      const r = await syncRouter(t.router_id!, "assistant");
+      return r.ok ? { ok: true, data: r.data ? `Synced, ${r.data} fix${r.data > 1 ? "es" : ""}` : "Synced, nothing to fix" } : r;
+    }
+    case "suspend":
+    case "reactivate": {
+      const r = await setSubscriberStatus(t.subscriber_id!, p.kind);
+      return r.ok ? { ok: true, data: p.kind === "suspend" ? "Suspended" : "Reactivated" } : r;
+    }
+    case "payment_match": {
+      const r = await matchPayment(t.payment_id!, t.account_id!);
+      return r.ok ? { ok: true, data: "Credited" } : r;
+    }
+    case "send_stk": {
+      const r = await sendSTK(t.subscriber_id!);
+      return r.ok ? { ok: true, data: "Prompt sent" } : r;
+    }
+    case "create_package": {
+      const r = await savePlan(null, (p.target as { plan: PlanForm }).plan);
+      return r.ok ? { ok: true, data: "Package created" } : r;
+    }
+  }
+  return { ok: false, error: "That change isn't supported here." };
 }

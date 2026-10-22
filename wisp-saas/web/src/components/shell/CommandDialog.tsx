@@ -1,6 +1,8 @@
 "use client";
 
-import { Plus, Router, Ticket, User, UserPlus } from "lucide-react";
+import { useAssistant } from "@/components/assistant/AssistantProvider";
+
+import { Plus, Router, Sparkles, Ticket, User, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import {
@@ -36,6 +38,7 @@ export function CommandDialog({
   initial: string;
 }) {
   const router = useRouter();
+  const { ask } = useAssistant();
   const [q, setQ] = React.useState(initial);
   const [hits, setHits] = React.useState<SearchHit[]>([]);
   const [busy, setBusy] = React.useState(false);
@@ -94,7 +97,7 @@ export function CommandDialog({
             onValueChange={setQ}
           />
           <CommandList>
-            {t.length >= 2 && !busy && hits.length === 0 && (
+            {t.length === 2 && !busy && hits.length === 0 && matchedActions.length + matchedPages.length === 0 && (
               <CommandEmpty>No matches</CommandEmpty>
             )}
             {customers.length > 0 && (
@@ -157,6 +160,21 @@ export function CommandDialog({
                     {label}
                   </CommandItem>
                 ))}
+              </CommandGroup>
+            )}
+            {t.length >= 3 && (
+              <CommandGroup heading="Assistant">
+                <CommandItem
+                  value={`ask ${q}`}
+                  onSelect={() => {
+                    onOpenChange(false);
+                    setQ("");
+                    ask(q.trim());
+                  }}
+                >
+                  <Sparkles aria-hidden className="text-primary" />
+                  <span className="truncate">Ask “{q.trim()}”</span>
+                </CommandItem>
               </CommandGroup>
             )}
           </CommandList>

@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -33,6 +34,22 @@ type PaymentView struct {
 	Subscriber *uuid.UUID `json:"subscriber_id"`
 }
 
+// Payments lists the newest payments, optionally filtered by status
+// (success, failed, pending, expired, unmatched).
+func (s *Service) Payments(ctx context.Context, tenantID uuid.UUID, status *string, limit int32) ([]PaymentView, error) {
+	var rows []store.ListPaymentsRow
+	err := s.DB.WithTenant(ctx, tenantID, func(q *store.Queries) error {
+		var err error
+		rows, err = q.ListPayments(ctx, store.ListPaymentsParams{Limit: limit, Status: status})
+		return err
+	})
+	out := make([]PaymentView, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, paymentView(row))
+	}
+	return out, err
+}
+
 func paymentView(r store.ListPaymentsRow) PaymentView {
 	kind := "pppoe"
 	switch {
@@ -62,19 +79,10 @@ func (s *Service) Routes(r chi.Router) {
 		if v := r.URL.Query().Get("status"); v != "" {
 			status = &v
 		}
-		var rows []store.ListPaymentsRow
-		err := s.DB.WithTenant(r.Context(), tid(r), func(q *store.Queries) error {
-			var err error
-			rows, err = q.ListPayments(r.Context(), store.ListPaymentsParams{Limit: 100, Status: status})
-			return err
-		})
+		out, err := s.Payments(r.Context(), tid(r), status, 100)
 		if err != nil {
 			httpx.Fail(w, r, err)
 			return
-		}
-		out := make([]PaymentView, 0, len(rows))
-		for _, row := range rows {
-			out = append(out, paymentView(row))
 		}
 		httpx.JSON(w, http.StatusOK, map[string]any{"payments": out})
 	})

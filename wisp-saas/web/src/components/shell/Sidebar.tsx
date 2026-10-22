@@ -3,6 +3,7 @@
 import { LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AskButton } from "@/components/assistant/AssistantProvider";
 import { Logo } from "@/components/Logo";
 import { m } from "@/components/motion";
 import { useIntentPrefetch } from "@/hooks/use-intent-prefetch";
@@ -61,6 +62,7 @@ export function Sidebar({
         })}
       </nav>
       <div className="mt-auto flex flex-col gap-2">
+        <AskButton wide />
         {(trialDaysLeft !== null || lapsed) && (
           <div className="flex items-center gap-2.5 rounded-tile bg-card p-4 shadow-card">
             <div className="flex flex-grow flex-col">
