@@ -69,7 +69,8 @@ jobs:
       - name: Postgres
         run: |
           docker run -d --name pg -e POSTGRES_USER=owner -e POSTGRES_PASSWORD=owner -e POSTGRES_DB=wisp \
-            -e APP_DB_PASSWORD=wisp_api -v "$PWD/infra/postgres/01-app-role.sh:/docker-entrypoint-initdb.d/01-app-role.sh:ro" \
+            -e APP_DB_PASSWORD=wisp_api -e ADMIN_DB_PASSWORD=wisp_admin \
+            -v "$PWD/infra/postgres/01-app-role.sh:/docker-entrypoint-initdb.d/01-app-role.sh:ro" \
             -p 55432:5432 postgres:16-alpine
           for i in $(seq 1 30); do docker exec pg pg_isready -U owner -d wisp && break; sleep 1; done
           sleep 3
@@ -77,11 +78,18 @@ jobs:
         run: |
           go build -o /tmp/api ./cmd/api
           export DATABASE_URL=postgres://wisp_api:wisp_api@localhost:55432/wisp?sslmode=disable
+          export ADMIN_DATABASE_URL=postgres://wisp_admin:wisp_admin@localhost:55432/wisp?sslmode=disable
           export MIGRATE_DATABASE_URL=postgres://owner:owner@localhost:55432/wisp?sslmode=disable
           export LOCAL_KEK=$(openssl rand -base64 32) RADIUS_SECRET_SEED=ci
           export WG_SERVER_PUBLIC_KEY=c2VydmVyLXB1YmxpYy1rZXktMzItYnl0ZXMtbG9uZyE=
           nohup /tmp/api > /tmp/api.log 2>&1 &
           for i in $(seq 1 30); do curl -sf localhost:8080/healthz && break; sleep 1; done
+          # A staff account for the admin console test; its authenticator secret stays masked.
+          pw="ci-admin-$(openssl rand -hex 8)"
+          secret=$(ADMIN_PASSWORD="$pw" /tmp/api -role add-admin -email ci-admin@example.com -name CI | sed -n 's/^  secret: //p')
+          echo "::add-mask::$secret"
+          echo "::add-mask::$pw"
+          { echo "E2E_ADMIN_EMAIL=ci-admin@example.com"; echo "E2E_ADMIN_PASSWORD=$pw"; echo "E2E_ADMIN_SECRET=$secret"; } >> "$GITHUB_ENV"
       - name: Web
         working-directory: wisp-saas/web
         run: |

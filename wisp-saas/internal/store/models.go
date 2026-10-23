@@ -5,12 +5,30 @@
 package store
 
 import (
+	"encoding/json"
 	"net/netip"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type AdminAudit struct {
+	ID        uuid.UUID       `json:"id"`
+	AdminID   uuid.UUID       `json:"admin_id"`
+	Action    string          `json:"action"`
+	TenantID  *uuid.UUID      `json:"tenant_id"`
+	Payload   json.RawMessage `json:"payload"`
+	CreatedAt time.Time       `json:"created_at"`
+}
+
+type AdminSession struct {
+	TokenHash []byte    `json:"token_hash"`
+	AdminID   uuid.UUID `json:"admin_id"`
+	Ip        *string   `json:"ip"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
+}
 
 type AssistantUsage struct {
 	TenantID     uuid.UUID   `json:"tenant_id"`
@@ -28,15 +46,15 @@ type AuthSession struct {
 }
 
 type ConfigAudit struct {
-	ID           uuid.UUID  `json:"id"`
-	TenantID     uuid.UUID  `json:"tenant_id"`
-	RouterID     *uuid.UUID `json:"router_id"`
-	Action       string     `json:"action"`
-	Payload      []byte     `json:"payload"`
-	Status       string     `json:"status"`
-	ErrorMessage *string    `json:"error_message"`
-	InitiatedBy  string     `json:"initiated_by"`
-	CreatedAt    time.Time  `json:"created_at"`
+	ID           uuid.UUID       `json:"id"`
+	TenantID     uuid.UUID       `json:"tenant_id"`
+	RouterID     *uuid.UUID      `json:"router_id"`
+	Action       string          `json:"action"`
+	Payload      json.RawMessage `json:"payload"`
+	Status       string          `json:"status"`
+	ErrorMessage *string         `json:"error_message"`
+	InitiatedBy  string          `json:"initiated_by"`
+	CreatedAt    time.Time       `json:"created_at"`
 }
 
 type HotspotPurchase struct {
@@ -116,6 +134,19 @@ type Plan struct {
 	IsActive            bool       `json:"is_active"`
 	SortOrder           int32      `json:"sort_order"`
 	CreatedAt           time.Time  `json:"created_at"`
+}
+
+type PlatformAdmin struct {
+	ID            uuid.UUID  `json:"id"`
+	Email         string     `json:"email"`
+	Name          string     `json:"name"`
+	PasswordHash  string     `json:"password_hash"`
+	TotpSecretEnc []byte     `json:"totp_secret_enc"`
+	DekWrapped    []byte     `json:"dek_wrapped"`
+	TotpLastStep  int64      `json:"totp_last_step"`
+	DisabledAt    *time.Time `json:"disabled_at"`
+	LastLoginAt   *time.Time `json:"last_login_at"`
+	CreatedAt     time.Time  `json:"created_at"`
 }
 
 type Router struct {

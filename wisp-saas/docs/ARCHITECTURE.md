@@ -42,6 +42,8 @@ Three Go binaries from one module, one Next.js app, Postgres. See CLAUDE.md §3.
 | `session` | session-svc | RADIUS authorize/accounting, CoA disconnects |
 | `tunnel` | tunnel-orchestrator | WireGuard peer reconciliation |
 | `dashboard` | — | Overview + revenue numbers |
+| `admin` | — | Platform staff console: password + TOTP sign-in, ISP list, trial/subscription/SMS-credit changes, audit |
+| `assistant` | — | Dashboard assistant (Claude) with read-only tools and confirm cards |
 | `portal` | — | Public captive-portal HTTP handlers |
 | `worker` | — | Background jobs |
 | `secrets` | — | Envelope encryption (KMS or local KEK), XChaCha20-Poly1305 |
@@ -93,3 +95,11 @@ rendered in the tenant's timezone (default Africa/Nairobi).
   results. The conversation lives in the browser (text only, ≤ 20 turns); `assistant_usage` counts
   questions and tokens per WISP per day for `ASSISTANT_DAILY_LIMIT`. The key (`ANTHROPIC_API_KEY`)
   is a platform secret like the Daraja app's; without it the panel says it is off.
+- **Platform admin = a separate DB role, not an RLS bypass.** Staff use `/admin` on the dashboard host
+  and the API's `/admin/v1/*`, which run on `ADMIN_DATABASE_URL` as `wisp_admin` (member of
+  `wisp_platform`). That role reads tenants across ISPs through column-level grants that leave out
+  password hashes, keys, customers' phone numbers and SMS bodies, and may update only a tenant's
+  subscription dates, status and SMS credits. Every change writes `admin_audit` in the same
+  transaction. Sign-in is argon2id password + TOTP (a code is accepted once: `totp_last_step`); the
+  secret is sealed with a per-admin data key. Sessions are 12 h, cookie scoped to `/admin`.
+  Without `ADMIN_DATABASE_URL` the console routes are not mounted.

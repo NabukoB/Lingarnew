@@ -16,7 +16,7 @@ the compose plugin. `/dev/net/tun` must exist (it does on normal KVM VPSes).
    openssl rand -base64 32   # LOCAL_KEK (or use KMS_KEY_ID)
    openssl rand -hex 32      # RADIUS_SECRET_SEED   (never change later)
    openssl rand -hex 24      # RADIUS_API_TOKEN
-   openssl rand -hex 16      # POSTGRES_OWNER_PASSWORD, APP_DB_PASSWORD
+   openssl rand -hex 16      # POSTGRES_OWNER_PASSWORD, APP_DB_PASSWORD, ADMIN_DB_PASSWORD
    wg genkey | tee wg.key | wg pubkey   # WG_SERVER_PRIVATE_KEY / WG_SERVER_PUBLIC_KEY
    ```
    Set `APP_ENV=production`, the domains, `PUBLIC_API_URL=https://api.<domain>`,
@@ -35,6 +35,16 @@ the compose plugin. `/dev/net/tun` must exist (it does on normal KVM VPSes).
 How it fits: `wg-gateway` owns the network namespace; `api`, `worker`, `radius`, `freeradius` and
 `caddy` join it (`network_mode: service:wg-gateway`), so they reach routers at 10.200.x.x and routers
 reach RADIUS at 10.200.0.1. RADIUS ports are never published to the internet.
+
+6. **Staff account** (platform admin console at `https://app.<domain>/admin`) — set
+   `ADMIN_DB_PASSWORD` and `ADMIN_DATABASE_URL=postgres://wisp_admin:<ADMIN_DB_PASSWORD>@postgres:5432/wisp?sslmode=disable`
+   in `.env` before the first start (the role is created with the database), then:
+   ```sh
+   docker compose -f docker-compose.prod.yml exec -it api /app -role add-admin -email you@<domain> -name "Your Name"
+   ```
+   It asks for a password (12+ characters) and prints an authenticator secret and link once.
+   Add it to Google Authenticator / 1Password. For an existing database, create the role by hand:
+   `CREATE ROLE wisp_admin LOGIN PASSWORD '…' IN ROLE wisp_platform;`
 
 ### Upgrades
 `git pull && docker compose -f docker-compose.prod.yml up -d --build`. Migrations run on API start.

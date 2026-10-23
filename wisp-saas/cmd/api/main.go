@@ -7,6 +7,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"flag"
@@ -24,6 +25,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 
+	"github.com/nabukob/lingarnew/wisp-saas/internal/admin"
 	"github.com/nabukob/lingarnew/wisp-saas/internal/assistant"
 	"github.com/nabukob/lingarnew/wisp-saas/internal/auth"
 	"github.com/nabukob/lingarnew/wisp-saas/internal/billing"
@@ -46,7 +48,9 @@ import (
 )
 
 func main() {
-	role := flag.String("role", "api", "api | worker | migrate")
+	role := flag.String("role", "api", "api | worker | migrate | add-admin")
+	flag.StringVar(&adminEmail, "email", "", "add-admin: the staff member's email")
+	flag.StringVar(&adminName, "name", "", "add-admin: their name")
 	flag.Parse()
 	level := slog.LevelInfo
 	if os.Getenv("LOG_LEVEL") == "debug" {
@@ -58,6 +62,8 @@ func main() {
 		os.Exit(1)
 	}
 }
+
+var adminEmail, adminName string
 
 // App holds every service; both roles build it the same way.
 type App struct {
@@ -72,6 +78,7 @@ type App struct {
 	Dashboard *dashboard.Service
 	SMS       *sms.Service
 	Assistant *assistant.Service
+	Admin     *admin.Service // nil unless ADMIN_DATABASE_URL is set
 }
 
 func build(ctx context.Context, cfg config.Config) (*App, error) {
@@ -83,7 +90,16 @@ func build(ctx context.Context, cfg config.Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	return assemble(cfg, database, secrets.NewSealer(kek)), nil
+	sealer := secrets.NewSealer(kek)
+	app := assemble(cfg, database, sealer)
+	if cfg.AdminDatabaseURL != "" {
+		adminDB, err := db.Open(ctx, cfg.AdminDatabaseURL)
+		if err != nil {
+			return nil, fmt.Errorf("admin database: %w", err)
+		}
+		app.Admin = &admin.Service{DB: adminDB, Sealer: sealer}
+	}
+	return app, nil
 }
 
 func assemble(cfg config.Config, database *db.DB, sealer *secrets.Sealer) *App {
@@ -139,8 +155,13 @@ func run(role string) error {
 		return err
 	}
 	defer app.DB.Close()
+	if app.Admin != nil {
+		defer app.Admin.DB.Close()
+	}
 
 	switch role {
+	case "add-admin":
+		return addAdmin(ctx, app)
 	case "worker":
 		w := &worker.Worker{DB: app.DB, SMS: app.SMS, Disconnector: app.Sessions, Sweeper: app.Billing, Poller: app.Routers, PortalURL: app.Routers.PortalURL}
 		slog.Info("worker started")
@@ -149,7 +170,33 @@ func run(role string) error {
 	case "api":
 		return serve(ctx, app)
 	}
-	return fmt.Errorf("unknown role %q (use api, worker or migrate)", role)
+	return fmt.Errorf("unknown role %q (use api, worker, migrate or add-admin)", role)
+}
+
+// addAdmin creates a staff account for the admin console and prints the
+// authenticator secret once. The password comes from ADMIN_PASSWORD or stdin.
+func addAdmin(ctx context.Context, app *App) error {
+	if app.Admin == nil {
+		return errors.New("set ADMIN_DATABASE_URL (a login role in wisp_platform) first")
+	}
+	if adminEmail == "" {
+		return errors.New("pass -email ops@example.com")
+	}
+	pw := os.Getenv("ADMIN_PASSWORD")
+	if pw == "" {
+		fmt.Fprint(os.Stderr, "Password (12+ characters): ")
+		line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil && line == "" {
+			return fmt.Errorf("read password: %w", err)
+		}
+		pw = strings.TrimRight(line, "\r\n")
+	}
+	e, err := app.Admin.CreateAdmin(ctx, adminEmail, adminName, pw)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Admin %s created.\nAdd this to an authenticator app (Google Authenticator, 1Password, Authy):\n  secret: %s\n  link:   %s\nIt is shown once.\n", adminEmail, e.Secret, e.URL)
+	return nil
 }
 
 // cors allows the dashboard origins to call the API with a bearer token.
@@ -247,6 +294,11 @@ func Handler(app *App) http.Handler {
 		app.Dashboard.Routes(r)
 		app.Assistant.Routes(r)
 	})
+
+	// Platform admin console (staff only; own DB role, password + TOTP).
+	if app.Admin != nil {
+		app.Admin.Routes(r, ip)
+	}
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		httpx.Fail(w, r, httpx.NotFound("This endpoint"))

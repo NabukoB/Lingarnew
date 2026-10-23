@@ -14,8 +14,9 @@ type Config struct {
 	Env      string // development | production
 	HTTPAddr string
 
-	DatabaseURL string
-	RedisURL    string
+	DatabaseURL      string
+	AdminDatabaseURL string // wisp_platform login role; empty = admin console off
+	RedisURL         string
 
 	// Secrets: KMS in production, a local key-encryption key in development.
 	KMSKeyID string
@@ -70,6 +71,7 @@ func Load() (Config, error) {
 		Env:                 get("APP_ENV", "development"),
 		HTTPAddr:            get("HTTP_ADDR", ":8080"),
 		DatabaseURL:         os.Getenv("DATABASE_URL"),
+		AdminDatabaseURL:    os.Getenv("ADMIN_DATABASE_URL"),
 		RedisURL:            os.Getenv("REDIS_URL"),
 		KMSKeyID:            os.Getenv("KMS_KEY_ID"),
 		LocalKEK:            os.Getenv("LOCAL_KEK"),

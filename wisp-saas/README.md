@@ -38,5 +38,6 @@ make e2e            # Playwright: a WISP's first day against a running stack
 | Safaricom callback IP list | `MPESA_ALLOWED_IPS` |
 | Africa's Talking username, API key, approved sender ID | `AT_USERNAME`, `AT_API_KEY`, `AT_SENDER` |
 | Anthropic API key for the dashboard assistant (optional; without it the Ask panel is off) | `ANTHROPIC_API_KEY`, `ASSISTANT_DAILY_LIMIT` |
+| A staff account for the admin console (`/admin`) | `ADMIN_DB_PASSWORD`, `ADMIN_DATABASE_URL`, then `api -role add-admin` (`docs/DEPLOYMENT.md` step 6) |
 | AWS KMS key (optional; local KEK works self-hosted) | `KMS_KEY_ID` + AWS credentials |
 | A RouterOS v7 router for a first live test | Dashboard → Routers → Add |

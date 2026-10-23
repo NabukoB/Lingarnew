@@ -27,11 +27,15 @@ import (
 	"github.com/nabukob/lingarnew/wisp-saas/internal/secrets"
 )
 
-const appPassword = "wisp_api_test"
+const (
+	appPassword   = "wisp_api_test"
+	adminPassword = "wisp_admin_test"
+)
 
 var (
 	once     sync.Once
 	appURL   string
+	adminURL string
 	ownerURL string
 	startErr error
 )
@@ -111,7 +115,10 @@ func start() {
 	_, err = conn.Exec(ctx, fmt.Sprintf(`DO $$ BEGIN
 		IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'wisp_api') THEN
 			CREATE ROLE wisp_api LOGIN PASSWORD '%s' IN ROLE wisp_app;
-		END IF; END $$;`, appPassword))
+		END IF;
+		IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'wisp_admin_t') THEN
+			CREATE ROLE wisp_admin_t LOGIN PASSWORD '%s' IN ROLE wisp_platform;
+		END IF; END $$;`, appPassword, adminPassword))
 	if err != nil {
 		startErr = err
 		return
@@ -123,4 +130,22 @@ func start() {
 	}
 	u.User = url.UserPassword("wisp_api", appPassword)
 	appURL = u.String()
+	u.User = url.UserPassword("wisp_admin_t", adminPassword)
+	adminURL = u.String()
+}
+
+// AdminDB returns a pool connected as a wisp_platform login role (the staff
+// admin console's role).
+func AdminDB(t testing.TB) *db.DB {
+	t.Helper()
+	once.Do(start)
+	if startErr != nil {
+		t.Fatalf("start postgres: %v", startErr)
+	}
+	d, err := db.Open(context.Background(), adminURL)
+	if err != nil {
+		t.Fatalf("open admin pool: %v", err)
+	}
+	t.Cleanup(d.Close)
+	return d
 }

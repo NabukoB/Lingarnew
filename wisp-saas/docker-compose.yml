@@ -12,6 +12,7 @@ services:
       POSTGRES_PASSWORD: owner
       POSTGRES_DB: wisp
       APP_DB_PASSWORD: wisp_api
+      ADMIN_DB_PASSWORD: wisp_admin
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./infra/postgres/01-app-role.sh:/docker-entrypoint-initdb.d/01-app-role.sh:ro
@@ -26,6 +27,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://wisp_api:wisp_api@postgres:5432/wisp?sslmode=disable
+      ADMIN_DATABASE_URL: postgres://wisp_admin:wisp_admin@postgres:5432/wisp?sslmode=disable
       MIGRATE_DATABASE_URL: postgres://owner:owner@postgres:5432/wisp?sslmode=disable
       HTTP_ADDR: ":8080"
     ports: ["8080:8080"]

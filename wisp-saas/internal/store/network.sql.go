@@ -7,6 +7,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"net/netip"
 	"time"
 
@@ -285,12 +286,12 @@ VALUES (app_tenant(), $1, $2, $3, $4, $5, $6)
 `
 
 type InsertConfigAuditParams struct {
-	RouterID     *uuid.UUID `json:"router_id"`
-	Action       string     `json:"action"`
-	Payload      []byte     `json:"payload"`
-	Status       string     `json:"status"`
-	ErrorMessage *string    `json:"error_message"`
-	InitiatedBy  string     `json:"initiated_by"`
+	RouterID     *uuid.UUID      `json:"router_id"`
+	Action       string          `json:"action"`
+	Payload      json.RawMessage `json:"payload"`
+	Status       string          `json:"status"`
+	ErrorMessage *string         `json:"error_message"`
+	InitiatedBy  string          `json:"initiated_by"`
 }
 
 func (q *Queries) InsertConfigAudit(ctx context.Context, arg InsertConfigAuditParams) error {
