@@ -57,7 +57,7 @@ start_stack() {
   export DATABASE_URL="postgres://wisp_api:wisp_api@localhost:$PG_PORT/wisp?sslmode=disable"
   export ADMIN_DATABASE_URL="postgres://wisp_admin:wisp_admin@localhost:$PG_PORT/wisp?sslmode=disable"
   export MIGRATE_DATABASE_URL="postgres://owner:owner@localhost:$PG_PORT/wisp?sslmode=disable"
-  export LOCAL_KEK=$(openssl rand -base64 32) RADIUS_SECRET_SEED=verify HTTP_ADDR=":$API_PORT"
+  export LOCAL_KEK=$(openssl rand -base64 32) RADIUS_SECRET_SEED=verify TRUST_PROXY_HEADERS=true HTTP_ADDR=":$API_PORT"
   export PORTAL_BASE_URL="http://localhost:$WEB_PORT/portal" DASHBOARD_URL="http://localhost:$WEB_PORT"
   export WG_SERVER_PUBLIC_KEY=c2VydmVyLXB1YmxpYy1rZXktMzItYnl0ZXMtbG9uZyE= ALLOWED_ORIGINS="http://localhost:$WEB_PORT"
   "$OUT/api" >"$OUT/logs/api-server.log" 2>&1 &

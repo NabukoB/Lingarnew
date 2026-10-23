@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { signUp, watchErrors } from "./helpers";
+import { asVisitor, signUp, watchErrors } from "./helpers";
 import { totp } from "./totp";
 
 // Needs a staff account: `api -role add-admin -email … ` and its secret in
@@ -32,6 +32,7 @@ test.describe("admin console", () => {
     await owner.close();
 
     const page = await browser.newPage();
+    await asVisitor(page);
     const errors = watchErrors(page);
 
     // Wrong code is refused with one generic message.

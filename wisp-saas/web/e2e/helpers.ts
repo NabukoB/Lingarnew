@@ -1,7 +1,19 @@
 import { expect, type Page } from "@playwright/test";
 
+/**
+ * Gives the page's browser context its own client IP, as separate visitors
+ * have. The API rate-limits sign-up and login per IP; without this the whole
+ * suite counts as one person. Needs the API to trust X-Forwarded-For
+ * (TRUST_PROXY_HEADERS=true, as behind the production proxy).
+ */
+export async function asVisitor(page: Page): Promise<void> {
+  const b = () => 1 + Math.floor(Math.random() * 254);
+  await page.context().setExtraHTTPHeaders({ "X-Forwarded-For": `100.${64 + (b() % 64)}.${b()}.${b()}` });
+}
+
 /** Creates a fresh WISP account and returns its portal slug and name. */
 export async function signUp(page: Page, label = "Nav"): Promise<{ slug: string; business: string }> {
+  await asVisitor(page);
   const stamp = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   const business = `${label} ${stamp} WiFi`;
   await page.goto("/signup");

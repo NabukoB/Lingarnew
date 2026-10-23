@@ -85,6 +85,7 @@ jobs:
           export ADMIN_DATABASE_URL=postgres://wisp_admin:wisp_admin@localhost:55432/wisp?sslmode=disable
           export MIGRATE_DATABASE_URL=postgres://owner:owner@localhost:55432/wisp?sslmode=disable
           export LOCAL_KEK=$(openssl rand -base64 32) RADIUS_SECRET_SEED=ci
+          export TRUST_PROXY_HEADERS=true  # as behind the production proxy; tests set one client IP per browser
           export WG_SERVER_PUBLIC_KEY=c2VydmVyLXB1YmxpYy1rZXktMzItYnl0ZXMtbG9uZyE=
           nohup /tmp/api > /tmp/api.log 2>&1 &
           for i in $(seq 1 30); do curl -sf localhost:8080/healthz && break; sleep 1; done
@@ -113,7 +114,7 @@ jobs:
           path: /tmp/perf
           if-no-files-found: ignore
       - if: failure()
-        run: tail -100 /tmp/api.log /tmp/web.log
+        run: tail -n 100 /tmp/api.log /tmp/web.log
 
   perf:
     runs-on: ubuntu-latest
