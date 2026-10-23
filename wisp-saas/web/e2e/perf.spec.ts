@@ -58,6 +58,8 @@ async function measure(
   });
   await page.goto(path, { waitUntil: "load" });
   if (ready) await ready(page);
+  // On a throttled phone the first paint can land after "load"; wait for it rather than reading 0.
+  await page.waitForFunction(() => performance.getEntriesByName("first-contentful-paint").length > 0, null, { timeout: 30_000 });
   await page.waitForTimeout(500); // let late layout shifts and LCP candidates land
   // LCP is final once the user interacts; a click on empty space ends it like a real tap would.
   await page.mouse.click(1, 1);
@@ -77,9 +79,10 @@ async function measure(
   });
   await ctx.close();
   const scaled = { ...budget, ttfb: budget.ttfb * scale, fcp: budget.fcp * scale, lcp: budget.lcp * scale };
-  const pass = v.ttfb <= scaled.ttfb && v.fcp <= scaled.fcp && v.lcp <= scaled.lcp && v.cls <= scaled.cls && v.jsKB <= scaled.jsKB;
+  const pass = v.fcp > 0 && v.lcp > 0 && v.ttfb <= scaled.ttfb && v.fcp <= scaled.fcp && v.lcp <= scaled.lcp && v.cls <= scaled.cls && v.jsKB <= scaled.jsKB;
   rows.push({ page: name, network: throttle ? "Slow 4G, 4× CPU" : "fast", vitals: v, budget: scaled, pass });
   expect(errors, `${name}: console errors`).toEqual([]);
+  expect(v.fcp, `${name}: no first paint recorded`).toBeGreaterThan(0);
   expect.soft(v.cls, `${name}: CLS`).toBeLessThanOrEqual(scaled.cls);
   expect.soft(v.lcp, `${name}: LCP ms`).toBeLessThanOrEqual(scaled.lcp);
   expect.soft(v.fcp, `${name}: FCP ms`).toBeLessThanOrEqual(scaled.fcp);
