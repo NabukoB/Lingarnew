@@ -51,6 +51,10 @@ jobs:
       - run: npx next lint
       - run: npx vitest run
       - run: npm run build
+      - name: JavaScript bundle budgets
+        run: |
+          PERF_REPORT=/tmp/perf node scripts/bundle-budget.mjs
+          cat /tmp/perf/bundles.md >> "$GITHUB_STEP_SUMMARY"
 
   e2e:
     runs-on: ubuntu-latest
@@ -98,9 +102,39 @@ jobs:
           API_URL=http://localhost:8080 nohup npm start > /tmp/web.log 2>&1 &
           npx playwright install --with-deps chromium
           for i in $(seq 1 30); do curl -s -o /dev/null localhost:3010/login && break; sleep 1; done
-          npx playwright test
+          # Web Vitals budgets get 1.5× headroom on shared runners.
+          PERF_REPORT=/tmp/perf PERF_BUDGET_SCALE=1.5 npx playwright test
+      - if: always()
+        run: test -f /tmp/perf/web-perf.md && cat /tmp/perf/web-perf.md >> "$GITHUB_STEP_SUMMARY" || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-perf
+          path: /tmp/perf
+          if-no-files-found: ignore
       - if: failure()
         run: tail -100 /tmp/api.log /tmp/web.log
+
+  perf:
+    runs-on: ubuntu-latest
+    needs: [go]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wisp-saas/go.mod
+          cache-dependency-path: wisp-saas/go.sum
+      - name: API + RADIUS load budgets (large seeded ISP)
+        # Shared runners are slower and noisier than a server: 2× latency budgets.
+        run: PERF_REPORT=/tmp/perf PERF_BUDGET_SCALE=2 go test -count=1 -tags perf -run TestPerf -v ./cmd/api/
+      - if: always()
+        run: test -f /tmp/perf/api-perf.md && cat /tmp/perf/api-perf.md >> "$GITHUB_STEP_SUMMARY" || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-perf
+          path: /tmp/perf
+          if-no-files-found: ignore
 
   images:
     runs-on: ubuntu-latest

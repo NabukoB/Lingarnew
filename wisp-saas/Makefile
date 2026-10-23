@@ -1,9 +1,11 @@
 # make lint test          — what CI runs (integration tests need Docker)
 # make e2e                — Playwright smoke against a running stack
+# make perf               — API + RADIUS load budgets on a large seeded ISP (Docker)
+# make verify             — everything above end to end, with a report in reports/
 # make up / make down     — local stack with docker compose
 GO_PKGS := ./...
 
-.PHONY: lint test test-go test-web e2e e2e-radius build sqlc up down script
+.PHONY: lint test test-go test-web e2e e2e-radius perf bundles verify build sqlc up down script
 
 lint:
 	gofmt -l . | (! grep .) || (echo "run gofmt -w ." && exit 1)
@@ -24,6 +26,15 @@ e2e:
 e2e-radius:
 	docker build -f infra/docker/freeradius.Dockerfile -t wisp-freeradius .
 	go test -count=1 -tags e2e ./tests/e2e/
+
+perf:
+	go test -count=1 -tags perf -run TestPerf -v ./cmd/api/
+
+bundles:
+	cd web && npx next build && node scripts/bundle-budget.mjs
+
+verify:
+	scripts/verify.sh
 
 build:
 	go build -o bin/ ./cmd/...

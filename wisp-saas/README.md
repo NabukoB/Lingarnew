@@ -26,7 +26,24 @@ Without Docker: Postgres 16 + `go run ./cmd/api` + `cd web && API_URL=http://loc
 make lint test      # Go unit + testcontainers integration tests, web type-check/lint/vitest
 make e2e-radius     # real FreeRADIUS + radclient against the backend
 make e2e            # Playwright: a WISP's first day against a running stack
+make perf           # API + RADIUS load budgets on a large seeded ISP
+make verify         # all of it end to end, with a report in reports/verify-<time>/
 ```
+
+`make verify` (`scripts/verify.sh`) runs lint, Go unit + integration tests, web unit tests, the
+load budgets, real FreeRADIUS, a production web build with bundle budgets, then starts Postgres + API
++ web and drives every Playwright spec against it (admin console and Core Web Vitals included).
+
+| Budget | Where | Limit |
+|---|---|---|
+| Dashboard / admin reads (4 clients) on 60 routers, 8,000 customers, 60k payments | `cmd/api/perf_test.go` | p95 100–250 ms |
+| Captive portal (32 clients) | same | p95 60 ms, ≥ 300 req/s |
+| RADIUS authorize + accounting (32 routers) | same | p95 100 ms, ≥ 300–400 req/s |
+| First-load JS per route, gzipped | `web/scripts/bundle-budget.mjs` | portal + sign-in 190 KB, dashboard 280 KB |
+| Cold-load Web Vitals (fast network) | `web/e2e/perf.spec.ts` | TTFB 0.8 s, FCP 1.5 s, LCP 2.5 s, CLS 0.1 |
+| Captive portal on Slow 4G with 4× CPU slowdown | same | FCP 3 s, LCP 4 s |
+
+`PERF_BUDGET_SCALE=2` loosens the time budgets on slow machines (CI uses 2× for the API, 1.5× for the browser).
 
 ## Launch checklist — what only you can provide
 

@@ -280,32 +280,34 @@ SELECT t.id, t.name, t.email, t.slug, t.account_prefix, t.plan, t.mpesa_mode, t.
        t.subscription_expires_at, t.sms_credits, t.created_at,
        (SELECT count(*) FROM subscribers s WHERE s.tenant_id = t.id)::int AS subscribers,
        (SELECT count(*) FROM subscribers s WHERE s.tenant_id = t.id AND s.status = 'active')::int AS active_subscribers,
-       (SELECT max(a.created_at) FROM auth_sessions a WHERE a.tenant_id = t.id)::timestamptz AS last_login_at
+       -- No cast: NULL when the ISP has no live session (signed out, or sessions purged),
+       -- so sqlc scans it into interface{} (time.Time or nil) instead of a non-null time.Time.
+       (SELECT max(a.created_at) FROM auth_sessions a WHERE a.tenant_id = t.id) AS last_login_at
 FROM tenants t WHERE t.id = $1
 `
 
 type AdminTenantRow struct {
-	ID                    uuid.UUID  `json:"id"`
-	Name                  string     `json:"name"`
-	Email                 string     `json:"email"`
-	Slug                  string     `json:"slug"`
-	AccountPrefix         string     `json:"account_prefix"`
-	Plan                  string     `json:"plan"`
-	MpesaMode             string     `json:"mpesa_mode"`
-	MpesaShortcodeType    string     `json:"mpesa_shortcode_type"`
-	MpesaShortcode        *string    `json:"mpesa_shortcode"`
-	MpesaEnv              string     `json:"mpesa_env"`
-	SupportPhone          *string    `json:"support_phone"`
-	PortalDomain          *string    `json:"portal_domain"`
-	Timezone              string     `json:"timezone"`
-	SubscriptionStatus    string     `json:"subscription_status"`
-	TrialEndsAt           time.Time  `json:"trial_ends_at"`
-	SubscriptionExpiresAt *time.Time `json:"subscription_expires_at"`
-	SmsCredits            int32      `json:"sms_credits"`
-	CreatedAt             time.Time  `json:"created_at"`
-	Subscribers           int32      `json:"subscribers"`
-	ActiveSubscribers     int32      `json:"active_subscribers"`
-	LastLoginAt           time.Time  `json:"last_login_at"`
+	ID                    uuid.UUID   `json:"id"`
+	Name                  string      `json:"name"`
+	Email                 string      `json:"email"`
+	Slug                  string      `json:"slug"`
+	AccountPrefix         string      `json:"account_prefix"`
+	Plan                  string      `json:"plan"`
+	MpesaMode             string      `json:"mpesa_mode"`
+	MpesaShortcodeType    string      `json:"mpesa_shortcode_type"`
+	MpesaShortcode        *string     `json:"mpesa_shortcode"`
+	MpesaEnv              string      `json:"mpesa_env"`
+	SupportPhone          *string     `json:"support_phone"`
+	PortalDomain          *string     `json:"portal_domain"`
+	Timezone              string      `json:"timezone"`
+	SubscriptionStatus    string      `json:"subscription_status"`
+	TrialEndsAt           time.Time   `json:"trial_ends_at"`
+	SubscriptionExpiresAt *time.Time  `json:"subscription_expires_at"`
+	SmsCredits            int32       `json:"sms_credits"`
+	CreatedAt             time.Time   `json:"created_at"`
+	Subscribers           int32       `json:"subscribers"`
+	ActiveSubscribers     int32       `json:"active_subscribers"`
+	LastLoginAt           interface{} `json:"last_login_at"`
 }
 
 func (q *Queries) AdminTenant(ctx context.Context, id uuid.UUID) (AdminTenantRow, error) {
@@ -453,7 +455,9 @@ SELECT t.id, t.name, t.email, t.slug, t.plan, t.mpesa_mode, t.subscription_statu
        (SELECT count(*) FROM routers r WHERE r.tenant_id = t.id AND r.status = 'online')::int AS routers_online,
        (SELECT count(*) FROM routers r WHERE r.tenant_id = t.id AND r.status = 'offline')::int AS routers_offline,
        (SELECT count(*) FROM subscribers s WHERE s.tenant_id = t.id AND s.status = 'active')::int AS active_subscribers,
-       (SELECT max(a.created_at) FROM auth_sessions a WHERE a.tenant_id = t.id)::timestamptz AS last_login_at
+       -- No cast: NULL when the ISP has no live session (signed out, or sessions purged),
+       -- so sqlc scans it into interface{} (time.Time or nil) instead of a non-null time.Time.
+       (SELECT max(a.created_at) FROM auth_sessions a WHERE a.tenant_id = t.id) AS last_login_at
 FROM tenants t
 WHERE ($1::text = '' OR t.name ILIKE '%' || $1 || '%' OR t.email ILIKE '%' || $1 || '%' OR t.slug ILIKE '%' || $1 || '%')
 ORDER BY t.created_at DESC
@@ -466,22 +470,22 @@ type AdminTenantsParams struct {
 }
 
 type AdminTenantsRow struct {
-	ID                    uuid.UUID  `json:"id"`
-	Name                  string     `json:"name"`
-	Email                 string     `json:"email"`
-	Slug                  string     `json:"slug"`
-	Plan                  string     `json:"plan"`
-	MpesaMode             string     `json:"mpesa_mode"`
-	SubscriptionStatus    string     `json:"subscription_status"`
-	TrialEndsAt           time.Time  `json:"trial_ends_at"`
-	SubscriptionExpiresAt *time.Time `json:"subscription_expires_at"`
-	SmsCredits            int32      `json:"sms_credits"`
-	CreatedAt             time.Time  `json:"created_at"`
-	Routers               int32      `json:"routers"`
-	RoutersOnline         int32      `json:"routers_online"`
-	RoutersOffline        int32      `json:"routers_offline"`
-	ActiveSubscribers     int32      `json:"active_subscribers"`
-	LastLoginAt           time.Time  `json:"last_login_at"`
+	ID                    uuid.UUID   `json:"id"`
+	Name                  string      `json:"name"`
+	Email                 string      `json:"email"`
+	Slug                  string      `json:"slug"`
+	Plan                  string      `json:"plan"`
+	MpesaMode             string      `json:"mpesa_mode"`
+	SubscriptionStatus    string      `json:"subscription_status"`
+	TrialEndsAt           time.Time   `json:"trial_ends_at"`
+	SubscriptionExpiresAt *time.Time  `json:"subscription_expires_at"`
+	SmsCredits            int32       `json:"sms_credits"`
+	CreatedAt             time.Time   `json:"created_at"`
+	Routers               int32       `json:"routers"`
+	RoutersOnline         int32       `json:"routers_online"`
+	RoutersOffline        int32       `json:"routers_offline"`
+	ActiveSubscribers     int32       `json:"active_subscribers"`
+	LastLoginAt           interface{} `json:"last_login_at"`
 }
 
 func (q *Queries) AdminTenants(ctx context.Context, arg AdminTenantsParams) ([]AdminTenantsRow, error) {

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 
@@ -233,5 +234,32 @@ func TestStanding(t *testing.T) {
 		if got := admin.Standing(c.status, c.trial, c.expires, now); got != c.want {
 			t.Errorf("Standing(%s) = %s, want %s", c.status, got, c.want)
 		}
+	}
+}
+
+// An ISP whose sessions are gone (signed out, or expired and purged) has no
+// last sign-in; it must not break the list or the detail page.
+func TestTenantWithoutSessions(t *testing.T) {
+	ctx := context.Background()
+	app := testutil.DB(t)
+	sealer := testutil.Sealer(t)
+	tn := fixtures.Tenant(t, app, sealer, "Signed Out WiFi")
+	owner, err := pgx.Connect(ctx, testutil.OwnerURL(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer owner.Close(ctx)
+	if _, err := owner.Exec(ctx, `DELETE FROM auth_sessions WHERE tenant_id = $1`, tn.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	s := &admin.Service{DB: testutil.AdminDB(t), Sealer: sealer}
+	rows, err := s.Tenants(ctx, "Signed Out WiFi", "")
+	if err != nil || len(rows) != 1 || rows[0].LastLoginAt != nil {
+		t.Fatalf("tenants = %+v, %v", rows, err)
+	}
+	d, err := s.Tenant(ctx, tn.ID)
+	if err != nil || d.LastLoginAt != nil {
+		t.Fatalf("tenant = %+v, %v", d, err)
 	}
 }

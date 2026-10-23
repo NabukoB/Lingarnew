@@ -43,7 +43,9 @@ SELECT t.id, t.name, t.email, t.slug, t.plan, t.mpesa_mode, t.subscription_statu
        (SELECT count(*) FROM routers r WHERE r.tenant_id = t.id AND r.status = 'online')::int AS routers_online,
        (SELECT count(*) FROM routers r WHERE r.tenant_id = t.id AND r.status = 'offline')::int AS routers_offline,
        (SELECT count(*) FROM subscribers s WHERE s.tenant_id = t.id AND s.status = 'active')::int AS active_subscribers,
-       (SELECT max(a.created_at) FROM auth_sessions a WHERE a.tenant_id = t.id)::timestamptz AS last_login_at
+       -- No cast: NULL when the ISP has no live session (signed out, or sessions purged),
+       -- so sqlc scans it into interface{} (time.Time or nil) instead of a non-null time.Time.
+       (SELECT max(a.created_at) FROM auth_sessions a WHERE a.tenant_id = t.id) AS last_login_at
 FROM tenants t
 WHERE (@q::text = '' OR t.name ILIKE '%' || @q || '%' OR t.email ILIKE '%' || @q || '%' OR t.slug ILIKE '%' || @q || '%')
 ORDER BY t.created_at DESC
@@ -55,7 +57,9 @@ SELECT t.id, t.name, t.email, t.slug, t.account_prefix, t.plan, t.mpesa_mode, t.
        t.subscription_expires_at, t.sms_credits, t.created_at,
        (SELECT count(*) FROM subscribers s WHERE s.tenant_id = t.id)::int AS subscribers,
        (SELECT count(*) FROM subscribers s WHERE s.tenant_id = t.id AND s.status = 'active')::int AS active_subscribers,
-       (SELECT max(a.created_at) FROM auth_sessions a WHERE a.tenant_id = t.id)::timestamptz AS last_login_at
+       -- No cast: NULL when the ISP has no live session (signed out, or sessions purged),
+       -- so sqlc scans it into interface{} (time.Time or nil) instead of a non-null time.Time.
+       (SELECT max(a.created_at) FROM auth_sessions a WHERE a.tenant_id = t.id) AS last_login_at
 FROM tenants t WHERE t.id = @id;
 
 -- name: AdminTenantRouters :many
